@@ -417,7 +417,7 @@
                                         <strong>Locked by:</strong> ${section.locked_by || 'Committee'}<br>
                                         <strong>Date:</strong> ${section.locked_at ? new Date(section.locked_at).toLocaleDateString() : 'Unknown'}
                                         ${section.committee_notes ? `<br><strong>Notes:</strong> ${section.committee_notes}` : ''}
-                                        ${section.new_text ? `<br><br><strong>Selected Text:</strong><div class="mt-2 p-2 bg-light rounded">${section.new_text}</div>` : ''}
+                                        ${section.new_text ? `<br><br><strong>Selected Text:</strong><div class="mt-2 p-2 bg-light rounded ${globalTrackChanges ? 'diff-text' : ''}" id="locked-text-${section.id}">${globalTrackChanges ? generateDiffHTML(section.original_text, section.new_text) : section.new_text}</div>` : ''}
                                     </div>
                                     <button class="btn btn-danger w-100" onclick="event.stopPropagation(); unlockSection('${section.id}')">
                                         <i class="bi bi-unlock"></i> Unlock Section
@@ -476,9 +476,6 @@
                         <div class="suggestion-actions">
                             <button class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); editSuggestion('${sug.id}')">
                                 <i class="bi bi-pencil"></i>
-                            </button>
-                            <button class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation(); deleteSuggestion('${sug.id}', '${section.id}')">
-                                <i class="bi bi-trash"></i>
                             </button>
                         </div>
                     </div>
