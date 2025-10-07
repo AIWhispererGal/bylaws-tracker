@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bylaws Amendment Tracker - Reseda NC</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 1rem;
+        }
+
+        .main-container {
+            display: flex;
+            height: calc(100vh - 76px);
+            margin-top: 76px;
+        }
+
+        .doc-frame {
+            flex: 1;
+            background: white;
+            border-right: 2px solid #dee2e6;
+        }
+
+        .sidebar {
+            width: 500px;
+            background: white;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .section-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .section-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .section-card.locked {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+        }
+
+        .section-card.expanded {
+            background: #e8f4fd;
+            border: 2px solid #0066cc;
+        }
+
+        .section-text {
+            font-size: 13px;
+            color: #495057;
+            max-height: 60px;
+            overflow-y: auto;
+            margin: 10px 0;
+            padding: 8px;
+            background: white;
+            border-radius: 4px;
+        }
+
+        .suggestions-area {
+            display: none;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 2px solid #dee2e6;
+        }
+
+        .section-card.expanded .suggestions-area {
+            display: block;
+        }
+
+        .suggestion-item {
+            background: white;
+            border: 1px solid #dee2e6;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+        }
+
+        .suggestion-item:hover {
+            border-color: #0066cc;
+            background: #f0f8ff;
+        }
+
+        .suggestion-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 8px;
+        }
+
+        .new-suggestion-form {
+            background: #f0f8ff;
+            border: 2px dashed #0066cc;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .lock-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .lock-badge.locked {
+            background: #ffc107;
+            color: #856404;
+        }
+
+        .lock-badge.open {
+            background: #28a745;
+            color: white;
+        }
+
+        .header-buttons {
+            position: fixed;
+            top: 85px;
+            right: 520px;
+            z-index: 100;
+            display: flex;
+            gap: 10px;
+        }
+
+        #docFrame {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .search-box {
+            margin-bottom: 20px;
+        }
+
+        .section-counter {
+            background: #6c757d;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+
+        /* Multi-Select Mode Styles */
+        .multi-select-active .section-card {
+            position: relative;
+            padding-left: 50px;
+        }
+
+        .section-checkbox {
+            position: absolute;
+            left: 15px;
+            top: 20px;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+        }
+
+        .section-card.selected {
+            background: #e3f2fd;
+            border: 2px solid #2196F3;
+            box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
+        }
+
+        .selection-info {
+            background: #e3f2fd;
+            border: 2px solid #2196F3;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 15px;
+            display: none;
+        }
+
+        .selection-info.active {
+            display: block;
+        }
+
+        .selection-error {
+            background: #ffebee;
+            border-color: #f44336;
+        }
+
+        .multi-select-toggle {
+            transition: all 0.3s;
+        }
+
+        .multi-select-toggle.active {
+            background: #2196F3 !important;
+            border-color: #2196F3 !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-dark fixed-top">
+        <div class="container-fluid">
+            <span class="navbar-brand mb-0 h1">
+                <i class="bi bi-file-earmark-text"></i> Bylaws Amendment Tracker
+            </span>
+            <div>
+                <span class="text-light me-3">Improved Version</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Export Buttons -->
+    <div class="header-buttons">
+        <button class="btn btn-info btn-sm" onclick="reParseDocument()">
+            <i class="bi bi-arrow-repeat"></i> Re-Parse Doc
+        </button>
+        <button class="btn btn-warning btn-sm" onclick="exportCommittee()">
+            <i class="bi bi-download"></i> Export Committee
+        </button>
+        <button class="btn btn-success btn-sm" onclick="exportBoard()">
+            <i class="bi bi-download"></i> Export Board
+        </button>
+    </div>
+
+    <!-- Main Container -->
+    <div class="main-container">
+        <!-- Google Doc Frame -->
+        <div class="doc-frame">
+            <iframe id="docFrame"
+                src="">
+            </iframe>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="sidebar" id="sidebarContainer">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">Document Sections</h5>
+                <div class="d-flex gap-2 align-items-center">
+                    <button class="btn btn-sm btn-outline-primary multi-select-toggle"
+                            id="multiSelectToggle" onclick="toggleMultiSelectMode()">
+                        <i class="bi bi-check2-square"></i> Multi-Select
+                    </button>
+                    <span class="section-counter" id="sectionCount">0 sections</span>
+                </div>
+            </div>
+
+            <!-- Selection Info Banner -->
+            <div class="selection-info" id="selectionInfo">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <strong id="selectionCount">0 sections selected</strong>
+                        <div id="selectionRange" class="small mt-1"></div>
+                        <div id="selectionError" class="small text-danger mt-1" style="display: none;"></div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-warning" onclick="showMultiSectionLockDialog()">
+                            <i class="bi bi-lock"></i> Lock Selected
+                        </button>
+                        <button class="btn btn-sm btn-secondary" onclick="clearSelection()">
+                            Clear
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search Box -->
+            <div class="search-box">
+                <input type="text" class="form-control" id="searchBox"
+                    placeholder="Search sections..." onkeyup="filterSections()">
+            </div>
+
+            <div id="sectionsContainer">
+                <div class="text-center py-5 text-muted">
+                    <i class="bi bi-inbox display-1"></i>
+                    <p class="mt-3">No sections loaded yet</p>
+                    <p>Use Google Docs menu: 🔧 Bylaws Sync → Parse into Small Sections</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Configuration from server environment
+        const DOC_ID = '<%= locals.GOOGLE_DOC_ID || "1LdE2NGMOJ7BgV19V3Qb-hnN5VTmB5C_Hh6heemqxviA" %>';
+
+        // State
+        let currentSections = [];
+        let expandedSections = new Set();
+        let multiSelectMode = false;
+        let selectedSections = new Set();
+        let lastClickedSection = null;
+
+        // Load sections on page load
+        window.onload = function() {
+            loadSections();
+            // Update iframe src with actual doc ID
+            document.getElementById('docFrame').src =
+                `https://docs.google.com/document/d/${DOC_ID}/edit?embedded=true`;
+        };
+
+        // Load all sections
+        async function loadSections() {
+            try {
+                const response = await fetch(`/bylaws/api/sections/${DOC_ID}`);
+                const data = await response.json();
+
+                if (data.success && data.sections.length > 0) {
+                    currentSections = data.sections;
+                    displaySections(data.sections);
+                    document.getElementById('sectionCount').textContent = data.sections.length + ' sections';
+                }
+            } catch (error) {
+                console.error('Error loading sections:', error);
+            }
+        }
+
+        // Display sections in sidebar
+        function displaySections(sections) {
+            const container = document.getElementById('sectionsContainer');
+
+            if (!sections || sections.length === 0) {
+                return;
+            }
+
+            let html = '';
+            sections.forEach(section => {
+                const isLocked = section.locked_by_committee;
+                const isExpanded = expandedSections.has(section.id);
+                const isSelected = selectedSections.has(section.id);
+                const suggestionCount = section.bylaw_suggestions ? section.bylaw_suggestions.length : 0;
+
+                html += `
+                    <div class="section-card ${isLocked ? 'locked' : ''} ${isExpanded ? 'expanded' : ''} ${isSelected ? 'selected' : ''}"
+                         data-section-id="${section.id}"
+                         data-article="${section.article_number || ''}"
+                         onclick="handleSectionClick(event, '${section.id}')">
+                        ${multiSelectMode ? `
+                            <input type="checkbox"
+                                   class="section-checkbox form-check-input"
+                                   ${isSelected ? 'checked' : ''}
+                                   onclick="event.stopPropagation(); selectSection('${section.id}', false);">
+                        ` : ''}
+                        <div>
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div style="flex: 1;">
+                                    <h6 class="mb-1">${section.section_citation}</h6>
+                                    <span class="lock-badge ${isLocked ? 'locked' : 'open'}">
+                                        ${isLocked ? '🔒 Locked' : '🔓 Open'}
+                                    </span>
+                                    <span class="badge bg-info ms-2">${suggestionCount} suggestions</span>
+                                </div>
+                                <i class="bi bi-chevron-${isExpanded ? 'up' : 'down'}"></i>
+                            </div>
+
+                            <div class="section-text">
+                                ${section.original_text || 'No text available'}
+                            </div>
+                        </div>
+
+                        <div class="suggestions-area">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="mb-0">Suggestions</h6>
+                                <button class="btn btn-sm btn-primary" onclick="showNewSuggestionForm('${section.id}')">
+                                    <i class="bi bi-plus-circle"></i> Add Suggestion
+                                </button>
+                            </div>
+
+                            <div id="newSuggestionForm-${section.id}" style="display: none;">
+                                <div class="new-suggestion-form">
+                                    <h6>New Suggestion</h6>
+                                    <div class="mb-2">
+                                        <label class="form-label">Your Name</label>
+                                        <input type="text" class="form-control" id="authorName-${section.id}"
+                                            placeholder="Enter your name">
+                                    </div>
+                                    <div class="mb-2">
+                                        <label class="form-label">Suggested Text</label>
+                                        <textarea class="form-control" id="suggestedText-${section.id}"
+                                            rows="3" placeholder="Enter your suggested amendment">${section.original_text || ''}</textarea>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Rationale (Optional)</label>
+                                        <textarea class="form-control" id="rationale-${section.id}"
+                                            rows="2" placeholder="Why is this change needed?"></textarea>
+                                    </div>
+                                    <div class="d-flex gap-2">
+                                        <button class="btn btn-success btn-sm" onclick="submitSuggestion('${section.id}')">
+                                            Submit
+                                        </button>
+                                        <button class="btn btn-secondary btn-sm" onclick="hideNewSuggestionForm('${section.id}')">
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="suggestions-${section.id}">
+                                ${renderSuggestions(section)}
+                            </div>
+
+                            ${!isLocked ? `
+                                <div class="mt-3">
+                                    <button class="btn btn-warning w-100" onclick="showLockDialog('${section.id}')">
+                                        <i class="bi bi-lock"></i> Lock Section with Selection
+                                    </button>
+                                </div>
+                            ` : `
+                                <div class="mt-3">
+                                    <div class="alert alert-warning">
+                                        <strong>Locked by:</strong> ${section.locked_by || 'Committee'}<br>
+                                        <strong>Date:</strong> ${section.locked_at ? new Date(section.locked_at).toLocaleDateString() : 'Unknown'}
+                                        ${section.committee_notes ? `<br><strong>Notes:</strong> ${section.committee_notes}` : ''}
+                                    </div>
+                                    <button class="btn btn-danger w-100" onclick="unlockSection('${section.id}')">
+                                        <i class="bi bi-unlock"></i> Unlock Section
+                                    </button>
+                                </div>
+                            `}
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function renderSuggestions(section) {
+            if (!section.bylaw_suggestions || section.bylaw_suggestions.length === 0) {
+                // Add default option
+                return `
+                    <div class="suggestion-item">
+                        <input type="radio" name="suggestion-${section.id}" value="original" id="original-${section.id}">
+                        <label for="original-${section.id}" class="ms-2">
+                            <strong>Keep Original Text</strong>
+                            <div class="text-muted small mt-1">${section.original_text}</div>
+                        </label>
+                    </div>
+                `;
+            }
+
+            let html = `
+                <div class="suggestion-item">
+                    <input type="radio" name="suggestion-${section.id}" value="original" id="original-${section.id}">
+                    <label for="original-${section.id}" class="ms-2">
+                        <strong>Keep Original Text</strong>
+                    </label>
+                </div>
+            `;
+
+            section.bylaw_suggestions.forEach(sug => {
+                html += `
+                    <div class="suggestion-item">
+                        <input type="radio" name="suggestion-${section.id}" value="${sug.id}" id="sug-${sug.id}">
+                        <label for="sug-${sug.id}" class="ms-2" style="width: 100%;">
+                            <div class="d-flex justify-content-between">
+                                <strong>${sug.author_name}</strong>
+                                <span class="badge bg-secondary">${sug.support_count || 0} support</span>
+                            </div>
+                            <div class="mt-2">${sug.suggested_text}</div>
+                            ${sug.rationale ? `<div class="text-muted small mt-1">Rationale: ${sug.rationale}</div>` : ''}
+                        </label>
+                        <div class="suggestion-actions">
+                            <button class="btn btn-sm btn-outline-primary" onclick="editSuggestion('${sug.id}')">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteSuggestion('${sug.id}', '${section.id}')">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            return html;
+        }
+
+        function toggleSection(sectionId) {
+            if (expandedSections.has(sectionId)) {
+                expandedSections.delete(sectionId);
+            } else {
+                expandedSections.add(sectionId);
+                // Load fresh suggestions when expanding
+                loadSuggestionsForSection(sectionId);
+            }
+            displaySections(currentSections);
+        }
+
+        async function loadSuggestionsForSection(sectionId) {
+            try {
+                const response = await fetch(`/bylaws/api/sections/${sectionId}/suggestions`);
+                const data = await response.json();
+
+                if (data.success) {
+                    // Update the section's suggestions
+                    const section = currentSections.find(s => s.id === sectionId);
+                    if (section) {
+                        section.bylaw_suggestions = data.suggestions;
+                        // Re-render just this section's suggestions
+                        const suggestionsDiv = document.getElementById(`suggestions-${sectionId}`);
+                        if (suggestionsDiv) {
+                            suggestionsDiv.innerHTML = renderSuggestions(section);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading suggestions:', error);
+            }
+        }
+
+        function showNewSuggestionForm(sectionId) {
+            document.getElementById(`newSuggestionForm-${sectionId}`).style.display = 'block';
+        }
+
+        function hideNewSuggestionForm(sectionId) {
+            document.getElementById(`newSuggestionForm-${sectionId}`).style.display = 'none';
+        }
+
+        async function submitSuggestion(sectionId) {
+            const authorName = document.getElementById(`authorName-${sectionId}`).value;
+            const suggestedText = document.getElementById(`suggestedText-${sectionId}`).value;
+            const rationale = document.getElementById(`rationale-${sectionId}`).value;
+
+            if (!suggestedText.trim()) {
+                alert('Please enter suggested text');
+                return;
+            }
+
+            try {
+                const response = await fetch('/bylaws/api/suggestions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sectionId,
+                        suggestedText,
+                        rationale,
+                        authorName: authorName || 'Anonymous'
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    hideNewSuggestionForm(sectionId);
+                    // Clear form
+                    document.getElementById(`authorName-${sectionId}`).value = '';
+                    document.getElementById(`suggestedText-${sectionId}`).value = '';
+                    document.getElementById(`rationale-${sectionId}`).value = '';
+                    // Reload suggestions
+                    await loadSuggestionsForSection(sectionId);
+                    alert('Suggestion submitted successfully!');
+                }
+            } catch (error) {
+                console.error('Error submitting suggestion:', error);
+                alert('Error submitting suggestion');
+            }
+        }
+
+        async function deleteSuggestion(suggestionId, sectionId) {
+            if (!confirm('Are you sure you want to delete this suggestion?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/bylaws/api/suggestions/${suggestionId}`, {
+                    method: 'DELETE'
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    await loadSuggestionsForSection(sectionId);
+                }
+            } catch (error) {
+                console.error('Error deleting suggestion:', error);
+                alert('Error deleting suggestion');
+            }
+        }
+
+        function editSuggestion(suggestionId) {
+            // TODO: Implement inline editing
+            alert('Edit functionality coming soon!');
+        }
+
+        function showLockDialog(sectionId) {
+            const selectedRadio = document.querySelector(`input[name="suggestion-${sectionId}"]:checked`);
+            if (!selectedRadio) {
+                alert('Please select a suggestion first');
+                return;
+            }
+
+            const notes = prompt('Add committee notes (optional):');
+            lockSection(sectionId, selectedRadio.value, notes);
+        }
+
+        async function lockSection(sectionId, suggestionId, notes) {
+            try {
+                const response = await fetch(`/bylaws/api/sections/${sectionId}/lock`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        suggestionId: suggestionId,
+                        notes: notes,
+                        lockedBy: 'Committee User'
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    alert('Section locked successfully!');
+                    loadSections();
+                }
+            } catch (error) {
+                console.error('Error locking section:', error);
+                alert('Error locking section');
+            }
+        }
+
+        async function unlockSection(sectionId) {
+            if (!confirm('Are you sure you want to unlock this section?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/bylaws/api/sections/${sectionId}/unlock`, {
+                    method: 'POST'
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    alert('Section unlocked successfully!');
+                    loadSections();
+                }
+            } catch (error) {
+                console.error('Error unlocking section:', error);
+                alert('Error unlocking section');
+            }
+        }
+
+        function filterSections() {
+            const searchTerm = document.getElementById('searchBox').value.toLowerCase();
+            const filtered = currentSections.filter(section =>
+                section.section_citation.toLowerCase().includes(searchTerm) ||
+                (section.original_text && section.original_text.toLowerCase().includes(searchTerm))
+            );
+            displaySections(filtered);
+        }
+
+        function reParseDocument() {
+            alert('Please use Google Docs menu:\n🔧 Bylaws Sync → Parse into Small Sections\n\nThis will create more granular sections.');
+        }
+
+        function exportCommittee() {
+            window.location.href = '/bylaws/api/export/committee';
+        }
+
+        function exportBoard() {
+            window.location.href = '/bylaws/api/export/board';
+        }
+
+        // ============================================
+        // MULTI-SECTION SELECTION FUNCTIONS
+        // ============================================
+
+        /**
+         * Toggle multi-select mode on/off
+         */
+        function toggleMultiSelectMode() {
+            multiSelectMode = !multiSelectMode;
+            const sidebar = document.getElementById('sidebarContainer');
+            const toggleBtn = document.getElementById('multiSelectToggle');
+
+            if (multiSelectMode) {
+                sidebar.classList.add('multi-select-active');
+                toggleBtn.classList.add('active');
+                toggleBtn.innerHTML = '<i class="bi bi-x-square"></i> Exit Multi-Select';
+            } else {
+                sidebar.classList.remove('multi-select-active');
+                toggleBtn.classList.remove('active');
+                toggleBtn.innerHTML = '<i class="bi bi-check2-square"></i> Multi-Select';
+                clearSelection();
+            }
+
+            displaySections(currentSections);
+        }
+
+        /**
+         * Handle section card click (for expand/collapse or selection)
+         */
+        function handleSectionClick(event, sectionId) {
+            // If clicking checkbox, let checkbox handler deal with it
+            if (event.target.classList.contains('section-checkbox')) {
+                return;
+            }
+
+            if (multiSelectMode) {
+                // Determine selection mode based on modifier keys
+                const isShiftClick = event.shiftKey;
+                const isCtrlClick = event.ctrlKey || event.metaKey;
+
+                if (isShiftClick && lastClickedSection) {
+                    // Range select
+                    selectRange(lastClickedSection, sectionId);
+                } else if (isCtrlClick) {
+                    // Add/remove from selection
+                    selectSection(sectionId, true);
+                } else {
+                    // Single select (clear others)
+                    selectSection(sectionId, false);
+                }
+            } else {
+                // Normal mode: expand/collapse
+                toggleSection(sectionId);
+            }
+        }
+
+        /**
+         * Select a single section
+         * @param {string} sectionId - Section ID to select
+         * @param {boolean} multiSelect - If true, add to selection; if false, replace selection
+         */
+        function selectSection(sectionId, multiSelect) {
+            if (!multiSelect) {
+                selectedSections.clear();
+            }
+
+            if (selectedSections.has(sectionId)) {
+                selectedSections.delete(sectionId);
+            } else {
+                selectedSections.add(sectionId);
+            }
+
+            lastClickedSection = sectionId;
+            updateSelectionDisplay();
+            displaySections(currentSections);
+        }
+
+        /**
+         * Select range of sections from start to end
+         */
+        function selectRange(startId, endId) {
+            const startIndex = currentSections.findIndex(s => s.id === startId);
+            const endIndex = currentSections.findIndex(s => s.id === endId);
+
+            if (startIndex === -1 || endIndex === -1) return;
+
+            const [minIndex, maxIndex] = startIndex < endIndex ?
+                [startIndex, endIndex] : [endIndex, startIndex];
+
+            // Select all sections in range
+            for (let i = minIndex; i <= maxIndex; i++) {
+                selectedSections.add(currentSections[i].id);
+            }
+
+            lastClickedSection = endId;
+            updateSelectionDisplay();
+            displaySections(currentSections);
+        }
+
+        /**
+         * Clear all selections
+         */
+        function clearSelection() {
+            selectedSections.clear();
+            lastClickedSection = null;
+            updateSelectionDisplay();
+            displaySections(currentSections);
+        }
+
+        /**
+         * Update the selection info banner
+         */
+        function updateSelectionDisplay() {
+            const selectionInfo = document.getElementById('selectionInfo');
+            const selectionCount = document.getElementById('selectionCount');
+            const selectionRange = document.getElementById('selectionRange');
+            const selectionError = document.getElementById('selectionError');
+
+            const count = selectedSections.size;
+
+            if (count === 0) {
+                selectionInfo.classList.remove('active');
+                return;
+            }
+
+            selectionInfo.classList.add('active');
+            selectionCount.textContent = `${count} section${count !== 1 ? 's' : ''} selected`;
+
+            // Get selected sections details
+            const selected = currentSections.filter(s => selectedSections.has(s.id));
+
+            // Display range
+            if (selected.length > 0) {
+                const rangeText = formatSelectionRange(selected);
+                selectionRange.textContent = rangeText;
+            }
+
+            // Validate selection (all must be from same article)
+            const validation = validateSelection(selected);
+            if (!validation.valid) {
+                selectionInfo.classList.add('selection-error');
+                selectionError.style.display = 'block';
+                selectionError.textContent = validation.error;
+            } else {
+                selectionInfo.classList.remove('selection-error');
+                selectionError.style.display = 'none';
+            }
+        }
+
+        /**
+         * Format selection range as readable text
+         */
+        function formatSelectionRange(selected) {
+            if (selected.length === 0) return '';
+            if (selected.length === 1) return selected[0].section_citation;
+
+            // Group by article
+            const byArticle = {};
+            selected.forEach(s => {
+                const article = s.article_number || 'Unknown';
+                if (!byArticle[article]) byArticle[article] = [];
+                byArticle[article].push(s);
+            });
+
+            const parts = [];
+            for (const [article, sections] of Object.entries(byArticle)) {
+                if (sections.length === 1) {
+                    parts.push(sections[0].section_citation);
+                } else {
+                    const first = sections[0].section_citation;
+                    const last = sections[sections.length - 1].section_citation;
+                    parts.push(`${first} - ${last}`);
+                }
+            }
+
+            return parts.join(', ');
+        }
+
+        /**
+         * Validate that all selected sections are from the same article
+         */
+        function validateSelection(selected) {
+            if (selected.length === 0) {
+                return { valid: true };
+            }
+
+            const articles = new Set(selected.map(s => s.article_number || ''));
+
+            if (articles.size > 1) {
+                return {
+                    valid: false,
+                    error: 'Cannot lock sections from different articles together. Please select sections from the same article only.'
+                };
+            }
+
+            return { valid: true };
+        }
+
+        /**
+         * Show lock dialog for multiple sections
+         */
+        function showMultiSectionLockDialog() {
+            if (selectedSections.size === 0) {
+                alert('Please select at least one section first');
+                return;
+            }
+
+            const selected = currentSections.filter(s => selectedSections.has(s.id));
+            const validation = validateSelection(selected);
+
+            if (!validation.valid) {
+                alert(validation.error);
+                return;
+            }
+
+            // Check if any selected section is already locked
+            const lockedSections = selected.filter(s => s.locked_by_committee);
+            if (lockedSections.length > 0) {
+                const lockedCitations = lockedSections.map(s => s.section_citation).join(', ');
+                if (!confirm(`Warning: The following sections are already locked: ${lockedCitations}\n\nDo you want to proceed and re-lock them?`)) {
+                    return;
+                }
+            }
+
+            if (selectedSections.size === 1) {
+                // Single section - use existing dialog
+                const sectionId = Array.from(selectedSections)[0];
+                showLockDialog(sectionId);
+            } else {
+                // Multiple sections - show custom dialog
+                const sectionsList = selected.map(s => s.section_citation).join(', ');
+                const confirmMsg = `You are about to lock ${selectedSections.size} sections together:\n\n${sectionsList}\n\nThis will apply the same decision to all selected sections.`;
+
+                if (!confirm(confirmMsg)) {
+                    return;
+                }
+
+                const decision = prompt('Enter decision (keep-original, amend, or delete):', 'keep-original');
+                if (!decision) return;
+
+                const notes = prompt('Add committee notes (optional):');
+
+                lockMultipleSections(Array.from(selectedSections), decision, notes);
+            }
+        }
+
+        /**
+         * Lock multiple sections with the same decision
+         */
+        async function lockMultipleSections(sectionIds, decision, notes) {
+            try {
+                const response = await fetch('/bylaws/api/sections/lock-multiple', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sectionIds: sectionIds,
+                        decision: decision,
+                        notes: notes,
+                        lockedBy: 'Committee User'
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    alert(`Successfully locked ${sectionIds.length} sections!`);
+                    clearSelection();
+                    toggleMultiSelectMode(); // Exit multi-select mode
+                    loadSections(); // Reload to show updated state
+                } else {
+                    alert('Error locking sections: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error locking multiple sections:', error);
+                alert('Error locking sections: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>
