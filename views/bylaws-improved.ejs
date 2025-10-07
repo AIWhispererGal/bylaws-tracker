@@ -351,7 +351,9 @@
                             </div>
 
                             <div class="section-text">
-                                ${section.original_text || 'No text available'}
+                                ${isLocked && section.new_text ?
+                                    `<span class="badge bg-success me-2">NEW TEXT SELECTED</span>${section.new_text}` :
+                                    section.original_text || 'No text available'}
                             </div>
                         </div>
 
@@ -404,12 +406,20 @@
                                 </div>
                             ` : `
                                 <div class="mt-3">
-                                    <div class="alert alert-warning">
+                                    <div class="alert alert-success">
+                                        <h6 class="alert-heading">
+                                            <i class="bi bi-lock-fill"></i> Section Locked
+                                        </h6>
+                                        <hr>
+                                        <strong>Decision:</strong> ${section.new_text ?
+                                            '<span class="badge bg-success">New Amendment Selected</span>' :
+                                            '<span class="badge bg-info">Keep Original Text</span>'}<br>
                                         <strong>Locked by:</strong> ${section.locked_by || 'Committee'}<br>
                                         <strong>Date:</strong> ${section.locked_at ? new Date(section.locked_at).toLocaleDateString() : 'Unknown'}
                                         ${section.committee_notes ? `<br><strong>Notes:</strong> ${section.committee_notes}` : ''}
+                                        ${section.new_text ? `<br><br><strong>Selected Text:</strong><div class="mt-2 p-2 bg-light rounded">${section.new_text}</div>` : ''}
                                     </div>
-                                    <button class="btn btn-danger w-100" onclick="unlockSection('${section.id}')">
+                                    <button class="btn btn-danger w-100" onclick="event.stopPropagation(); unlockSection('${section.id}')">
                                         <i class="bi bi-unlock"></i> Unlock Section
                                     </button>
                                 </div>
