@@ -346,47 +346,6 @@ app.post('/bylaws/api/sections/:sectionId/unlock', async (req, res) => {
   }
 });
 
-// Update section text (for fixing empty sections)
-app.post('/bylaws/api/sections/:sectionId/update-text', async (req, res) => {
-  try {
-    const { sectionId } = req.params;
-    const { original_text } = req.body;
-
-    const { data, error } = await supabase
-      .from('bylaw_sections')
-      .update({ original_text })
-      .eq('id', sectionId)
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    res.json({ success: true, section: data });
-  } catch (error) {
-    console.error('Error updating section text:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// Delete section (for removing duplicates)
-app.delete('/bylaws/api/sections/:sectionId', async (req, res) => {
-  try {
-    const { sectionId } = req.params;
-
-    const { error } = await supabase
-      .from('bylaw_sections')
-      .delete()
-      .eq('id', sectionId);
-
-    if (error) throw error;
-
-    res.json({ success: true, message: 'Section deleted successfully' });
-  } catch (error) {
-    console.error('Error deleting section:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
 // Export committee selections as JSON
 app.get('/bylaws/api/export/committee', async (req, res) => {
   try {
