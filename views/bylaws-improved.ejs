@@ -216,9 +216,6 @@
 
     <!-- Export Buttons -->
     <div class="header-buttons">
-        <button class="btn btn-info btn-sm" onclick="reParseDocument()">
-            <i class="bi bi-arrow-repeat"></i> Re-Parse Doc
-        </button>
         <button class="btn btn-warning btn-sm" onclick="exportCommittee()">
             <i class="bi bi-download"></i> Export Committee
         </button>
@@ -240,32 +237,7 @@
         <div class="sidebar" id="sidebarContainer">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h5 class="mb-0">Document Sections</h5>
-                <div class="d-flex gap-2 align-items-center">
-                    <button class="btn btn-sm btn-outline-primary multi-select-toggle"
-                            id="multiSelectToggle" onclick="toggleMultiSelectMode()">
-                        <i class="bi bi-check2-square"></i> Multi-Select
-                    </button>
-                    <span class="section-counter" id="sectionCount">0 sections</span>
-                </div>
-            </div>
-
-            <!-- Selection Info Banner -->
-            <div class="selection-info" id="selectionInfo">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <strong id="selectionCount">0 sections selected</strong>
-                        <div id="selectionRange" class="small mt-1"></div>
-                        <div id="selectionError" class="small text-danger mt-1" style="display: none;"></div>
-                    </div>
-                    <div class="d-flex gap-2">
-                        <button class="btn btn-sm btn-warning" onclick="showMultiSectionLockDialog()">
-                            <i class="bi bi-lock"></i> Lock Selected
-                        </button>
-                        <button class="btn btn-sm btn-secondary" onclick="clearSelection()">
-                            Clear
-                        </button>
-                    </div>
-                </div>
+                <span class="section-counter" id="sectionCount">0 sections</span>
             </div>
 
             <!-- Search Box -->
@@ -367,7 +339,7 @@
                         <div class="suggestions-area">
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <h6 class="mb-0">Suggestions</h6>
-                                <button class="btn btn-sm btn-primary" onclick="showNewSuggestionForm('${section.id}')">
+                                <button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); showNewSuggestionForm('${section.id}')">
                                     <i class="bi bi-plus-circle"></i> Add Suggestion
                                 </button>
                             </div>
@@ -391,10 +363,10 @@
                                             rows="2" placeholder="Why is this change needed?"></textarea>
                                     </div>
                                     <div class="d-flex gap-2">
-                                        <button class="btn btn-success btn-sm" onclick="submitSuggestion('${section.id}')">
+                                        <button class="btn btn-success btn-sm" onclick="event.stopPropagation(); submitSuggestion('${section.id}')">
                                             Submit
                                         </button>
-                                        <button class="btn btn-secondary btn-sm" onclick="hideNewSuggestionForm('${section.id}')">
+                                        <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); hideNewSuggestionForm('${section.id}')">
                                             Cancel
                                         </button>
                                     </div>
