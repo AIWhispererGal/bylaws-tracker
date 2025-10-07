@@ -431,10 +431,7 @@
                     <div class="suggestion-item">
                         <input type="radio" name="suggestion-${section.id}" value="${sug.id}" id="sug-${sug.id}">
                         <label for="sug-${sug.id}" class="ms-2" style="width: 100%;">
-                            <div class="d-flex justify-content-between">
-                                <strong>${sug.author_name}</strong>
-                                <span class="badge bg-secondary">${sug.support_count || 0} support</span>
-                            </div>
+                            <strong>${sug.author_name}</strong>
                             <div class="mt-2">${sug.suggested_text}</div>
                             ${sug.rationale ? `<div class="text-muted small mt-1">Rationale: ${sug.rationale}</div>` : ''}
                         </label>
