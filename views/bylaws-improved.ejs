@@ -336,7 +336,7 @@
                             </div>
                         </div>
 
-                        <div class="suggestions-area">
+                        <div class="suggestions-area" onclick="event.stopPropagation()">
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <h6 class="mb-0">Suggestions</h6>
                                 <button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); showNewSuggestionForm('${section.id}')">
@@ -344,23 +344,23 @@
                                 </button>
                             </div>
 
-                            <div id="newSuggestionForm-${section.id}" style="display: none;">
+                            <div id="newSuggestionForm-${section.id}" style="display: none;" onclick="event.stopPropagation()">
                                 <div class="new-suggestion-form">
                                     <h6>New Suggestion</h6>
                                     <div class="mb-2">
                                         <label class="form-label">Your Name</label>
                                         <input type="text" class="form-control" id="authorName-${section.id}"
-                                            placeholder="Enter your name">
+                                            placeholder="Enter your name" onclick="event.stopPropagation()">
                                     </div>
                                     <div class="mb-2">
                                         <label class="form-label">Suggested Text</label>
                                         <textarea class="form-control" id="suggestedText-${section.id}"
-                                            rows="3" placeholder="Enter your suggested amendment">${section.original_text || ''}</textarea>
+                                            rows="3" placeholder="Enter your suggested amendment" onclick="event.stopPropagation()">${section.original_text || ''}</textarea>
                                     </div>
                                     <div class="mb-3">
                                         <label class="form-label">Rationale (Optional)</label>
                                         <textarea class="form-control" id="rationale-${section.id}"
-                                            rows="2" placeholder="Why is this change needed?"></textarea>
+                                            rows="2" placeholder="Why is this change needed?" onclick="event.stopPropagation()"></textarea>
                                     </div>
                                     <div class="d-flex gap-2">
                                         <button class="btn btn-success btn-sm" onclick="event.stopPropagation(); submitSuggestion('${section.id}')">
