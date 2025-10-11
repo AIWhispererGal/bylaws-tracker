@@ -1,0 +1,66 @@
+{
+  "organizationName": "Corporate Bylaws Template",
+  "organizationType": "corporation",
+
+  "hierarchy": {
+    "levels": [
+      {
+        "name": "Article",
+        "type": "article",
+        "numbering": "roman",
+        "prefix": "ARTICLE ",
+        "depth": 0
+      },
+      {
+        "name": "Section",
+        "type": "section",
+        "numbering": "numeric",
+        "prefix": "Section ",
+        "depth": 1
+      },
+      {
+        "name": "Subsection",
+        "type": "subsection",
+        "numbering": "alphaLower",
+        "prefix": "(",
+        "depth": 2
+      }
+    ],
+    "maxDepth": 3,
+    "allowNesting": true
+  },
+
+  "workflow": {
+    "enabled": true,
+    "stages": [
+      {
+        "name": "Executive Draft",
+        "order": 1,
+        "color": "#87CEEB",
+        "permissions": ["executive"],
+        "actions": ["edit", "submit"]
+      },
+      {
+        "name": "Legal Review",
+        "order": 2,
+        "color": "#FFA500",
+        "permissions": ["legal"],
+        "actions": ["approve", "reject", "request_changes"]
+      },
+      {
+        "name": "Board Approval",
+        "order": 3,
+        "color": "#90EE90",
+        "permissions": ["board"],
+        "actions": ["approve", "reject"]
+      }
+    ],
+    "requireSequential": true
+  },
+
+  "suggestions": {
+    "enabled": false,
+    "allowAnonymous": false,
+    "allowMultiSection": true
+  }
+}

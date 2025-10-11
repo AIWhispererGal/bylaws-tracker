@@ -1,0 +1,85 @@
+<div class="welcome-screen text-center">
+    <div class="welcome-hero animate__animated animate__bounceIn">
+        <div class="hero-icon">
+            <i class="bi bi-stars"></i>
+        </div>
+        <h2 class="hero-title">Welcome to Your Governance Tool!</h2>
+        <p class="hero-subtitle">Let's get you set up in just 5 quick steps</p>
+    </div>
+
+    <div class="welcome-cards row g-4 mt-5">
+        <div class="col-md-4">
+            <div class="feature-card animate__animated animate__fadeInUp" style="animation-delay: 0.1s">
+                <div class="feature-icon">
+                    <i class="bi bi-building"></i>
+                </div>
+                <h4>Your Organization</h4>
+                <p>Tell us about your HOA, club, or organization</p>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="feature-card animate__animated animate__fadeInUp" style="animation-delay: 0.2s">
+                <div class="feature-icon">
+                    <i class="bi bi-file-earmark-text"></i>
+                </div>
+                <h4>Document Structure</h4>
+                <p>Choose how your bylaws are organized</p>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="feature-card animate__animated animate__fadeInUp" style="animation-delay: 0.3s">
+                <div class="feature-icon">
+                    <i class="bi bi-arrow-left-right"></i>
+                </div>
+                <h4>Approval Workflow</h4>
+                <p>Define who reviews and approves changes</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="welcome-checklist mt-5">
+        <div class="checklist-card">
+            <h4 class="mb-4">
+                <i class="bi bi-clipboard-check"></i>
+                Before you begin, have these ready:
+            </h4>
+            <div class="checklist-items text-start">
+                <div class="checklist-item">
+                    <i class="bi bi-circle"></i>
+                    <span>Your organization's name and basic info</span>
+                </div>
+                <div class="checklist-item">
+                    <i class="bi bi-circle"></i>
+                    <span>Your current bylaws document (Google Doc link or .docx file)</span>
+                </div>
+                <div class="checklist-item">
+                    <i class="bi bi-circle"></i>
+                    <span>Names of people who will review and approve changes</span>
+                </div>
+                <div class="checklist-item optional">
+                    <i class="bi bi-circle"></i>
+                    <span>Your organization's logo (optional)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="welcome-actions mt-5">
+        <button type="button" class="btn btn-primary btn-lg px-5" id="startSetupBtn">
+            Let's Get Started!
+            <i class="bi bi-arrow-right ms-2"></i>
+        </button>
+        <p class="mt-3 text-muted small">
+            <i class="bi bi-clock"></i>
+            Takes about 5 minutes to complete
+        </p>
+    </div>
+</div>
+
+<script>
+document.getElementById('startSetupBtn').addEventListener('click', function() {
+    window.location.href = '/setup/organization';
+});
+</script>

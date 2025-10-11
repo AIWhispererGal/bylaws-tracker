@@ -2,6 +2,9 @@ require('dotenv').config();
 const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
 const path = require('path');
+const session = require('express-session');
+const csrf = require('csurf');
+const expressLayouts = require('express-ejs-layouts');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -10,16 +13,41 @@ const PORT = process.env.PORT || 3000;
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 const APP_URL = process.env.APP_URL || 'http://localhost:3000';
+const SESSION_SECRET = process.env.SESSION_SECRET || 'development-secret-change-in-production';
 
 // Initialize Supabase client
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// Session middleware (must be before routes)
+app.use(session({
+  secret: SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
+}));
+
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public')));
 
-// CORS for Google Apps Script
+// CSRF protection (after session, before routes)
+const csrfProtection = csrf({ cookie: false });
+app.use((req, res, next) => {
+  // Skip CSRF for API routes and setup routes (setup uses multipart/form-data with file uploads)
+  if (req.path.startsWith('/bylaws/api/') ||
+      req.path.startsWith('/api/') ||
+      req.path.startsWith('/setup/')) {
+    return next();
+  }
+  csrfProtection(req, res, next);
+});
+
+// CORS configuration
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Headers', 'Content-Type');
@@ -27,13 +55,87 @@ app.use((req, res, next) => {
   next();
 });
 
-// Set view engine
+// Set view engine and layouts
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
+app.use(expressLayouts);
+app.set('layout', false); // Disable default layout, we'll specify per route
 
 // Make supabase available to all routes
 app.use((req, res, next) => {
   req.supabase = supabase;
+  next();
+});
+
+// ===========================================
+// SETUP WIZARD INTEGRATION
+// ===========================================
+
+/**
+ * Check if organization is configured in Supabase
+ * Caches result in session to avoid repeated DB queries
+ */
+async function checkSetupStatus(req) {
+  // Check session cache first
+  if (req.session && req.session.isConfigured !== undefined) {
+    return req.session.isConfigured;
+  }
+
+  try {
+    // Check if organizations table has any entries
+    const { data, error } = await supabase
+      .from('organizations')
+      .select('id')
+      .limit(1);
+
+    if (error) {
+      console.error('Error checking setup status:', error);
+      return false;
+    }
+
+    const isConfigured = data && data.length > 0;
+
+    // Cache in session
+    if (req.session) {
+      req.session.isConfigured = isConfigured;
+    }
+
+    return isConfigured;
+  } catch (error) {
+    console.error('Setup status check failed:', error);
+    return false;
+  }
+}
+
+// Mount setup routes
+const setupRoutes = require('./src/routes/setup');
+app.use('/setup', setupRoutes);
+
+// Setup detection middleware - redirect to setup if not configured
+app.use(async (req, res, next) => {
+  // Allowed paths that don't require setup
+  const allowedPaths = [
+    '/setup',
+    '/css/',
+    '/js/',
+    '/images/',
+    '/api/config',
+    '/api/health'
+  ];
+
+  const isAllowedPath = allowedPaths.some(path => req.path.startsWith(path));
+
+  if (isAllowedPath) {
+    return next();
+  }
+
+  // Check if setup is complete
+  const isConfigured = await checkSetupStatus(req);
+
+  if (!isConfigured) {
+    return res.redirect('/setup');
+  }
+
   next();
 });
 
@@ -126,12 +228,44 @@ app.get('/', (req, res) => {
   res.redirect('/bylaws');
 });
 
-// Config endpoint for Google Apps Script
+// Config endpoint for API clients
 app.get('/api/config', (req, res) => {
   res.json({
     APP_URL: APP_URL,
     status: 'connected'
   });
+});
+
+// Health check endpoint for Render
+app.get('/api/health', async (req, res) => {
+  try {
+    // Check database connection by querying a simple table
+    const { data, error } = await supabase
+      .from('bylaw_sections')
+      .select('id')
+      .limit(1);
+
+    if (error) {
+      console.error('Health check failed:', error);
+      return res.status(500).json({
+        status: 'unhealthy',
+        database: 'disconnected',
+        error: error.message
+      });
+    }
+
+    res.status(200).json({
+      status: 'healthy',
+      database: 'connected',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Health check error:', error);
+    res.status(500).json({
+      status: 'unhealthy',
+      error: error.message
+    });
+  }
 });
 
 // Bylaws routes
@@ -657,7 +791,6 @@ app.get('/bylaws/api/export/board', async (req, res) => {
 // Make APP_URL available to views
 app.use((req, res, next) => {
   res.locals.APP_URL = APP_URL;
-  res.locals.GOOGLE_DOC_ID = process.env.GOOGLE_DOC_ID;
   next();
 });
 
@@ -668,12 +801,5 @@ app.listen(PORT, () => {
   console.log('Current Configuration:');
   console.log(`- App URL: ${APP_URL}`);
   console.log(`- Supabase: ${SUPABASE_URL ? 'Connected' : 'Not configured'}`);
-  console.log(`- Google Doc ID: ${process.env.GOOGLE_DOC_ID || 'Not configured'}`);
-  console.log('');
-  console.log('To use NGROK:');
-  console.log('1. Run: ngrok http 3000');
-  console.log('2. Copy the HTTPS URL (e.g., https://abc123.ngrok.io)');
-  console.log('3. Update APP_URL in .env file');
-  console.log('4. Restart the server');
   console.log('');
 });

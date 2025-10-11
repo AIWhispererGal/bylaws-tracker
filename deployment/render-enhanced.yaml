@@ -1,0 +1,75 @@
+# Enhanced Render Blueprint for Bylaws Amendment Tracker
+# This file enables one-click deployment with automatic setup wizard
+
+services:
+  - type: web
+    name: bylaws-amendment-tracker
+    env: node
+    plan: free
+    region: oregon
+
+    # Build configuration
+    buildCommand: npm install
+    startCommand: npm start
+
+    # Health check for Render monitoring
+    healthCheckPath: /health
+
+    # Auto-deploy on git push
+    autoDeploy: true
+
+    # Environment variables
+    envVars:
+      # Node environment
+      - key: NODE_ENV
+        value: production
+
+      # Server port (Render's default)
+      - key: PORT
+        value: 10000
+
+      # App URL (auto-generated from Render)
+      - key: APP_URL
+        generateValue: true
+
+      # Session security (auto-generated)
+      - key: SESSION_SECRET
+        generateValue: true
+
+      # Setup wizard state flag
+      - key: SETUP_COMPLETED
+        value: "false"
+
+      # Supabase credentials (set via setup wizard)
+      - key: SUPABASE_URL
+        sync: false
+
+      - key: SUPABASE_ANON_KEY
+        sync: false
+
+      # Optional: Google Docs integration
+      - key: GOOGLE_DOC_ID
+        sync: false
+
+      # Optional: Organization branding
+      - key: ORGANIZATION_NAME
+        sync: false
+
+      # Optional: Render API access for auto-configuration
+      # (User can add this manually for enhanced setup experience)
+      - key: RENDER_API_KEY
+        sync: false
+
+      - key: RENDER_SERVICE_ID
+        sync: false
+
+# Optional: Static site for landing page
+# Uncomment if you want a separate landing page
+# - type: static
+#   name: bylaws-landing
+#   buildCommand: npm run build:landing
+#   staticPublishPath: ./landing/dist
+#   routes:
+#     - type: redirect
+#       source: /*
+#       destination: https://bylaws-amendment-tracker.onrender.com

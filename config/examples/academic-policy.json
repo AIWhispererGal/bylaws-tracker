@@ -1,0 +1,79 @@
+{
+  "organizationName": "Academic Policy Template",
+  "organizationType": "university",
+
+  "terminology": {
+    "documentName": "Policy Document",
+    "sectionName": "Section",
+    "articleName": "Chapter",
+    "chapterName": "Chapter"
+  },
+
+  "hierarchy": {
+    "levels": [
+      {
+        "name": "Chapter",
+        "type": "chapter",
+        "numbering": "numeric",
+        "prefix": "Chapter ",
+        "depth": 0
+      },
+      {
+        "name": "Section",
+        "type": "section",
+        "numbering": "numeric",
+        "prefix": "",
+        "depth": 1
+      },
+      {
+        "name": "Subsection",
+        "type": "subsection",
+        "numbering": "alpha",
+        "prefix": "",
+        "depth": 2
+      }
+    ],
+    "maxDepth": 4,
+    "allowNesting": true
+  },
+
+  "numbering": {
+    "separator": ".",
+    "displayFormat": "{number}"
+  },
+
+  "workflow": {
+    "enabled": true,
+    "stages": [
+      {
+        "name": "Faculty Draft",
+        "order": 1,
+        "color": "#87CEEB",
+        "permissions": ["faculty"],
+        "actions": ["edit", "submit"]
+      },
+      {
+        "name": "Department Review",
+        "order": 2,
+        "color": "#FFD700",
+        "permissions": ["department_head"],
+        "actions": ["approve", "reject", "request_revision"]
+      },
+      {
+        "name": "Senate Approval",
+        "order": 3,
+        "color": "#90EE90",
+        "permissions": ["senate_member"],
+        "actions": ["approve", "reject"]
+      }
+    ],
+    "requireSequential": true
+  },
+
+  "suggestions": {
+    "enabled": true,
+    "allowAnonymous": false,
+    "requireEmail": true,
+    "votingEnabled": true
+  }
+}

@@ -1,0 +1,288 @@
+<div class="processing-screen">
+    <div class="processing-container text-center">
+        <!-- Animated Spinner -->
+        <div class="processing-spinner mb-4 animate__animated animate__fadeIn">
+            <div class="spinner-border text-primary" role="status" style="width: 5rem; height: 5rem;">
+                <span class="visually-hidden">Processing...</span>
+            </div>
+        </div>
+
+        <!-- Main Message -->
+        <h2 class="processing-title mb-3">Setting Up Your Organization</h2>
+        <p class="processing-subtitle text-muted">This will only take a moment...</p>
+
+        <!-- Progress Checklist -->
+        <div class="processing-checklist mt-5">
+            <div class="checklist-item" data-step="organization" id="step-organization">
+                <div class="checklist-icon">
+                    <div class="spinner-border spinner-border-sm text-primary" role="status">
+                        <span class="visually-hidden">Processing...</span>
+                    </div>
+                </div>
+                <div class="checklist-text">Creating organization profile</div>
+            </div>
+
+            <div class="checklist-item pending" data-step="document" id="step-document">
+                <div class="checklist-icon">
+                    <i class="bi bi-circle"></i>
+                </div>
+                <div class="checklist-text">Setting up document structure</div>
+            </div>
+
+            <div class="checklist-item pending" data-step="workflow" id="step-workflow">
+                <div class="checklist-icon">
+                    <i class="bi bi-circle"></i>
+                </div>
+                <div class="checklist-text">Configuring approval workflow</div>
+            </div>
+
+            <div class="checklist-item pending" data-step="import" id="step-import">
+                <div class="checklist-icon">
+                    <i class="bi bi-circle"></i>
+                </div>
+                <div class="checklist-text">Importing your bylaws</div>
+            </div>
+
+            <div class="checklist-item pending" data-step="database" id="step-database">
+                <div class="checklist-icon">
+                    <i class="bi bi-circle"></i>
+                </div>
+                <div class="checklist-text">Initializing database</div>
+            </div>
+
+            <div class="checklist-item pending" data-step="finalize" id="step-finalize">
+                <div class="checklist-icon">
+                    <i class="bi bi-circle"></i>
+                </div>
+                <div class="checklist-text">Finalizing setup</div>
+            </div>
+        </div>
+
+        <!-- Fun Messages -->
+        <div class="fun-messages mt-5">
+            <div class="message-container">
+                <p class="fun-message text-muted" id="funMessage">
+                    <i class="bi bi-lightbulb"></i>
+                    Did you know? Most organizations review their bylaws annually.
+                </p>
+            </div>
+        </div>
+
+        <!-- Time Estimate -->
+        <div class="time-estimate mt-4">
+            <p class="text-muted small">
+                <i class="bi bi-clock"></i>
+                Estimated time remaining: <span id="timeRemaining">30 seconds</span>
+            </p>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="progress mt-4" style="height: 8px;">
+            <div
+                class="progress-bar progress-bar-striped progress-bar-animated"
+                role="progressbar"
+                id="progressBar"
+                style="width: 0%"
+                aria-valuenow="0"
+                aria-valuemin="0"
+                aria-maxnow="100"
+            ></div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Processing screen logic
+(function() {
+    const funMessages = [
+        "Did you know? Most organizations review their bylaws annually.",
+        "Governance made easy - you're setting up a powerful tool!",
+        "Your board will love how simple amendments become.",
+        "We're making sure everything is perfect for you.",
+        "Almost there! Creating your custom workflow.",
+        "Security is our priority - encrypting your data.",
+        "Building your document management system.",
+        "Preparing your collaboration workspace."
+    ];
+
+    let currentMessage = 0;
+    let progress = 0;
+    let completedSteps = 0;
+    const totalSteps = 6;
+
+    // Rotate fun messages
+    function rotateFunMessage() {
+        currentMessage = (currentMessage + 1) % funMessages.length;
+        const messageEl = document.getElementById('funMessage');
+        messageEl.style.opacity = '0';
+        setTimeout(() => {
+            messageEl.innerHTML = `<i class="bi bi-lightbulb"></i> ${funMessages[currentMessage]}`;
+            messageEl.style.opacity = '1';
+        }, 300);
+    }
+
+    // Update time remaining
+    function updateTimeRemaining(seconds) {
+        const timeEl = document.getElementById('timeRemaining');
+        if (seconds > 60) {
+            const mins = Math.ceil(seconds / 60);
+            timeEl.textContent = `${mins} minute${mins > 1 ? 's' : ''}`;
+        } else {
+            timeEl.textContent = `${seconds} seconds`;
+        }
+    }
+
+    // Complete a step
+    function completeStep(stepId) {
+        const stepEl = document.getElementById(`step-${stepId}`);
+        if (!stepEl) return;
+
+        // Remove spinner/pending state
+        stepEl.classList.remove('pending');
+
+        // Update icon to checkmark
+        const iconEl = stepEl.querySelector('.checklist-icon');
+        iconEl.innerHTML = '<i class="bi bi-check-circle-fill text-success"></i>';
+
+        // Add completed class with animation
+        stepEl.classList.add('completed', 'animate__animated', 'animate__bounceIn');
+
+        completedSteps++;
+
+        // Update progress bar
+        const progressPercent = (completedSteps / totalSteps) * 100;
+        document.getElementById('progressBar').style.width = `${progressPercent}%`;
+        document.getElementById('progressBar').setAttribute('aria-valuenow', progressPercent);
+
+        // Start next step spinner
+        const nextStepEl = stepEl.nextElementSibling;
+        if (nextStepEl && nextStepEl.classList.contains('checklist-item')) {
+            nextStepEl.classList.remove('pending');
+            const nextIconEl = nextStepEl.querySelector('.checklist-icon');
+            nextIconEl.innerHTML = `
+                <div class="spinner-border spinner-border-sm text-primary" role="status">
+                    <span class="visually-hidden">Processing...</span>
+                </div>
+            `;
+        }
+    }
+
+    // Poll for setup status
+    function pollSetupStatus() {
+        fetch('/setup/status')
+            .then(res => res.json())
+            .then(data => {
+                // Update completed steps
+                const steps = ['organization', 'document', 'workflow', 'import', 'database', 'finalize'];
+                steps.forEach(step => {
+                    if (data.completedSteps && data.completedSteps.includes(step)) {
+                        completeStep(step);
+                    }
+                });
+
+                // Update time remaining
+                if (data.estimatedSeconds) {
+                    updateTimeRemaining(data.estimatedSeconds);
+                }
+
+                // Check if complete
+                if (data.status === 'complete') {
+                    window.location.href = '/setup/success';
+                } else if (data.status === 'error') {
+                    showError(data.error || 'Setup failed. Please try again.');
+                } else {
+                    // Continue polling
+                    setTimeout(pollSetupStatus, 1000);
+                }
+            })
+            .catch(err => {
+                console.error('Status check failed:', err);
+                setTimeout(pollSetupStatus, 2000); // Retry with longer interval
+            });
+    }
+
+    // Show error
+    function showError(message) {
+        document.querySelector('.processing-container').innerHTML = `
+            <div class="alert alert-danger animate__animated animate__shakeX">
+                <h4 class="alert-heading">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    Setup Error
+                </h4>
+                <p>${message}</p>
+                <hr>
+                <p class="mb-0">
+                    <a href="/setup" class="btn btn-primary">Start Over</a>
+                    <a href="/help/setup-troubleshooting" class="btn btn-outline-secondary ms-2">Get Help</a>
+                </p>
+            </div>
+        `;
+    }
+
+    // Prevent navigation away
+    window.addEventListener('beforeunload', function(e) {
+        e.preventDefault();
+        e.returnValue = 'Setup is still in progress. Are you sure you want to leave?';
+        return e.returnValue;
+    });
+
+    // Initialize
+    setInterval(rotateFunMessage, 5000);
+    pollSetupStatus();
+})();
+</script>
+
+<style>
+.processing-screen {
+    min-height: 60vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.processing-checklist {
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.checklist-item {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    margin-bottom: 0.5rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.checklist-item.pending {
+    opacity: 0.5;
+}
+
+.checklist-item.completed {
+    background: #d4edda;
+}
+
+.checklist-icon {
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 1rem;
+    font-size: 1.2rem;
+}
+
+.checklist-text {
+    flex: 1;
+    font-weight: 500;
+}
+
+.fun-message {
+    transition: opacity 0.3s ease;
+}
+
+.message-container {
+    min-height: 50px;
+}
+</style>

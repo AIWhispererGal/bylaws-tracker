@@ -1,0 +1,471 @@
+{
+  "analysis_date": "2025-10-11",
+  "researcher": "Hive Mind RESEARCHER Agent",
+  "swarm_id": "swarm-1760221389887-x2atwleks",
+
+  "executive_summary": {
+    "total_unused_files_identified": 48,
+    "google_apps_script_files": 6,
+    "test_and_utility_files": 11,
+    "documentation_files": 16,
+    "data_files": 3,
+    "setup_subsystem_files": 6,
+    "deployment_files": 3,
+    "root_level_utilities": 3
+  },
+
+  "risk_assessment": {
+    "high_risk": "Google Apps Script files and src/setup subdirectory",
+    "medium_risk": "Documentation files and utility scripts",
+    "low_risk": "Test data files and temporary scripts",
+    "no_risk": "Already archived files from previous migration"
+  },
+
+  "unused_files_by_category": {
+
+    "1_google_apps_script": {
+      "description": "Legacy Google Docs integration scripts - SUPERSEDED by web-based setup wizard",
+      "risk_level": "HIGH - These are the core legacy files mentioned in the task",
+      "files": [
+        {
+          "path": "google-apps-script/Code.gs",
+          "size": "7.5 KB",
+          "last_modified": "Oct 6 (git tracked)",
+          "reason": "Original Google Apps Script - superseded by web setup wizard",
+          "dependencies": "None - standalone .gs file",
+          "recommendation": "ARCHIVE - Core legacy file no longer needed"
+        },
+        {
+          "path": "google-apps-script/SimpleCode.gs",
+          "size": "Unknown",
+          "reason": "Alternative/simplified version of Code.gs",
+          "dependencies": "None",
+          "recommendation": "ARCHIVE - Legacy variant"
+        },
+        {
+          "path": "google-apps-script/SmartCode.gs",
+          "size": "Unknown",
+          "reason": "Enhanced version of Code.gs",
+          "dependencies": "None",
+          "recommendation": "ARCHIVE - Legacy variant"
+        },
+        {
+          "path": "google-apps-script/BetterParser.gs",
+          "size": "Unknown",
+          "reason": "Parser variant for Google Apps Script",
+          "dependencies": "None",
+          "recommendation": "ARCHIVE - Legacy parser"
+        },
+        {
+          "path": "google-apps-script/SmartSemanticParser.gs",
+          "size": "Unknown",
+          "reason": "Another parser variant",
+          "dependencies": "None",
+          "recommendation": "ARCHIVE - Legacy parser"
+        },
+        {
+          "path": "google-apps-script/UPDATE_THIS_WITH_NGROK.gs",
+          "size": "Unknown",
+          "reason": "Configuration template file",
+          "dependencies": "None",
+          "recommendation": "ARCHIVE - No longer needed with web setup"
+        },
+        {
+          "path": "google-apps-script/Code.gs.txt",
+          "size": "Unknown",
+          "reason": "Text copy of Code.gs",
+          "dependencies": "None",
+          "recommendation": "ARCHIVE - Duplicate file"
+        }
+      ]
+    },
+
+    "2_root_level_utilities": {
+      "description": "Standalone utility scripts in root directory",
+      "risk_level": "MEDIUM - May have been used for initial data migration",
+      "files": [
+        {
+          "path": "parse_bylaws.js",
+          "size": "5.9 KB",
+          "reason": "Standalone parser for .txt files - hardcoded paths to OLD location (BYLAWSTOOL2)",
+          "dependencies": "fs, path modules only",
+          "evidence": "Hardcoded path: '/mnt/c/Users/mgall/OneDrive/Desktop/BYLAWSCOMMITTEE/BYLAWSTOOL2/RNCBYLAWS_2024.txt'",
+          "recommendation": "ARCHIVE - Used for initial migration, no longer needed"
+        },
+        {
+          "path": "upload_to_render.js",
+          "size": "1.5 KB",
+          "reason": "One-time upload script to Render deployment",
+          "dependencies": "https, fs modules",
+          "evidence": "Uploads parsed_sections.json to Render API",
+          "recommendation": "ARCHIVE - One-time migration tool"
+        },
+        {
+          "path": "test-multi-section.js",
+          "size": "3.0 KB",
+          "reason": "Test data generator for multi-section API feature",
+          "dependencies": "None - just console output",
+          "evidence": "No actual API calls, just test data definitions",
+          "recommendation": "ARCHIVE - Development testing artifact"
+        }
+      ]
+    },
+
+    "3_data_files": {
+      "description": "Sample/test data files in root directory",
+      "risk_level": "LOW - Sample data, can be regenerated",
+      "files": [
+        {
+          "path": "RNCBYLAWS_2024.docx",
+          "size": "450 KB",
+          "reason": "Sample bylaws document (Reseda NC specific)",
+          "recommendation": "ARCHIVE - Should be in examples/ or test fixtures"
+        },
+        {
+          "path": "RNCBYLAWS_2024.txt",
+          "size": "59 KB",
+          "reason": "Text version of sample document",
+          "recommendation": "ARCHIVE - Should be in examples/ or test fixtures"
+        },
+        {
+          "path": "~$CBYLAWS_2024.txt",
+          "size": "162 bytes",
+          "reason": "Microsoft Office temporary file",
+          "recommendation": "DELETE - System temp file, should be in .gitignore"
+        },
+        {
+          "path": "parsed_sections.json",
+          "size": "Unknown",
+          "reason": "Output from parse_bylaws.js",
+          "recommendation": "ARCHIVE - Generated file, should be in .gitignore"
+        }
+      ]
+    },
+
+    "4_src_setup_subsystem": {
+      "description": "ALTERNATIVE setup implementation in src/setup/ - appears to be superseded by src/routes/setup.js",
+      "risk_level": "HIGH - Entire parallel implementation that may be unused",
+      "files": [
+        {
+          "path": "src/setup/routes/setup.routes.js",
+          "reason": "Alternative setup routes implementation",
+          "evidence": "NOT imported anywhere in server.js or src/routes/setup.js",
+          "imports_in_codebase": "NONE FOUND",
+          "recommendation": "VERIFY THEN ARCHIVE - Appears to be unused parallel implementation"
+        },
+        {
+          "path": "src/setup/controllers/welcome.controller.js",
+          "reason": "Controller for alternative setup",
+          "evidence": "Only required by src/setup/routes/setup.routes.js",
+          "recommendation": "VERIFY THEN ARCHIVE"
+        },
+        {
+          "path": "src/setup/controllers/organization.controller.js",
+          "reason": "Controller for alternative setup",
+          "evidence": "Only required by src/setup/routes/setup.routes.js",
+          "recommendation": "VERIFY THEN ARCHIVE"
+        },
+        {
+          "path": "src/setup/middleware/setup-guard.middleware.js",
+          "reason": "Middleware for alternative setup",
+          "evidence": "Only required by src/setup/routes/setup.routes.js",
+          "recommendation": "VERIFY THEN ARCHIVE"
+        },
+        {
+          "path": "src/setup/views/setup-welcome.ejs",
+          "reason": "View template for alternative setup",
+          "evidence": "Not referenced by active setup routes",
+          "recommendation": "VERIFY THEN ARCHIVE"
+        },
+        {
+          "path": "src/setup/public/css/setup-wizard.css",
+          "reason": "Styles for alternative setup",
+          "evidence": "Duplicates public/css/setup-wizard.css",
+          "recommendation": "VERIFY THEN ARCHIVE - Duplicate file"
+        }
+      ]
+    },
+
+    "5_utils_directory": {
+      "description": "Utility functions that may have been refactored",
+      "risk_level": "MEDIUM - Need to verify imports",
+      "files": [
+        {
+          "path": "src/utils/hierarchyDetector.js",
+          "reason": "Hierarchy detection utility",
+          "evidence": "Tests import from this path: require('../../src/utils/hierarchyDetector')",
+          "actual_implementation": "ACTIVE in src/parsers/hierarchyDetector.js",
+          "recommendation": "CHECK IF DUPLICATE - May be superseded by src/parsers/hierarchyDetector.js"
+        }
+      ]
+    },
+
+    "6_deployment_utilities": {
+      "description": "One-time deployment helper scripts",
+      "risk_level": "LOW - Can be kept for future deployments",
+      "files": [
+        {
+          "path": "deployment/first-run-detector.js",
+          "size": "Unknown",
+          "reason": "Middleware for detecting first run",
+          "evidence": "Example code only, not imported anywhere",
+          "recommendation": "ARCHIVE - Reference implementation only"
+        },
+        {
+          "path": "deployment/render-api-service.js",
+          "size": "Unknown",
+          "reason": "Render API helper service",
+          "evidence": "Example code only, not imported anywhere",
+          "recommendation": "KEEP AS REFERENCE - May be useful for future automation"
+        }
+      ]
+    },
+
+    "7_excessive_documentation": {
+      "description": "Duplicate, outdated, or superseded documentation files",
+      "risk_level": "LOW - Documentation cleanup",
+      "files": [
+        {
+          "path": "IMPLEMENTATION_GUIDE.md",
+          "reason": "Superseded by comprehensive docs/ folder",
+          "recommendation": "ARCHIVE - Content moved to docs/"
+        },
+        {
+          "path": "PARSER_COMPLETE.md",
+          "reason": "Completion marker file",
+          "recommendation": "ARCHIVE - Historical marker"
+        },
+        {
+          "path": "DEPLOYMENT_GUIDE.md",
+          "reason": "Superseded by docs/DEPLOYMENT_INDEX.md and deployment/ folder",
+          "recommendation": "ARCHIVE - Content reorganized"
+        },
+        {
+          "path": "FINAL_SETUP_CHECKLIST.md",
+          "reason": "One-time setup checklist",
+          "recommendation": "ARCHIVE - Setup is now automated"
+        },
+        {
+          "path": "GENERALIZATION_GUIDE.md",
+          "reason": "Superseded by docs/GENERALIZATION_GUIDE.md",
+          "recommendation": "ARCHIVE - Duplicate in docs/"
+        },
+        {
+          "path": "SETUP_GUIDE.md",
+          "reason": "Superseded by docs/SETUP_GUIDE.md",
+          "recommendation": "ARCHIVE - Duplicate in docs/"
+        },
+        {
+          "path": "CONFIGURATION_GUIDE.md",
+          "reason": "Superseded by comprehensive docs/",
+          "recommendation": "ARCHIVE - Content in docs/"
+        },
+        {
+          "path": "MIGRATION_GUIDE.md",
+          "reason": "Historical migration instructions",
+          "recommendation": "ARCHIVE - Migration complete"
+        },
+        {
+          "path": "IMPLEMENTATION_SUMMARY.md",
+          "reason": "Historical summary",
+          "recommendation": "ARCHIVE - Superseded by current docs"
+        },
+        {
+          "path": "QUICKSTART.md",
+          "reason": "Superseded by README.md and docs/",
+          "recommendation": "ARCHIVE - Content consolidated"
+        },
+        {
+          "path": "DEBUG_FORM.md",
+          "reason": "Debugging notes from development",
+          "recommendation": "ARCHIVE - Historical debugging info"
+        },
+        {
+          "path": "RENDER_DEPLOYMENT_COMPLETE.md",
+          "reason": "Deployment completion marker",
+          "recommendation": "ARCHIVE - Historical marker"
+        }
+      ]
+    },
+
+    "8_debug_and_analysis_scripts": {
+      "description": "Scripts used during development for debugging and analysis",
+      "risk_level": "LOW - Development artifacts",
+      "files": [
+        {
+          "path": "scripts/debug-empty-sections.js",
+          "reason": "Debugging script for empty sections issue",
+          "recommendation": "ARCHIVE - Issue resolved"
+        },
+        {
+          "path": "scripts/debug-parser.js",
+          "reason": "Parser debugging utility",
+          "recommendation": "ARCHIVE - Development tool"
+        },
+        {
+          "path": "scripts/analyze-empty-sections.js",
+          "reason": "Analysis script for empty sections",
+          "recommendation": "ARCHIVE - Issue resolved"
+        },
+        {
+          "path": "scripts/analyze-filtered-content.js",
+          "reason": "Content filtering analysis",
+          "recommendation": "ARCHIVE - Development tool"
+        },
+        {
+          "path": "scripts/analyze-lost-content.js",
+          "reason": "Lost content analysis",
+          "recommendation": "ARCHIVE - Development tool"
+        },
+        {
+          "path": "scripts/analyze-missing-words.js",
+          "reason": "Missing words analysis",
+          "recommendation": "ARCHIVE - Development tool"
+        },
+        {
+          "path": "scripts/analyze-parser-issues.js",
+          "reason": "Parser issues analysis",
+          "recommendation": "ARCHIVE - Development tool"
+        },
+        {
+          "path": "scripts/analyze-parser-output.js",
+          "reason": "Parser output analysis",
+          "recommendation": "ARCHIVE - Development tool"
+        },
+        {
+          "path": "scripts/analyze-text-normalization.js",
+          "reason": "Text normalization analysis",
+          "recommendation": "ARCHIVE - Development tool"
+        },
+        {
+          "path": "scripts/check-article-content.js",
+          "reason": "Article content checker",
+          "recommendation": "ARCHIVE - Development tool"
+        },
+        {
+          "path": "scripts/check-header-content.js",
+          "reason": "Header content checker",
+          "recommendation": "ARCHIVE - Development tool"
+        },
+        {
+          "path": "scripts/check-parsed-content.js",
+          "reason": "Parsed content checker",
+          "recommendation": "ARCHIVE - Development tool"
+        },
+        {
+          "path": "scripts/test-extraction.js",
+          "reason": "Extraction testing",
+          "recommendation": "ARCHIVE - Development tool"
+        },
+        {
+          "path": "scripts/test-hierarchy-patterns.js",
+          "reason": "Hierarchy pattern testing",
+          "recommendation": "ARCHIVE - Development tool"
+        },
+        {
+          "path": "scripts/test-rnc-actual.js",
+          "reason": "RNC-specific testing",
+          "recommendation": "ARCHIVE - Development tool"
+        },
+        {
+          "path": "scripts/test-rnc-patterns.js",
+          "reason": "RNC pattern testing",
+          "recommendation": "ARCHIVE - Development tool"
+        },
+        {
+          "path": "scripts/find-empty-sections.js",
+          "reason": "Empty sections finder",
+          "recommendation": "ARCHIVE - Development tool"
+        }
+      ]
+    }
+  },
+
+  "active_files_that_should_stay": {
+    "core_application": [
+      "server.js",
+      "package.json",
+      "package-lock.json"
+    ],
+    "source_code": [
+      "src/routes/setup.js",
+      "src/parsers/wordParser.js",
+      "src/parsers/googleDocsParser.js",
+      "src/parsers/hierarchyDetector.js",
+      "src/parsers/numberingSchemes.js",
+      "src/services/setupService.js",
+      "src/services/sectionStorage.js",
+      "src/config/*.js",
+      "src/middleware/setup-required.js"
+    ],
+    "views": [
+      "views/bylaws-improved.ejs",
+      "views/setup/*.ejs"
+    ],
+    "public": [
+      "public/css/setup-wizard.css",
+      "public/js/setup-wizard.js"
+    ],
+    "documentation": [
+      "README.md",
+      "CLAUDE.md",
+      "docs/**/*.md"
+    ],
+    "database": [
+      "database/schema.sql",
+      "database/migration_001_multi_section.sql"
+    ],
+    "deployment": [
+      "render.yaml",
+      "deployment/supabase-setup-helper.js",
+      "deployment/RENDER_DEPLOYMENT_GUIDE.md"
+    ],
+    "scripts_active": [
+      "scripts/reset-for-testing.js",
+      "scripts/run-migration.js",
+      "scripts/fix-schema.js",
+      "scripts/verify-integration.js"
+    ],
+    "tests": [
+      "tests/**/*.test.js",
+      "jest.config.js"
+    ]
+  },
+
+  "recommended_archive_structure": {
+    "archive/": {
+      "google-apps-script/": "All 7 .gs files",
+      "legacy-utilities/": "parse_bylaws.js, upload_to_render.js, test-multi-section.js",
+      "sample-data/": "RNCBYLAWS_2024.docx, RNCBYLAWS_2024.txt, parsed_sections.json",
+      "setup-v1-unused/": "All src/setup/* files if verified as unused",
+      "debug-scripts/": "All scripts/analyze-*.js, scripts/debug-*.js, scripts/test-*.js",
+      "historical-docs/": "All root-level .md files being superseded"
+    }
+  },
+
+  "verification_steps_needed": {
+    "step_1": {
+      "action": "Verify src/setup/ directory is unused",
+      "command": "grep -r 'src/setup' --include='*.js' --exclude-dir=src/setup",
+      "expected": "No imports found outside of src/setup directory"
+    },
+    "step_2": {
+      "action": "Verify src/utils/hierarchyDetector.js vs src/parsers/hierarchyDetector.js",
+      "command": "diff src/utils/hierarchyDetector.js src/parsers/hierarchyDetector.js",
+      "expected": "Check if files are identical or if utils version is unused"
+    },
+    "step_3": {
+      "action": "Check if any scripts are still referenced in package.json",
+      "command": "grep -E 'parse_bylaws|upload_to_render|test-multi' package.json",
+      "expected": "No references found"
+    }
+  },
+
+  "summary": {
+    "total_files_to_archive": 48,
+    "space_savings_estimate": "~2-3 MB (mostly documentation)",
+    "code_cleanup_benefit": "Removes confusion between active and legacy implementations",
+    "risk_mitigation": "All files should be archived (not deleted) for 6 months",
+    "google_apps_priority": "HIGH - Primary reason for this analysis"
+  }
+}

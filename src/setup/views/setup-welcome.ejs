@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %></title>
+  <link rel="stylesheet" href="/css/setup-wizard.css">
+</head>
+<body class="setup-wizard">
+  <div class="setup-container">
+    <!-- Header -->
+    <header class="setup-header">
+      <div class="setup-logo">
+        <span class="logo-icon">📋</span>
+        <span class="logo-text">Bylaws Tracker</span>
+      </div>
+    </header>
+
+    <!-- Progress Bar -->
+    <div class="setup-progress">
+      <div class="progress-bar">
+        <div class="progress-fill" style="width: <%= progress.percentage %>%"></div>
+      </div>
+      <div class="progress-text">Step <%= progress.current %> of <%= progress.total %></div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="setup-main">
+      <div class="setup-card">
+        <!-- Welcome Icon -->
+        <div class="setup-icon">🎉</div>
+
+        <!-- Title -->
+        <h1 class="setup-title">Welcome!</h1>
+
+        <!-- Description -->
+        <div class="setup-description">
+          <p class="lead">Your Bylaws Amendment Tracker is deployed!</p>
+          <p>Let's get you set up in just 5 steps<br>(Takes about 5 minutes)</p>
+        </div>
+
+        <!-- Steps Preview -->
+        <div class="steps-preview">
+          <div class="step-item">
+            <span class="step-number">1️⃣</span>
+            <span class="step-text">Tell us about your organization</span>
+          </div>
+          <div class="step-item">
+            <span class="step-number">2️⃣</span>
+            <span class="step-text">Choose your document type</span>
+          </div>
+          <div class="step-item">
+            <span class="step-number">3️⃣</span>
+            <span class="step-text">Set up approval workflow</span>
+          </div>
+          <div class="step-item">
+            <span class="step-number">4️⃣</span>
+            <span class="step-text">Upload your document</span>
+          </div>
+          <div class="step-item">
+            <span class="step-number">5️⃣</span>
+            <span class="step-text">Finalize setup</span>
+          </div>
+        </div>
+
+        <!-- Call to Action -->
+        <div class="setup-actions">
+          <a href="/setup/organization" class="btn btn-primary btn-lg">
+            Let's Get Started
+          </a>
+        </div>
+
+        <!-- Reassurance -->
+        <p class="setup-note">
+          Don't worry - you can change any of this later!
+        </p>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="setup-footer">
+      <div class="footer-links">
+        <a href="#" onclick="showVideoModal(); return false;">Watch 2-min Video</a>
+        <span class="separator">•</span>
+        <a href="/docs/faq" target="_blank">FAQ</a>
+        <span class="separator">•</span>
+        <a href="/docs/help" target="_blank">Get Help</a>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Video Modal (hidden by default) -->
+  <div id="videoModal" class="modal" style="display: none;">
+    <div class="modal-overlay" onclick="hideVideoModal()"></div>
+    <div class="modal-content">
+      <button class="modal-close" onclick="hideVideoModal()">&times;</button>
+      <h2>Setup Walkthrough</h2>
+      <div class="video-container">
+        <!-- Replace with actual video embed -->
+        <iframe
+          width="560"
+          height="315"
+          src="https://www.youtube.com/embed/YOUR_VIDEO_ID"
+          frameborder="0"
+          allowfullscreen>
+        </iframe>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showVideoModal() {
+      document.getElementById('videoModal').style.display = 'flex';
+    }
+
+    function hideVideoModal() {
+      document.getElementById('videoModal').style.display = 'none';
+    }
+
+    // Track page view
+    if (typeof analytics !== 'undefined') {
+      analytics.page('Setup Welcome');
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,123 @@
+{
+  "organizationId": null,
+  "organizationName": "Example Organization",
+  "organizationType": "neighborhood_council",
+
+  "terminology": {
+    "documentName": "Bylaws",
+    "sectionName": "Section",
+    "articleName": "Article",
+    "chapterName": "Chapter",
+    "subsectionName": "Subsection"
+  },
+
+  "hierarchy": {
+    "levels": [
+      {
+        "name": "Article",
+        "type": "article",
+        "numbering": "roman",
+        "prefix": "Article ",
+        "depth": 0
+      },
+      {
+        "name": "Section",
+        "type": "section",
+        "numbering": "numeric",
+        "prefix": "Section ",
+        "depth": 1
+      }
+    ],
+    "maxDepth": 5,
+    "allowNesting": true
+  },
+
+  "numbering": {
+    "separator": ".",
+    "displayFormat": "{prefix}{number}"
+  },
+
+  "workflow": {
+    "enabled": true,
+    "stages": [
+      {
+        "name": "Committee Review",
+        "order": 1,
+        "color": "#FFD700",
+        "icon": "clipboard-check",
+        "permissions": ["committee_member", "committee_chair", "admin"],
+        "actions": ["approve", "reject", "edit", "comment"],
+        "canLock": true,
+        "canEdit": true,
+        "canApprove": true,
+        "requiresApproval": true
+      },
+      {
+        "name": "Board Approval",
+        "order": 2,
+        "color": "#90EE90",
+        "icon": "check-circle",
+        "permissions": ["board_member", "admin"],
+        "actions": ["approve", "reject", "comment"],
+        "canLock": false,
+        "canEdit": false,
+        "canApprove": true,
+        "requiresApproval": true
+      }
+    ],
+    "allowSkipStages": false,
+    "requireSequential": true
+  },
+
+  "suggestions": {
+    "enabled": true,
+    "allowAnonymous": true,
+    "requireEmail": true,
+    "allowMultiSection": true,
+    "maxSectionsPerSuggestion": 10,
+    "votingEnabled": true,
+    "supportThreshold": 5
+  },
+
+  "export": {
+    "formats": ["json", "pdf"],
+    "includeHistory": true,
+    "includeComments": false,
+    "anonymizeAuthors": false
+  },
+
+  "integrations": {
+    "googleDocs": {
+      "enabled": true,
+      "autoSync": false,
+      "syncInterval": 3600000,
+      "parseOnSync": true
+    },
+    "email": {
+      "enabled": false,
+      "notifications": true
+    }
+  },
+
+  "security": {
+    "requireAuth": false,
+    "allowPublicView": true,
+    "allowPublicSuggestions": true,
+    "enableRLS": true
+  },
+
+  "display": {
+    "theme": "light",
+    "showLineNumbers": true,
+    "showDiff": true,
+    "highlightChanges": true,
+    "compactMode": false
+  },
+
+  "features": {
+    "versionControl": true,
+    "auditLog": true,
+    "realTimeCollaboration": false,
+    "aiSuggestions": false
+  }
+}

@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="<%= csrfToken %>">
+    <title>Setup Wizard - <%= title || 'Organization Setup' %></title>
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+
+    <!-- Animate.css for delightful transitions -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+
+    <!-- Custom Setup Wizard Styles -->
+    <link rel="stylesheet" href="/css/setup-wizard.css">
+</head>
+<body class="setup-wizard-body">
+    <div class="setup-container">
+        <!-- Header -->
+        <header class="setup-header">
+            <div class="container">
+                <div class="logo-section">
+                    <i class="bi bi-rocket-takeoff"></i>
+                    <h1>Setup Your Organization</h1>
+                </div>
+            </div>
+        </header>
+
+        <!-- Progress Indicator -->
+        <div class="progress-section">
+            <div class="container">
+                <div class="progress-stepper">
+                    <div class="step <%= currentStep >= 1 ? 'active' : '' %> <%= currentStep > 1 ? 'completed' : '' %>" data-step="1">
+                        <div class="step-circle">
+                            <% if (currentStep > 1) { %>
+                                <i class="bi bi-check-lg"></i>
+                            <% } else { %>
+                                <span>1</span>
+                            <% } %>
+                        </div>
+                        <div class="step-label">Welcome</div>
+                    </div>
+
+                    <div class="step-line"></div>
+
+                    <div class="step <%= currentStep >= 2 ? 'active' : '' %> <%= currentStep > 2 ? 'completed' : '' %>" data-step="2">
+                        <div class="step-circle">
+                            <% if (currentStep > 2) { %>
+                                <i class="bi bi-check-lg"></i>
+                            <% } else { %>
+                                <span>2</span>
+                            <% } %>
+                        </div>
+                        <div class="step-label">Organization</div>
+                    </div>
+
+                    <div class="step-line"></div>
+
+                    <div class="step <%= currentStep >= 3 ? 'active' : '' %> <%= currentStep > 3 ? 'completed' : '' %>" data-step="3">
+                        <div class="step-circle">
+                            <% if (currentStep > 3) { %>
+                                <i class="bi bi-check-lg"></i>
+                            <% } else { %>
+                                <span>3</span>
+                            <% } %>
+                        </div>
+                        <div class="step-label">Document</div>
+                    </div>
+
+                    <div class="step-line"></div>
+
+                    <div class="step <%= currentStep >= 4 ? 'active' : '' %> <%= currentStep > 4 ? 'completed' : '' %>" data-step="4">
+                        <div class="step-circle">
+                            <% if (currentStep > 4) { %>
+                                <i class="bi bi-check-lg"></i>
+                            <% } else { %>
+                                <span>4</span>
+                            <% } %>
+                        </div>
+                        <div class="step-label">Workflow</div>
+                    </div>
+
+                    <div class="step-line"></div>
+
+                    <div class="step <%= currentStep >= 5 ? 'active' : '' %> <%= currentStep > 5 ? 'completed' : '' %>" data-step="5">
+                        <div class="step-circle">
+                            <% if (currentStep > 5) { %>
+                                <i class="bi bi-check-lg"></i>
+                            <% } else { %>
+                                <span>5</span>
+                            <% } %>
+                        </div>
+                        <div class="step-label">Import</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <main class="setup-main">
+            <div class="container">
+                <div class="setup-content animate__animated animate__fadeIn">
+                    <%- include('./document-type') %>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="setup-footer">
+            <div class="container">
+                <div class="footer-content">
+                    <p class="text-muted">
+                        <i class="bi bi-question-circle"></i>
+                        Need help? <a href="/help/setup" target="_blank">View setup guide</a>
+                    </p>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Custom Setup Wizard JavaScript -->
+    <script src="/js/setup-wizard.js"></script>
+</body>
+</html>

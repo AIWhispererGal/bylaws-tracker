@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="<%= csrfToken %>">
+    <title>Setup Wizard - Processing Setup</title>
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+
+    <!-- Animate.css for delightful transitions -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+
+    <!-- Custom Setup Wizard Styles -->
+    <link rel="stylesheet" href="/css/setup-wizard.css">
+</head>
+<body class="setup-wizard-body">
+    <div class="setup-container">
+        <!-- Header -->
+        <header class="setup-header">
+            <div class="container">
+                <div class="logo-section">
+                    <i class="bi bi-rocket-takeoff"></i>
+                    <h1>Setup Your Organization</h1>
+                </div>
+            </div>
+        </header>
+
+        <!-- Progress Indicator -->
+        <div class="progress-section">
+            <div class="container">
+                <div class="progress-stepper">
+                    <div class="step completed" data-step="1">
+                        <div class="step-circle">
+                            <i class="bi bi-check-lg"></i>
+                        </div>
+                        <div class="step-label">Welcome</div>
+                    </div>
+
+                    <div class="step-line"></div>
+
+                    <div class="step completed" data-step="2">
+                        <div class="step-circle">
+                            <i class="bi bi-check-lg"></i>
+                        </div>
+                        <div class="step-label">Organization</div>
+                    </div>
+
+                    <div class="step-line"></div>
+
+                    <div class="step completed" data-step="3">
+                        <div class="step-circle">
+                            <i class="bi bi-check-lg"></i>
+                        </div>
+                        <div class="step-label">Document</div>
+                    </div>
+
+                    <div class="step-line"></div>
+
+                    <div class="step completed" data-step="4">
+                        <div class="step-circle">
+                            <i class="bi bi-check-lg"></i>
+                        </div>
+                        <div class="step-label">Workflow</div>
+                    </div>
+
+                    <div class="step-line"></div>
+
+                    <div class="step active" data-step="5">
+                        <div class="step-circle">
+                            <span>5</span>
+                        </div>
+                        <div class="step-label">Processing</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <main class="setup-main">
+            <div class="container">
+                <div class="setup-content animate__animated animate__fadeIn">
+                    <div class="processing-screen">
+                        <div class="processing-container text-center">
+                            <!-- Animated Spinner -->
+                            <div class="processing-spinner mb-4 animate__animated animate__fadeIn">
+                                <div class="spinner-border text-primary" role="status" style="width: 5rem; height: 5rem;">
+                                    <span class="visually-hidden">Processing...</span>
+                                </div>
+                            </div>
+
+                            <!-- Main Message -->
+                            <h2 class="processing-title mb-3">Setting Up Your Organization</h2>
+                            <p class="processing-subtitle text-muted">This will only take a moment...</p>
+
+                            <!-- Current Step Display -->
+                            <div class="current-step-display mt-4 mb-4">
+                                <div class="alert alert-info border-0 shadow-sm">
+                                    <div class="d-flex align-items-center justify-content-center">
+                                        <div class="spinner-border spinner-border-sm me-3" role="status">
+                                            <span class="visually-hidden">Processing...</span>
+                                        </div>
+                                        <div>
+                                            <strong>Current Step:</strong>
+                                            <span id="currentStepName">Initializing...</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Progress Bar with Percentage -->
+                            <div class="progress-wrapper mb-4">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="text-muted small">Progress</span>
+                                    <span class="badge bg-primary" id="progressPercentage">0%</span>
+                                </div>
+                                <div class="progress" style="height: 12px;">
+                                    <div
+                                        class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
+                                        role="progressbar"
+                                        id="progressBar"
+                                        style="width: 0%"
+                                        aria-valuenow="0"
+                                        aria-valuemin="0"
+                                        aria-valuemax="100"
+                                    ></div>
+                                </div>
+                            </div>
+
+                            <!-- Progress Checklist -->
+                            <div class="processing-checklist mt-5">
+                                <div class="checklist-item" data-step="organization" id="step-organization">
+                                    <div class="checklist-icon">
+                                        <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                            <span class="visually-hidden">Processing...</span>
+                                        </div>
+                                    </div>
+                                    <div class="checklist-text">Creating organization profile</div>
+                                </div>
+
+                                <div class="checklist-item pending" data-step="document" id="step-document">
+                                    <div class="checklist-icon">
+                                        <i class="bi bi-circle"></i>
+                                    </div>
+                                    <div class="checklist-text">Setting up document structure</div>
+                                </div>
+
+                                <div class="checklist-item pending" data-step="workflow" id="step-workflow">
+                                    <div class="checklist-icon">
+                                        <i class="bi bi-circle"></i>
+                                    </div>
+                                    <div class="checklist-text">Configuring approval workflow</div>
+                                </div>
+
+                                <div class="checklist-item pending" data-step="import" id="step-import">
+                                    <div class="checklist-icon">
+                                        <i class="bi bi-circle"></i>
+                                    </div>
+                                    <div class="checklist-text">Importing your bylaws</div>
+                                </div>
+
+                                <div class="checklist-item pending" data-step="database" id="step-database">
+                                    <div class="checklist-icon">
+                                        <i class="bi bi-circle"></i>
+                                    </div>
+                                    <div class="checklist-text">Initializing database</div>
+                                </div>
+
+                                <div class="checklist-item pending" data-step="finalize" id="step-finalize">
+                                    <div class="checklist-icon">
+                                        <i class="bi bi-circle"></i>
+                                    </div>
+                                    <div class="checklist-text">Finalizing setup</div>
+                                </div>
+                            </div>
+
+                            <!-- Fun Messages -->
+                            <div class="fun-messages mt-5">
+                                <div class="message-container">
+                                    <p class="fun-message text-muted" id="funMessage">
+                                        <i class="bi bi-lightbulb"></i>
+                                        Did you know? Most organizations review their bylaws annually.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <!-- Time Estimate -->
+                            <div class="time-estimate mt-4">
+                                <p class="text-muted small">
+                                    <i class="bi bi-clock"></i>
+                                    Estimated time remaining: <span id="timeRemaining">calculating...</span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="setup-footer">
+            <div class="container">
+                <div class="footer-content">
+                    <p class="text-muted">
+                        <i class="bi bi-shield-check"></i>
+                        Your data is being securely processed
+                    </p>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Custom Setup Wizard JavaScript -->
+    <script src="/js/setup-wizard.js"></script>
+
+    <!-- Processing Logic -->
+    <script>
+    (function() {
+        const funMessages = [
+            "Did you know? Most organizations review their bylaws annually.",
+            "Governance made easy - you're setting up a powerful tool!",
+            "Your board will love how simple amendments become.",
+            "We're making sure everything is perfect for you.",
+            "Almost there! Creating your custom workflow.",
+            "Security is our priority - encrypting your data.",
+            "Building your document management system.",
+            "Preparing your collaboration workspace."
+        ];
+
+        const stepNames = {
+            'organization': 'Creating organization profile',
+            'document': 'Setting up document structure',
+            'workflow': 'Configuring approval workflow',
+            'import': 'Importing your bylaws',
+            'database': 'Initializing database',
+            'finalize': 'Finalizing setup'
+        };
+
+        let currentMessage = 0;
+        let completedSteps = new Set();
+        const totalSteps = 6;
+        let pollInterval = null;
+        let lastProgress = 0;
+
+        // Rotate fun messages
+        function rotateFunMessage() {
+            currentMessage = (currentMessage + 1) % funMessages.length;
+            const messageEl = document.getElementById('funMessage');
+            messageEl.style.opacity = '0';
+            setTimeout(() => {
+                messageEl.innerHTML = `<i class="bi bi-lightbulb"></i> ${funMessages[currentMessage]}`;
+                messageEl.style.opacity = '1';
+            }, 300);
+        }
+
+        // Update time remaining
+        function updateTimeRemaining(seconds) {
+            const timeEl = document.getElementById('timeRemaining');
+            if (seconds === null || seconds === undefined) {
+                timeEl.textContent = 'calculating...';
+            } else if (seconds <= 0) {
+                timeEl.textContent = 'completing...';
+            } else if (seconds > 60) {
+                const mins = Math.ceil(seconds / 60);
+                timeEl.textContent = `${mins} minute${mins > 1 ? 's' : ''}`;
+            } else {
+                timeEl.textContent = `${seconds} second${seconds > 1 ? 's' : ''}`;
+            }
+        }
+
+        // Update current step name
+        function updateCurrentStepName(stepId) {
+            const nameEl = document.getElementById('currentStepName');
+            const stepName = stepNames[stepId] || 'Processing...';
+            nameEl.textContent = stepName;
+        }
+
+        // Update progress percentage
+        function updateProgressBar(percentage) {
+            const progressBar = document.getElementById('progressBar');
+            const progressBadge = document.getElementById('progressPercentage');
+
+            progressBar.style.width = `${percentage}%`;
+            progressBar.setAttribute('aria-valuenow', percentage);
+            progressBadge.textContent = `${Math.round(percentage)}%`;
+
+            lastProgress = percentage;
+        }
+
+        // Complete a step
+        function completeStep(stepId) {
+            if (completedSteps.has(stepId)) return;
+
+            const stepEl = document.getElementById(`step-${stepId}`);
+            if (!stepEl) return;
+
+            // Remove spinner/pending state
+            stepEl.classList.remove('pending');
+
+            // Update icon to checkmark
+            const iconEl = stepEl.querySelector('.checklist-icon');
+            iconEl.innerHTML = '<i class="bi bi-check-circle-fill text-success"></i>';
+
+            // Add completed class with animation
+            stepEl.classList.add('completed', 'animate__animated', 'animate__bounceIn');
+
+            completedSteps.add(stepId);
+
+            // Start next step spinner
+            const nextStepEl = stepEl.nextElementSibling;
+            if (nextStepEl && nextStepEl.classList.contains('checklist-item')) {
+                nextStepEl.classList.remove('pending');
+                const nextIconEl = nextStepEl.querySelector('.checklist-icon');
+                nextIconEl.innerHTML = `
+                    <div class="spinner-border spinner-border-sm text-primary" role="status">
+                        <span class="visually-hidden">Processing...</span>
+                    </div>
+                `;
+
+                // Update current step name
+                const nextStepId = nextStepEl.getAttribute('data-step');
+                if (nextStepId) {
+                    updateCurrentStepName(nextStepId);
+                }
+            }
+        }
+
+        // Poll for setup status
+        function pollSetupStatus() {
+            fetch('/setup/status')
+                .then(res => res.json())
+                .then(data => {
+                    // Update progress bar
+                    if (data.progressPercentage !== undefined) {
+                        updateProgressBar(data.progressPercentage);
+                    }
+
+                    // Update current step
+                    if (data.currentStep) {
+                        updateCurrentStepName(data.currentStep);
+                    }
+
+                    // Update completed steps
+                    const steps = ['organization', 'document', 'workflow', 'import', 'database', 'finalize'];
+                    steps.forEach(step => {
+                        if (data.completedSteps && data.completedSteps.includes(step)) {
+                            completeStep(step);
+                        }
+                    });
+
+                    // Update time remaining
+                    if (data.estimatedSeconds !== undefined) {
+                        updateTimeRemaining(data.estimatedSeconds);
+                    }
+
+                    // Check if complete
+                    if (data.status === 'complete') {
+                        updateProgressBar(100);
+                        updateCurrentStepName('finalize');
+                        completeStep('finalize');
+
+                        setTimeout(() => {
+                            window.location.href = '/setup/success';
+                        }, 1000);
+
+                        if (pollInterval) {
+                            clearInterval(pollInterval);
+                        }
+                    } else if (data.status === 'error') {
+                        showError(data.error || 'Setup failed. Please try again.', data.errorDetails);
+
+                        if (pollInterval) {
+                            clearInterval(pollInterval);
+                        }
+                    }
+                })
+                .catch(err => {
+                    console.error('Status check failed:', err);
+                    // Continue polling even on error
+                });
+        }
+
+        // Show error
+        function showError(message, details) {
+            const processingContainer = document.querySelector('.processing-container');
+            processingContainer.innerHTML = `
+                <div class="error-container animate__animated animate__fadeIn">
+                    <div class="alert alert-danger shadow-sm animate__animated animate__shakeX">
+                        <div class="d-flex align-items-start">
+                            <div class="flex-shrink-0">
+                                <i class="bi bi-exclamation-triangle-fill fs-3 text-danger"></i>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h4 class="alert-heading mb-3">Setup Error</h4>
+                                <p class="mb-3">${message}</p>
+                                ${details ? `
+                                    <div class="error-details">
+                                        <button class="btn btn-sm btn-outline-danger mb-2" type="button" data-bs-toggle="collapse" data-bs-target="#errorDetails">
+                                            <i class="bi bi-info-circle"></i> Show Details
+                                        </button>
+                                        <div class="collapse" id="errorDetails">
+                                            <div class="card card-body bg-light text-dark small">
+                                                <pre class="mb-0">${details}</pre>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ` : ''}
+                                <hr>
+                                <div class="d-flex gap-2 flex-wrap">
+                                    <a href="/setup" class="btn btn-primary">
+                                        <i class="bi bi-arrow-clockwise"></i> Start Over
+                                    </a>
+                                    <a href="/help/setup-troubleshooting" class="btn btn-outline-secondary" target="_blank">
+                                        <i class="bi bi-question-circle"></i> Get Help
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Prevent navigation away during processing
+        window.addEventListener('beforeunload', function(e) {
+            e.preventDefault();
+            e.returnValue = 'Setup is still in progress. Are you sure you want to leave?';
+            return e.returnValue;
+        });
+
+        // Initialize
+        setInterval(rotateFunMessage, 5000);
+
+        // Start polling every 2 seconds
+        pollSetupStatus(); // Initial poll
+        pollInterval = setInterval(pollSetupStatus, 2000);
+    })();
+    </script>
+
+    <style>
+    .processing-screen {
+        min-height: 60vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .processing-container {
+        max-width: 700px;
+        margin: 0 auto;
+    }
+
+    .processing-checklist {
+        max-width: 500px;
+        margin: 0 auto;
+    }
+
+    .checklist-item {
+        display: flex;
+        align-items: center;
+        padding: 1rem;
+        margin-bottom: 0.5rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+
+    .checklist-item.pending {
+        opacity: 0.5;
+    }
+
+    .checklist-item.completed {
+        background: #d4edda;
+    }
+
+    .checklist-icon {
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1rem;
+        font-size: 1.2rem;
+    }
+
+    .checklist-text {
+        flex: 1;
+        font-weight: 500;
+    }
+
+    .fun-message {
+        transition: opacity 0.3s ease;
+    }
+
+    .message-container {
+        min-height: 50px;
+    }
+
+    .progress-wrapper {
+        max-width: 500px;
+        margin: 0 auto;
+    }
+
+    .current-step-display .alert {
+        background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+    }
+
+    .error-details pre {
+        white-space: pre-wrap;
+        word-wrap: break-word;
+    }
+    </style>
+</body>
+</html>

@@ -269,7 +269,7 @@
                 <div class="text-center py-5 text-muted">
                     <i class="bi bi-inbox display-1"></i>
                     <p class="mt-3">No sections loaded yet</p>
-                    <p>Use Google Docs menu: 🔧 Bylaws Sync → Parse into Small Sections</p>
+                    <p>Upload a document to parse bylaws into sections</p>
                 </div>
             </div>
         </div>
@@ -280,7 +280,8 @@
     <script src="https://cdn.jsdelivr.net/npm/diff@5.1.0/dist/diff.min.js"></script>
     <script>
         // Configuration from server environment
-        const DOC_ID = '<%= locals.GOOGLE_DOC_ID || "1LdE2NGMOJ7BgV19V3Qb-hnN5VTmB5C_Hh6heemqxviA" %>';
+        // Using default organization ID for bylaws sections
+        const DOC_ID = 'default';
 
         // State
         let currentSections = [];
@@ -722,7 +723,7 @@
         }
 
         function reParseDocument() {
-            alert('Please use Google Docs menu:\n🔧 Bylaws Sync → Parse into Small Sections\n\nThis will create more granular sections.');
+            alert('Please re-upload your document through the setup wizard to re-parse sections.');
         }
 
         function exportCommittee() {

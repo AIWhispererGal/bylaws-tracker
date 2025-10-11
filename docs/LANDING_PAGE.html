@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Track, review, and approve bylaw amendments with ease. No technical skills required.">
+  <title>Bylaws Amendment Tracker - Deploy Your Own for Free</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      color: #1a1a1a;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .hero {
+      text-align: center;
+      padding: 80px 20px;
+      color: white;
+    }
+
+    .hero-icon {
+      font-size: 80px;
+      margin-bottom: 20px;
+      animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+
+    h1 {
+      font-size: 48px;
+      font-weight: 700;
+      margin-bottom: 20px;
+    }
+
+    .tagline {
+      font-size: 24px;
+      margin-bottom: 40px;
+      opacity: 0.95;
+    }
+
+    .hero-description {
+      font-size: 18px;
+      max-width: 700px;
+      margin: 0 auto 40px;
+      opacity: 0.9;
+    }
+
+    .cta-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 18px 40px;
+      font-size: 20px;
+      font-weight: 600;
+      background: white;
+      color: #667eea;
+      border: none;
+      border-radius: 12px;
+      text-decoration: none;
+      cursor: pointer;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+      transition: all 0.3s;
+    }
+
+    .cta-button:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+    }
+
+    .cta-button img {
+      height: 24px;
+    }
+
+    .trust-signals {
+      display: flex;
+      justify-content: center;
+      gap: 40px;
+      flex-wrap: wrap;
+      margin-top: 40px;
+    }
+
+    .trust-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 16px;
+    }
+
+    .trust-item::before {
+      content: '✓';
+      font-size: 20px;
+      color: #00A86B;
+      background: white;
+      border-radius: 50%;
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .how-it-works {
+      background: white;
+      border-radius: 20px;
+      padding: 60px 40px;
+      margin: 40px auto;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+    }
+
+    .how-it-works h2 {
+      text-align: center;
+      font-size: 36px;
+      margin-bottom: 50px;
+      color: #1a1a1a;
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 40px;
+      margin-bottom: 40px;
+    }
+
+    .step {
+      text-align: center;
+      padding: 20px;
+    }
+
+    .step-number {
+      font-size: 48px;
+      font-weight: 700;
+      color: #667eea;
+      margin-bottom: 15px;
+    }
+
+    .step-icon {
+      font-size: 48px;
+      margin-bottom: 15px;
+    }
+
+    .step h3 {
+      font-size: 20px;
+      margin-bottom: 10px;
+      color: #1a1a1a;
+    }
+
+    .step p {
+      color: #4a4a4a;
+      font-size: 16px;
+    }
+
+    .features {
+      background: #f5f5f5;
+      padding: 60px 20px;
+      margin: 40px -20px;
+    }
+
+    .features-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .features h2 {
+      text-align: center;
+      font-size: 36px;
+      margin-bottom: 50px;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 30px;
+    }
+
+    .feature-card {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+      transition: transform 0.3s;
+    }
+
+    .feature-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    .feature-icon {
+      font-size: 40px;
+      margin-bottom: 15px;
+    }
+
+    .feature-card h3 {
+      font-size: 20px;
+      margin-bottom: 10px;
+      color: #1a1a1a;
+    }
+
+    .feature-card p {
+      color: #4a4a4a;
+      font-size: 15px;
+    }
+
+    .final-cta {
+      text-align: center;
+      padding: 80px 20px;
+      color: white;
+    }
+
+    .final-cta h2 {
+      font-size: 36px;
+      margin-bottom: 20px;
+    }
+
+    .final-cta p {
+      font-size: 18px;
+      margin-bottom: 30px;
+      opacity: 0.9;
+    }
+
+    footer {
+      text-align: center;
+      padding: 40px 20px;
+      color: white;
+      opacity: 0.8;
+      font-size: 14px;
+    }
+
+    footer a {
+      color: white;
+      text-decoration: underline;
+    }
+
+    @media (max-width: 768px) {
+      h1 { font-size: 36px; }
+      .tagline { font-size: 20px; }
+      .how-it-works h2 { font-size: 28px; }
+      .steps { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="hero-icon">📋</div>
+      <h1>Bylaws Amendment Tracker</h1>
+      <p class="tagline">Track, Review, and Approve Document Changes</p>
+      <p class="hero-description">
+        Stop using Google Docs comment threads for your bylaw amendments.
+        Get a real system that tracks suggestions, approvals, and changes -
+        all in one organized place.
+      </p>
+
+      <!-- Deploy Button -->
+      <a href="https://render.com/deploy?repo=https://github.com/YOUR_USERNAME/BYLAWSTOOL_Generalized"
+         class="cta-button">
+        <span>🚀</span>
+        <span>Deploy Your Own Tracker (Free)</span>
+      </a>
+      <p style="margin-top: 10px; opacity: 0.8;">Takes 2 minutes, no credit card required</p>
+
+      <!-- Trust Signals -->
+      <div class="trust-signals">
+        <div class="trust-item">No technical skills needed</div>
+        <div class="trust-item">Free hosting on Render</div>
+        <div class="trust-item">Your own private instance</div>
+        <div class="trust-item">Full control of your data</div>
+      </div>
+    </section>
+
+    <!-- How It Works -->
+    <section class="how-it-works">
+      <h2>How It Works: 3 Simple Steps</h2>
+      <div class="steps">
+        <div class="step">
+          <div class="step-number">1</div>
+          <div class="step-icon">🚀</div>
+          <h3>Deploy</h3>
+          <p>Click the deploy button. Render will create your personal tracker in 2 minutes.</p>
+          <small style="color: #7a7a7a;">2 minutes</small>
+        </div>
+        <div class="step">
+          <div class="step-number">2</div>
+          <div class="step-icon">⚙️</div>
+          <h3>Configure</h3>
+          <p>Follow the friendly setup wizard. Upload your document and set up your workflow.</p>
+          <small style="color: #7a7a7a;">3 minutes</small>
+        </div>
+        <div class="step">
+          <div class="step-number">3</div>
+          <div class="step-icon">✅</div>
+          <h3>Use</h3>
+          <p>Start tracking amendments! Lock sections, collect suggestions, and vote on changes.</p>
+          <small style="color: #7a7a7a;">Instant</small>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Features -->
+  <section class="features">
+    <div class="features-container">
+      <h2>Everything You Need</h2>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">🔒</div>
+          <h3>Lock Sections for Review</h3>
+          <p>Prevent edits while collecting suggestions. Keep everyone focused on the same version.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📝</div>
+          <h3>Side-by-Side Comparison</h3>
+          <p>See original text and proposed changes side by side with highlighted differences.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">✅</div>
+          <h3>Track Approvals</h3>
+          <p>Committee review, board approval, member vote - configure any workflow you need.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📊</div>
+          <h3>Vote Management</h3>
+          <p>Record votes, track who approved, see approval percentages in real-time.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📄</div>
+          <h3>Export Clean PDFs</h3>
+          <p>Generate professional documents with only approved amendments.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">👥</div>
+          <h3>Team Collaboration</h3>
+          <p>Invite committee members, board, and staff. Everyone sees the same information.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="container">
+    <!-- Final CTA -->
+    <section class="final-cta">
+      <h2>Ready to Get Organized?</h2>
+      <p>Deploy your own Bylaws Amendment Tracker in less than 5 minutes</p>
+      <a href="https://render.com/deploy?repo=https://github.com/YOUR_USERNAME/BYLAWSTOOL_Generalized"
+         class="cta-button">
+        <span>🚀</span>
+        <span>Deploy to Render (Free)</span>
+      </a>
+      <p style="margin-top: 20px; font-size: 14px; opacity: 0.8;">
+        Questions? <a href="https://github.com/YOUR_USERNAME/BYLAWSTOOL_Generalized/blob/main/README.md"
+                      style="color: white; text-decoration: underline;">Read the docs</a> or
+        <a href="https://github.com/YOUR_USERNAME/BYLAWSTOOL_Generalized/issues"
+           style="color: white; text-decoration: underline;">get help</a>
+      </p>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+      <p>
+        Open source project •
+        <a href="https://github.com/YOUR_USERNAME/BYLAWSTOOL_Generalized">View on GitHub</a> •
+        Made for HOAs, clubs, and nonprofits
+      </p>
+    </footer>
+  </div>
+
+  <!-- Analytics (optional) -->
+  <script>
+    // Add your analytics tracking here
+    console.log('Landing page loaded');
+  </script>
+</body>
+</html>

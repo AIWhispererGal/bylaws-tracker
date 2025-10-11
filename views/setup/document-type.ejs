@@ -1,0 +1,233 @@
+<div class="document-type-screen">
+    <div class="screen-header text-center mb-5">
+        <h2 class="screen-title">Choose Your Document Structure</h2>
+        <p class="screen-subtitle">Select how your bylaws are organized</p>
+    </div>
+
+    <form id="documentTypeForm" class="setup-form" novalidate>
+        <!-- CSRF Token -->
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+        <!-- Document Structure Selection -->
+        <div class="structure-selection mb-5">
+            <div class="row g-4">
+                <!-- Article-Section Structure -->
+                <div class="col-md-6">
+                    <div class="structure-card selectable" data-structure="article-section">
+                        <div class="structure-card-header">
+                            <div class="structure-icon">
+                                <i class="bi bi-list-nested"></i>
+                            </div>
+                            <h4>Article → Section</h4>
+                            <div class="selection-indicator">
+                                <i class="bi bi-check-circle-fill"></i>
+                            </div>
+                        </div>
+                        <div class="structure-body">
+                            <div class="structure-example">
+                                <div class="example-item level-1">Article I - Name</div>
+                                <div class="example-item level-2">Section 1.1 - Official Name</div>
+                                <div class="example-item level-2">Section 1.2 - Abbreviation</div>
+                                <div class="example-item level-1">Article II - Purpose</div>
+                                <div class="example-item level-2">Section 2.1 - Mission</div>
+                            </div>
+                            <p class="structure-description">
+                                Most common for HOAs and formal organizations
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chapter-Section Structure -->
+                <div class="col-md-6">
+                    <div class="structure-card selectable" data-structure="chapter-section">
+                        <div class="structure-card-header">
+                            <div class="structure-icon">
+                                <i class="bi bi-book"></i>
+                            </div>
+                            <h4>Chapter → Section</h4>
+                            <div class="selection-indicator">
+                                <i class="bi bi-check-circle-fill"></i>
+                            </div>
+                        </div>
+                        <div class="structure-body">
+                            <div class="structure-example">
+                                <div class="example-item level-1">Chapter 1 - General Provisions</div>
+                                <div class="example-item level-2">Section 1.1 - Definitions</div>
+                                <div class="example-item level-2">Section 1.2 - Scope</div>
+                                <div class="example-item level-1">Chapter 2 - Membership</div>
+                                <div class="example-item level-2">Section 2.1 - Eligibility</div>
+                            </div>
+                            <p class="structure-description">
+                                Common for clubs and informal organizations
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Part-Section Structure -->
+                <div class="col-md-6">
+                    <div class="structure-card selectable" data-structure="part-section">
+                        <div class="structure-card-header">
+                            <div class="structure-icon">
+                                <i class="bi bi-diagram-3"></i>
+                            </div>
+                            <h4>Part → Section</h4>
+                            <div class="selection-indicator">
+                                <i class="bi bi-check-circle-fill"></i>
+                            </div>
+                        </div>
+                        <div class="structure-body">
+                            <div class="structure-example">
+                                <div class="example-item level-1">Part I - Organization</div>
+                                <div class="example-item level-2">Section 1 - Formation</div>
+                                <div class="example-item level-2">Section 2 - Authority</div>
+                                <div class="example-item level-1">Part II - Governance</div>
+                                <div class="example-item level-2">Section 1 - Board Structure</div>
+                            </div>
+                            <p class="structure-description">
+                                Used by some legal and regulatory documents
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Custom Structure -->
+                <div class="col-md-6">
+                    <div class="structure-card selectable" data-structure="custom">
+                        <div class="structure-card-header">
+                            <div class="structure-icon">
+                                <i class="bi bi-sliders"></i>
+                            </div>
+                            <h4>Custom Structure</h4>
+                            <div class="selection-indicator">
+                                <i class="bi bi-check-circle-fill"></i>
+                            </div>
+                        </div>
+                        <div class="structure-body">
+                            <div class="structure-example">
+                                <div class="example-item level-1">
+                                    <input type="text" class="form-control form-control-sm d-inline-block w-auto" placeholder="Title" readonly> 1
+                                </div>
+                                <div class="example-item level-2">
+                                    <input type="text" class="form-control form-control-sm d-inline-block w-auto" placeholder="Section" readonly> 1.1
+                                </div>
+                            </div>
+                            <p class="structure-description">
+                                Define your own hierarchy levels
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <input type="hidden" id="selectedStructure" name="structure_type" required>
+        <div class="invalid-feedback d-block text-center" id="structureError" style="display: none !important;">
+            Please select a document structure
+        </div>
+
+        <!-- Customization Section (appears after selection) -->
+        <div class="customization-section" id="customizationSection" style="display: none;">
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-pencil"></i>
+                        Customize Your Structure
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">Want to use different terms? Customize the labels below:</p>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="level1Name" class="form-label">Top Level Name</label>
+                            <input
+                                type="text"
+                                class="form-control"
+                                id="level1Name"
+                                name="level1_name"
+                                placeholder="e.g., Article, Chapter, Part"
+                            >
+                            <div class="form-text">Singular form (e.g., "Article")</div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="level2Name" class="form-label">Sub Level Name</label>
+                            <input
+                                type="text"
+                                class="form-control"
+                                id="level2Name"
+                                name="level2_name"
+                                placeholder="e.g., Section, Subsection"
+                            >
+                            <div class="form-text">Singular form (e.g., "Section")</div>
+                        </div>
+                    </div>
+
+                    <!-- Numbering Style -->
+                    <div class="mt-4">
+                        <label class="form-label">Numbering Style</label>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="numbering_style" id="numRoman" value="roman" checked>
+                                    <label class="form-check-label" for="numRoman">
+                                        Roman Numerals (I, II, III)
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="numbering_style" id="numNumeric" value="numeric">
+                                    <label class="form-check-label" for="numNumeric">
+                                        Numbers (1, 2, 3)
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="numbering_style" id="numAlpha" value="alpha">
+                                    <label class="form-check-label" for="numAlpha">
+                                        Letters (A, B, C)
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Preview Section -->
+        <div class="preview-section mt-4" id="previewSection" style="display: none;">
+            <div class="alert alert-info">
+                <h6 class="alert-heading">
+                    <i class="bi bi-eye"></i>
+                    Preview of Your Structure
+                </h6>
+                <div id="structurePreview" class="mt-3"></div>
+            </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="form-actions">
+            <a href="/setup/organization" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i>
+                Back
+            </a>
+            <button type="submit" class="btn btn-primary btn-lg">
+                Continue
+                <i class="bi bi-arrow-right"></i>
+            </button>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div class="form-loading" id="formLoading" style="display: none;">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Saving...</span>
+            </div>
+            <p class="mt-2">Saving your document structure...</p>
+        </div>
+    </form>
+</div>

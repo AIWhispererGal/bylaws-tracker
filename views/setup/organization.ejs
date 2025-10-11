@@ -1,0 +1,178 @@
+<div class="organization-screen">
+    <div class="screen-header text-center mb-5">
+        <h2 class="screen-title">Tell Us About Your Organization</h2>
+        <p class="screen-subtitle">This information will appear on your governance documents</p>
+    </div>
+
+    <form id="organizationForm" class="setup-form">
+        <!-- CSRF Token -->
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+        <div class="form-section">
+            <!-- Organization Name -->
+            <div class="mb-4">
+                <label for="orgName" class="form-label required">
+                    <i class="bi bi-building"></i>
+                    Organization Name
+                </label>
+                <input
+                    type="text"
+                    class="form-control form-control-lg"
+                    id="orgName"
+                    name="organization_name"
+                    placeholder="e.g., Sunset Hills Homeowners Association"
+                    required
+                    autocomplete="organization"
+                    value="<%= formData?.organization_name || '' %>"
+                >
+                <div class="invalid-feedback">Please enter your organization's name</div>
+                <div class="form-text">The full legal name of your organization</div>
+            </div>
+
+            <!-- Organization Type -->
+            <div class="mb-4">
+                <label for="orgType" class="form-label required">
+                    <i class="bi bi-tag"></i>
+                    Organization Type
+                </label>
+                <select
+                    class="form-select form-select-lg"
+                    id="orgType"
+                    name="organization_type"
+                    required
+                >
+                    <option value="">Choose type...</option>
+                    <option value="hoa" <%= formData?.organization_type === 'hoa' ? 'selected' : '' %>>
+                        🏘️ Homeowners Association (HOA)
+                    </option>
+                    <option value="condo" <%= formData?.organization_type === 'condo' ? 'selected' : '' %>>
+                        🏢 Condominium Association
+                    </option>
+                    <option value="club" <%= formData?.organization_type === 'club' ? 'selected' : '' %>>
+                        🎯 Club or Society
+                    </option>
+                    <option value="nonprofit" <%= formData?.organization_type === 'nonprofit' ? 'selected' : '' %>>
+                        💝 Nonprofit Organization
+                    </option>
+                    <option value="coop" <%= formData?.organization_type === 'coop' ? 'selected' : '' %>>
+                        🤝 Cooperative
+                    </option>
+                    <option value="other" <%= formData?.organization_type === 'other' ? 'selected' : '' %>>
+                        📋 Other
+                    </option>
+                </select>
+                <div class="invalid-feedback">Please select your organization type</div>
+            </div>
+
+            <!-- State/Province -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <label for="orgState" class="form-label required">
+                        <i class="bi bi-geo-alt"></i>
+                        State/Province
+                    </label>
+                    <input
+                        type="text"
+                        class="form-control"
+                        id="orgState"
+                        name="state"
+                        placeholder="e.g., California"
+                        required
+                        value="<%= formData?.state || '' %>"
+                    >
+                    <div class="invalid-feedback">Please enter your state or province</div>
+                </div>
+
+                <div class="col-md-6">
+                    <label for="orgCountry" class="form-label required">
+                        <i class="bi bi-globe"></i>
+                        Country
+                    </label>
+                    <select class="form-select" id="orgCountry" name="country" required>
+                        <option value="USA" <%= !formData?.country || formData?.country === 'USA' ? 'selected' : '' %>>United States</option>
+                        <option value="Canada" <%= formData?.country === 'Canada' ? 'selected' : '' %>>Canada</option>
+                        <option value="UK" <%= formData?.country === 'UK' ? 'selected' : '' %>>United Kingdom</option>
+                        <option value="Australia" <%= formData?.country === 'Australia' ? 'selected' : '' %>>Australia</option>
+                        <option value="Other" <%= formData?.country === 'Other' ? 'selected' : '' %>>Other</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Logo Upload (Optional) -->
+            <div class="mb-4">
+                <label class="form-label">
+                    <i class="bi bi-image"></i>
+                    Organization Logo <span class="badge bg-secondary">Optional</span>
+                </label>
+                <div class="logo-upload-area" id="logoUploadArea">
+                    <div class="logo-preview" id="logoPreview" style="display: none;">
+                        <img id="logoPreviewImg" src="" alt="Logo preview">
+                        <button type="button" class="btn btn-sm btn-outline-danger" id="removeLogo">
+                            <i class="bi bi-x-circle"></i> Remove
+                        </button>
+                    </div>
+                    <div class="upload-prompt" id="uploadPrompt">
+                        <i class="bi bi-cloud-upload"></i>
+                        <p>Click to upload or drag and drop</p>
+                        <p class="text-muted small">PNG, JPG, or SVG • Max 2MB</p>
+                        <input
+                            type="file"
+                            id="logoFile"
+                            name="logo"
+                            accept="image/png,image/jpeg,image/svg+xml"
+                            hidden
+                        >
+                    </div>
+                </div>
+                <div class="form-text">This will appear on reports and documents</div>
+            </div>
+
+            <!-- Contact Email (Optional) -->
+            <div class="mb-4">
+                <label for="contactEmail" class="form-label">
+                    <i class="bi bi-envelope"></i>
+                    Contact Email <span class="badge bg-secondary">Optional</span>
+                </label>
+                <input
+                    type="email"
+                    class="form-control"
+                    id="contactEmail"
+                    name="contact_email"
+                    placeholder="board@example.com"
+                    autocomplete="email"
+                    value="<%= formData?.contact_email || '' %>"
+                >
+                <div class="form-text">For notifications and system emails</div>
+            </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="form-actions">
+            <a href="/setup" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i>
+                Back
+            </a>
+            <button type="submit" class="btn btn-primary btn-lg">
+                Continue
+                <i class="bi bi-arrow-right"></i>
+            </button>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div class="form-loading" id="formLoading" style="display: none;">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Saving...</span>
+            </div>
+            <p class="mt-2">Saving your information...</p>
+        </div>
+    </form>
+</div>
+
+<script>
+// Form validation and submission
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof SetupWizard !== 'undefined') {
+        SetupWizard.initOrganizationForm();
+    }
+});
+</script>

@@ -1,0 +1,241 @@
+<div class="workflow-screen">
+    <div class="screen-header text-center mb-5">
+        <h2 class="screen-title">Set Up Your Approval Workflow</h2>
+        <p class="screen-subtitle">Define who reviews and approves changes to your bylaws</p>
+    </div>
+
+    <form id="workflowForm" class="setup-form" novalidate>
+        <!-- CSRF Token -->
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+        <!-- Workflow Template Selection -->
+        <div class="template-selection mb-5">
+            <h5 class="mb-3">
+                <i class="bi bi-grid"></i>
+                Start with a template or build your own
+            </h5>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="template-card selectable" data-template="simple">
+                        <div class="template-icon">
+                            <i class="bi bi-check-circle"></i>
+                        </div>
+                        <h6>Simple Approval</h6>
+                        <p class="small text-muted">Board Member → President</p>
+                        <div class="selection-indicator">
+                            <i class="bi bi-check-circle-fill"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="template-card selectable" data-template="committee">
+                        <div class="template-icon">
+                            <i class="bi bi-people"></i>
+                        </div>
+                        <h6>Committee Review</h6>
+                        <p class="small text-muted">Committee → Board → President</p>
+                        <div class="selection-indicator">
+                            <i class="bi bi-check-circle-fill"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="template-card selectable" data-template="membership">
+                        <div class="template-icon">
+                            <i class="bi bi-diagram-3"></i>
+                        </div>
+                        <h6>Full Membership</h6>
+                        <p class="small text-muted">Committee → Board → Members</p>
+                        <div class="selection-indicator">
+                            <i class="bi bi-check-circle-fill"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="template-card selectable" data-template="custom">
+                        <div class="template-icon">
+                            <i class="bi bi-sliders"></i>
+                        </div>
+                        <h6>Custom Workflow</h6>
+                        <p class="small text-muted">Build from scratch</p>
+                        <div class="selection-indicator">
+                            <i class="bi bi-check-circle-fill"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <input type="hidden" id="selectedTemplate" name="workflow_template">
+
+        <!-- Workflow Builder -->
+        <div class="workflow-builder" id="workflowBuilder" style="display: none;">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-diagram-3"></i>
+                        Approval Stages
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">Define the stages for reviewing and approving changes. Drag to reorder.</p>
+
+                    <!-- Workflow Stages List -->
+                    <div id="workflowStages" class="workflow-stages">
+                        <!-- Stages will be added here dynamically -->
+                    </div>
+
+                    <!-- Add Stage Button -->
+                    <button type="button" class="btn btn-outline-primary btn-sm mt-3" id="addStageBtn">
+                        <i class="bi bi-plus-circle"></i>
+                        Add Stage
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stage Configuration Template (hidden) -->
+            <template id="stageTemplate">
+                <div class="workflow-stage" data-stage-index="">
+                    <div class="stage-handle">
+                        <i class="bi bi-grip-vertical"></i>
+                    </div>
+                    <div class="stage-content">
+                        <div class="stage-header">
+                            <input
+                                type="text"
+                                class="form-control stage-name"
+                                placeholder="Stage name (e.g., Committee Review)"
+                                required
+                            >
+                            <button type="button" class="btn btn-sm btn-outline-danger remove-stage">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                        <div class="stage-details mt-3">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label small">Approval Type</label>
+                                    <select class="form-select form-select-sm stage-approval-type" required>
+                                        <option value="single">Single Approver</option>
+                                        <option value="majority">Majority Vote</option>
+                                        <option value="unanimous">Unanimous</option>
+                                        <option value="supermajority">Supermajority/Vote Threshold</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 supermajority-field" style="display: none;">
+                                    <label class="form-label small">Vote Threshold (%)</label>
+                                    <input
+                                        type="number"
+                                        class="form-control form-control-sm stage-supermajority"
+                                        placeholder="e.g., 67 for 2/3 majority"
+                                        min="1"
+                                        max="100"
+                                    >
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <label class="form-label small">Approvers/Reviewers</label>
+                                <textarea
+                                    class="form-control form-control-sm stage-approvers"
+                                    rows="2"
+                                    placeholder="Enter email addresses, one per line"
+                                    required
+                                ></textarea>
+                                <div class="form-text">Enter email addresses of people who can approve at this stage</div>
+                            </div>
+                            <div class="mt-2">
+                                <div class="form-check">
+                                    <input class="form-check-input stage-skip-if-author" type="checkbox">
+                                    <label class="form-check-label small">
+                                        Skip this stage if author is an approver
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <!-- Workflow Visualization -->
+        <div class="workflow-visualization mt-4" id="workflowVisualization" style="display: none;">
+            <div class="alert alert-info">
+                <h6 class="alert-heading">
+                    <i class="bi bi-diagram-2"></i>
+                    Your Approval Flow
+                </h6>
+                <div id="workflowDiagram" class="workflow-diagram mt-3">
+                    <!-- Visualization will be rendered here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Email Notifications -->
+        <div class="notification-settings mt-4" id="notificationSettings" style="display: none;">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="bi bi-envelope"></i>
+                        Email Notifications
+                    </h6>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="notifyOnSubmit" name="notify_on_submit" checked>
+                        <label class="form-check-label" for="notifyOnSubmit">
+                            Send email when a change is submitted for review
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="notifyOnApproval" name="notify_on_approval" checked>
+                        <label class="form-check-label" for="notifyOnApproval">
+                            Send email when a stage is approved
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="notifyOnRejection" name="notify_on_rejection" checked>
+                        <label class="form-check-label" for="notifyOnRejection">
+                            Send email when a change is rejected
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="notifyOnComplete" name="notify_on_complete" checked>
+                        <label class="form-check-label" for="notifyOnComplete">
+                            Send email when approval process is complete
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="form-actions">
+            <a href="/setup/document-type" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i>
+                Back
+            </a>
+            <button type="submit" class="btn btn-primary btn-lg">
+                Continue
+                <i class="bi bi-arrow-right"></i>
+            </button>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div class="form-loading" id="formLoading" style="display: none;">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Saving...</span>
+            </div>
+            <p class="mt-2">Saving your workflow...</p>
+        </div>
+    </form>
+</div>
+
+<script>
+// Initialize workflow form
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof SetupWizard !== 'undefined') {
+        SetupWizard.initWorkflowForm();
+    }
+});
+</script>
