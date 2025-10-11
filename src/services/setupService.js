@@ -176,6 +176,16 @@ class SetupService {
       // Load organization config
       const config = await organizationConfig.loadConfig(orgId, supabase);
 
+      // Debug: Check what config we actually have
+      console.log('[SETUP-DEBUG] 📋 Loaded organization config:');
+      console.log('[SETUP-DEBUG]   - Has hierarchy:', !!config.hierarchy);
+      console.log('[SETUP-DEBUG]   - Hierarchy levels:', config.hierarchy?.levels?.length || 0);
+      if (config.hierarchy?.levels) {
+        config.hierarchy.levels.forEach(level => {
+          console.log(`[SETUP-DEBUG]     * ${level.name} (type: ${level.type}, depth: ${level.depth})`);
+        });
+      }
+
       // Parse the document
       const parseResult = await wordParser.parseDocument(filePath, config);
 

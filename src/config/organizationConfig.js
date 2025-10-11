@@ -259,8 +259,14 @@ class OrganizationConfig {
         .single();
 
       if (error || !data) {
+        console.log('[CONFIG-DEBUG] ❌ No data from database or error:', error?.message);
         return null;
       }
+
+      console.log('[CONFIG-DEBUG] 📊 Database returned:');
+      console.log('[CONFIG-DEBUG]   - settings keys:', Object.keys(data.settings || {}));
+      console.log('[CONFIG-DEBUG]   - hierarchy_config:', data.hierarchy_config ? 'present' : 'NULL');
+      console.log('[CONFIG-DEBUG]   - settings.hierarchy:', data.settings?.hierarchy ? 'present' : 'absent');
 
       // Build config from database, only including non-null values
       // This prevents null database values from overriding defaults
@@ -270,6 +276,9 @@ class OrganizationConfig {
       if (data.hierarchy_config) {
         dbConfig.hierarchy = data.hierarchy_config;
       }
+
+      console.log('[CONFIG-DEBUG] 📦 Returning dbConfig with keys:', Object.keys(dbConfig));
+      console.log('[CONFIG-DEBUG]   - dbConfig.hierarchy:', dbConfig.hierarchy ? 'present' : 'absent');
 
       return dbConfig;
     } catch (error) {
