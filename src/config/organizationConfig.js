@@ -262,10 +262,16 @@ class OrganizationConfig {
         return null;
       }
 
-      return {
-        ...data.settings,
-        hierarchy: data.hierarchy_config
-      };
+      // Build config from database, only including non-null values
+      // This prevents null database values from overriding defaults
+      const dbConfig = { ...data.settings };
+
+      // Only include hierarchy if it's actually set in the database
+      if (data.hierarchy_config) {
+        dbConfig.hierarchy = data.hierarchy_config;
+      }
+
+      return dbConfig;
     } catch (error) {
       console.error('Error loading config from database:', error);
       return null;
