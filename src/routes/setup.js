@@ -550,6 +550,15 @@ async function processSetupData(setupData, supabase) {
                                 }
                             } else {
                                 console.error('[SETUP-DEBUG] ❌ Import failed:', importResult.error);
+
+                                // Log detailed validation errors if available
+                                if (importResult.validationErrors && importResult.validationErrors.length > 0) {
+                                    console.error('[SETUP-DEBUG] ❌ Validation errors:', JSON.stringify(importResult.validationErrors, null, 2));
+                                }
+                                if (importResult.warnings && importResult.warnings.length > 0) {
+                                    console.error('[SETUP-DEBUG] ⚠️  Validation warnings:', JSON.stringify(importResult.warnings, null, 2));
+                                }
+
                                 throw new Error('Failed to import document: ' + importResult.error);
                             }
                         } catch (parseError) {
