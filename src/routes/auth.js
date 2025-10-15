@@ -1422,11 +1422,12 @@ router.get('/reset-password', (req, res) => {
 
 /**
  * POST /auth/reset-password
- * Update user password via Supabase
+ * Update user password via Supabase using recovery token
+ * Accepts recovery token from URL fragment (sent by client)
  */
 router.post('/reset-password', async (req, res) => {
   try {
-    const { password, confirmPassword } = req.body;
+    const { password, confirmPassword, access_token, refresh_token } = req.body;
 
     // Validate input
     if (!password || !confirmPassword) {
@@ -1450,11 +1451,43 @@ router.post('/reset-password', async (req, res) => {
       });
     }
 
-    const { supabase } = req;
+    // Validate recovery token
+    if (!access_token) {
+      return res.status(400).json({
+        success: false,
+        error: 'Recovery token is required. Please use the link from your email.'
+      });
+    }
 
-    // Update password using Supabase
-    // The session token from the email link should be in the request
-    const { data, error } = await supabase.auth.updateUser({
+    // Create Supabase client with the recovery token session
+    const { createClient } = require('@supabase/supabase-js');
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_ANON_KEY;
+
+    const supabaseWithToken = createClient(supabaseUrl, supabaseKey, {
+      global: {
+        headers: {
+          Authorization: `Bearer ${access_token}`
+        }
+      }
+    });
+
+    // Set the session using the recovery tokens
+    const { error: sessionError } = await supabaseWithToken.auth.setSession({
+      access_token,
+      refresh_token
+    });
+
+    if (sessionError) {
+      console.error('Session setup error:', sessionError);
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid or expired reset link. Please request a new one.'
+      });
+    }
+
+    // Update password using the authenticated client
+    const { data, error } = await supabaseWithToken.auth.updateUser({
       password: password
     });
 
@@ -1474,7 +1507,7 @@ router.post('/reset-password', async (req, res) => {
     }
 
     // Sign out to clear the reset token
-    await supabase.auth.signOut();
+    await supabaseWithToken.auth.signOut();
 
     res.json({
       success: true,
