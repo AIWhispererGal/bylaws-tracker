@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %> - Bylaws Amendment Tracker</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <style>
+    body {
+      background: #f5f7fa;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .admin-header {
+      background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+      color: white;
+      padding: 2rem 0;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      margin-bottom: 2rem;
+    }
+
+    .content-card {
+      background: white;
+      border-radius: 15px;
+      padding: 2rem;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      margin-bottom: 2rem;
+    }
+
+    .stage-item {
+      background: #f8f9fa;
+      border: 2px solid #e9ecef;
+      border-radius: 10px;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+      cursor: move;
+      transition: all 0.2s;
+    }
+
+    .stage-item:hover {
+      border-color: #667eea;
+      box-shadow: 0 4px 10px rgba(102, 126, 234, 0.15);
+    }
+
+    .stage-item.sortable-drag {
+      opacity: 0.5;
+      cursor: grabbing;
+    }
+
+    .stage-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      cursor: pointer;
+    }
+
+    .stage-header .handle {
+      cursor: grab;
+      color: #6c757d;
+      font-size: 1.5rem;
+    }
+
+    .stage-content {
+      display: none;
+    }
+
+    .stage-content.show {
+      display: block;
+    }
+
+    .color-swatch {
+      width: 30px;
+      height: 30px;
+      border-radius: 5px;
+      border: 2px solid #dee2e6;
+      cursor: pointer;
+      display: inline-block;
+      vertical-align: middle;
+    }
+
+    .icon-picker {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 0.5rem;
+      max-height: 200px;
+      overflow-y: auto;
+      padding: 0.5rem;
+      border: 1px solid #dee2e6;
+      border-radius: 5px;
+      margin-top: 0.5rem;
+    }
+
+    .icon-option {
+      padding: 0.5rem;
+      text-align: center;
+      cursor: pointer;
+      border: 2px solid transparent;
+      border-radius: 5px;
+      transition: all 0.2s;
+    }
+
+    .icon-option:hover {
+      background: #e9ecef;
+      border-color: #667eea;
+    }
+
+    .icon-option.selected {
+      background: #667eea;
+      color: white;
+      border-color: #667eea;
+    }
+
+    .permission-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.75rem;
+      margin-top: 0.5rem;
+    }
+
+    .stage-order-badge {
+      background: #667eea;
+      color: white;
+      padding: 0.25rem 0.75rem;
+      border-radius: 15px;
+      font-weight: bold;
+    }
+
+    .required-indicator {
+      color: #dc3545;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="admin-header">
+    <div class="container">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <h1 class="mb-0">
+            <i class="bi bi-pencil-square"></i> <%= template ? 'Edit' : 'Create' %> Workflow Template
+          </h1>
+          <p class="mb-0 mt-2">Configure approval stages and permissions</p>
+        </div>
+        <div>
+          <a href="/admin/workflows" class="btn btn-light">
+            <i class="bi bi-arrow-left"></i> Back to Templates
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <form id="workflowForm">
+      <!-- Template Info -->
+      <div class="content-card">
+        <h3 class="mb-3">Template Information</h3>
+
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label for="templateName" class="form-label">
+              Template Name <span class="required-indicator">*</span>
+            </label>
+            <input type="text" class="form-control" id="templateName"
+                   value="<%= template ? template.name : '' %>" required>
+          </div>
+
+          <div class="col-md-6 mb-3">
+            <label class="form-label">Template Status</label>
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" id="isActive"
+                     <%= template && template.is_active ? 'checked' : '' %>>
+              <label class="form-check-label" for="isActive">
+                Active (can be assigned to documents)
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label for="templateDescription" class="form-label">Description</label>
+          <textarea class="form-control" id="templateDescription" rows="3"><%= template ? template.description || '' : '' %></textarea>
+        </div>
+      </div>
+
+      <!-- Workflow Stages -->
+      <div class="content-card">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h3 class="mb-0">Workflow Stages</h3>
+          <button type="button" class="btn btn-primary" onclick="addStage()">
+            <i class="bi bi-plus-circle"></i> Add Stage
+          </button>
+        </div>
+
+        <div class="alert alert-info">
+          <i class="bi bi-info-circle"></i>
+          <strong>Tip:</strong> Drag stages to reorder them. The workflow will progress through stages in order.
+        </div>
+
+        <div id="stagesList">
+          <% if (template && template.stages && template.stages.length > 0) { %>
+            <% template.stages.forEach((stage, index) => { %>
+              <%= renderStageItem(stage, index) %>
+            <% }); %>
+          <% } else { %>
+            <p class="text-muted text-center">No stages defined. Click "Add Stage" to create your first stage.</p>
+          <% } %>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="content-card">
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-primary btn-lg">
+            <i class="bi bi-save"></i> Save Template
+          </button>
+          <a href="/admin/workflows" class="btn btn-secondary btn-lg">
+            <i class="bi bi-x-circle"></i> Cancel
+          </a>
+          <% if (template && template.id) { %>
+            <button type="button" class="btn btn-danger btn-lg ms-auto" onclick="deleteTemplate()">
+              <i class="bi bi-trash"></i> Delete Template
+            </button>
+          <% } %>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/js/workflow-editor.js"></script>
+  <script>
+    // Initialize with existing template data if editing
+    <% if (template && template.id) { %>
+      window.templateId = '<%= template.id %>';
+      window.templateData = <%- JSON.stringify(template) %>;
+    <% } else { %>
+      window.templateId = null;
+      window.templateData = null;
+    <% } %>
+  </script>
+</body>
+</html>
+
+<%
+function renderStageItem(stage, index) {
+  return `
+    <div class="stage-item" data-stage-id="${stage.id || 'new-' + Date.now()}" data-stage-order="${stage.stage_order || index + 1}">
+      <div class="stage-header" onclick="toggleStageContent(this)">
+        <div class="d-flex align-items-center gap-3">
+          <span class="handle"><i class="bi bi-grip-vertical"></i></span>
+          <span class="stage-order-badge">${stage.stage_order || index + 1}</span>
+          <strong class="stage-name-display">${stage.stage_name || 'New Stage'}</strong>
+        </div>
+        <div>
+          <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteStage(this, event)">
+            <i class="bi bi-trash"></i>
+          </button>
+          <i class="bi bi-chevron-down toggle-icon"></i>
+        </div>
+      </div>
+
+      <div class="stage-content">
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label class="form-label">Stage Name <span class="required-indicator">*</span></label>
+            <input type="text" class="form-control stage-name" value="${stage.stage_name || ''}" required
+                   onchange="updateStageDisplay(this)">
+          </div>
+
+          <div class="col-md-6 mb-3">
+            <label class="form-label">Display Color</label>
+            <div class="d-flex align-items-center gap-2">
+              <input type="color" class="form-control form-control-color stage-color"
+                     value="${stage.display_color || '#6c757d'}">
+              <span class="color-swatch" style="background-color: ${stage.display_color || '#6c757d'}"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label class="form-label">Icon</label>
+            <input type="text" class="form-control stage-icon" value="${stage.icon || ''}"
+                   placeholder="e.g., check-circle">
+            <small class="text-muted">Bootstrap icon name (without 'bi-' prefix)</small>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Description</label>
+          <textarea class="form-control stage-description" rows="2">${stage.description || ''}</textarea>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Permissions</label>
+          <div class="permission-grid">
+            <div class="form-check">
+              <input class="form-check-input stage-can-lock" type="checkbox"
+                     ${stage.can_lock ? 'checked' : ''}>
+              <label class="form-check-label">Can Lock Sections</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input stage-can-edit" type="checkbox"
+                     ${stage.can_edit ? 'checked' : ''}>
+              <label class="form-check-label">Can Edit Content</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input stage-can-approve" type="checkbox"
+                     ${stage.can_approve ? 'checked' : ''}>
+              <label class="form-check-label">Can Approve/Reject</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input stage-requires-approval" type="checkbox"
+                     ${stage.requires_approval ? 'checked' : ''}>
+              <label class="form-check-label">Requires Approval</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Required Roles</label>
+          <select class="form-select stage-roles" multiple size="4">
+            <option value="owner" ${stage.required_roles?.includes('owner') ? 'selected' : ''}>Owner</option>
+            <option value="admin" ${stage.required_roles?.includes('admin') ? 'selected' : ''}>Admin</option>
+            <option value="member" ${stage.required_roles?.includes('member') ? 'selected' : ''}>Member</option>
+            <option value="viewer" ${stage.required_roles?.includes('viewer') ? 'selected' : ''}>Viewer</option>
+          </select>
+          <small class="text-muted">Hold Ctrl/Cmd to select multiple roles</small>
+        </div>
+      </div>
+    </div>
+  `;
+}
+%>

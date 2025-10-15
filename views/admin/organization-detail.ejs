@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %> - Bylaws Amendment Tracker</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+  <style>
+    body {
+      background: #f5f7fa;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .admin-header {
+      background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+      color: white;
+      padding: 2rem 0;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      margin-bottom: 2rem;
+    }
+
+    .content-card {
+      background: white;
+      border-radius: 15px;
+      padding: 2rem;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      margin-bottom: 2rem;
+    }
+
+    .section-title {
+      font-size: 1.3rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: #333;
+      border-bottom: 2px solid #e9ecef;
+      padding-bottom: 0.5rem;
+    }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.75rem 0;
+      border-bottom: 1px solid #f1f1f1;
+    }
+
+    .info-row:last-child {
+      border-bottom: none;
+    }
+
+    .info-label {
+      font-weight: 600;
+      color: #6c757d;
+    }
+
+    .info-value {
+      color: #333;
+    }
+
+    .document-item {
+      padding: 1rem;
+      border: 1px solid #e9ecef;
+      border-radius: 10px;
+      margin-bottom: 1rem;
+      transition: all 0.2s;
+    }
+
+    .document-item:hover {
+      border-color: #667eea;
+      box-shadow: 0 4px 10px rgba(102, 126, 234, 0.1);
+    }
+
+    .activity-item {
+      padding: 1rem;
+      border-left: 3px solid #667eea;
+      background: #f8f9fa;
+      border-radius: 5px;
+      margin-bottom: 1rem;
+    }
+
+    .activity-time {
+      font-size: 0.85rem;
+      color: #6c757d;
+    }
+  </style>
+</head>
+<body>
+  <div class="admin-header">
+    <div class="container">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <h1 class="mb-0">
+            <i class="bi bi-building"></i> <%= organization.name %>
+          </h1>
+          <p class="mb-0 mt-2">Organization Details & Management</p>
+        </div>
+        <div>
+          <a href="/admin/dashboard" class="btn btn-light">
+            <i class="bi bi-arrow-left"></i> Back to Admin
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="row">
+      <!-- Organization Info -->
+      <div class="col-md-6">
+        <div class="content-card">
+          <h3 class="section-title">Organization Information</h3>
+          <div class="info-row">
+            <span class="info-label">Organization ID</span>
+            <span class="info-value"><code><%= organization.id %></code></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Name</span>
+            <span class="info-value"><%= organization.name %></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Created</span>
+            <span class="info-value"><%= new Date(organization.created_at).toLocaleString() %></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Last Updated</span>
+            <span class="info-value"><%= new Date(organization.updated_at).toLocaleString() %></span>
+          </div>
+          <% if (organization.hierarchy_config) { %>
+          <div class="info-row">
+            <span class="info-label">Hierarchy Levels</span>
+            <span class="info-value"><%= organization.hierarchy_config.levels?.length || 0 %> levels</span>
+          </div>
+          <% } %>
+          <% if (organization.workflow_template) { %>
+          <div class="info-row">
+            <span class="info-label">Workflow Stages</span>
+            <span class="info-value"><%= organization.workflow_template.stages?.length || 0 %> stages</span>
+          </div>
+          <% } %>
+        </div>
+
+        <div class="content-card">
+          <h3 class="section-title">Quick Actions</h3>
+          <div class="d-grid gap-2">
+            <a href="/auth/switch/<%= organization.id %>" class="btn btn-primary">
+              <i class="bi bi-box-arrow-in-right"></i> Access Organization Dashboard
+            </a>
+            <% if (documents.length > 0) { %>
+            <a href="/dashboard/document/<%= documents[0].id %>" class="btn btn-outline-primary" onclick="switchAndView('<%= organization.id %>', '<%= documents[0].id %>'); return false;">
+              <i class="bi bi-file-earmark-text"></i> View Documents
+            </a>
+            <% } else { %>
+            <a href="/dashboard" class="btn btn-outline-secondary" disabled>
+              <i class="bi bi-file-earmark-text"></i> No Documents Yet
+            </a>
+            <% } %>
+            <a href="/admin/workflows?org=<%= organization.id %>" class="btn btn-outline-info">
+              <i class="bi bi-diagram-3"></i> Configure Workflows
+            </a>
+            <button class="btn btn-outline-danger" onclick="deleteOrganization('<%= organization.id %>', '<%= organization.name %>')">
+              <i class="bi bi-trash"></i> Delete Organization
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Users -->
+      <div class="col-md-6">
+        <div class="content-card">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="section-title mb-0">Users (<%= users.length %>)</h3>
+            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#inviteUserModal">
+              <i class="bi bi-person-plus"></i> Invite User
+            </button>
+          </div>
+          <% if (users.length > 0) { %>
+            <% users.forEach(user => { %>
+              <div class="info-row">
+                <div>
+                  <div class="info-value"><%= user.users?.full_name || 'Unknown User' %></div>
+                  <small class="text-muted"><%= user.users?.email || 'No email' %></small>
+                </div>
+                <span class="badge bg-<%= user.role === 'admin' || user.role === 'owner' ? 'danger' : 'primary' %>">
+                  <%= user.role || 'member' %>
+                </span>
+              </div>
+            <% }); %>
+          <% } else { %>
+            <p class="text-muted">No users associated with this organization</p>
+          <% } %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Invite User Modal -->
+    <div class="modal fade" id="inviteUserModal" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">
+              <i class="bi bi-person-plus"></i> Invite User to <%= organization.name %>
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <form id="inviteUserForm">
+              <div class="mb-3">
+                <label for="inviteEmail" class="form-label">Email Address *</label>
+                <input type="email" class="form-control" id="inviteEmail" required>
+                <div class="form-text">User will receive an invitation email</div>
+              </div>
+              <div class="mb-3">
+                <label for="inviteName" class="form-label">Full Name</label>
+                <input type="text" class="form-control" id="inviteName">
+              </div>
+              <div class="mb-3">
+                <label for="inviteRole" class="form-label">Role *</label>
+                <select class="form-select" id="inviteRole" required>
+                  <option value="member" selected>Member - Can view and create suggestions</option>
+                  <option value="admin">Admin - Can manage users and approve changes</option>
+                  <option value="owner">Owner - Full administrative access</option>
+                  <option value="viewer">Viewer - Read-only access</option>
+                </select>
+              </div>
+              <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i>
+                <strong>User Roles:</strong>
+                <ul class="mb-0 mt-2">
+                  <li><strong>Viewer:</strong> Read-only access</li>
+                  <li><strong>Member:</strong> Can add suggestions</li>
+                  <li><strong>Admin:</strong> Can lock sections and approve changes</li>
+                  <li><strong>Owner:</strong> Full control including user management</li>
+                </ul>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-primary" onclick="sendInvite()">
+              <i class="bi bi-send"></i> Send Invitation
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Documents -->
+    <div class="content-card">
+      <h3 class="section-title">Documents (<%= documents.length %>)</h3>
+      <% if (documents.length > 0) { %>
+        <div class="row">
+          <% documents.forEach(doc => { %>
+            <div class="col-md-6">
+              <div class="document-item">
+                <h5><%= doc.title %></h5>
+                <div class="text-muted small">
+                  <i class="bi bi-file-earmark"></i> <%= doc.document_type || 'Document' %>
+                  <span class="ms-3">
+                    <i class="bi bi-calendar"></i> <%= new Date(doc.created_at).toLocaleDateString() %>
+                  </span>
+                </div>
+                <% if (doc.status) { %>
+                  <span class="badge bg-info mt-2"><%= doc.status %></span>
+                <% } %>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+      <% } else { %>
+        <p class="text-muted">No documents uploaded yet</p>
+      <% } %>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="content-card">
+      <h3 class="section-title">Recent Activity</h3>
+      <% if (recentActivity.length > 0) { %>
+        <% recentActivity.forEach(activity => { %>
+          <div class="activity-item">
+            <div class="d-flex justify-content-between">
+              <div>
+                <strong><%= activity.author_name || 'Anonymous' %></strong> submitted a suggestion
+                <% if (activity.documents) { %>
+                  for <em><%= activity.documents.title %></em>
+                <% } %>
+              </div>
+              <span class="activity-time">
+                <%= new Date(activity.created_at).toLocaleDateString() %>
+              </span>
+            </div>
+            <% if (activity.rationale) { %>
+              <p class="mb-0 mt-2 text-muted"><%= activity.rationale.substring(0, 100) %>...</p>
+            <% } %>
+          </div>
+        <% }); %>
+      <% } else { %>
+        <p class="text-muted">No recent activity</p>
+      <% } %>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    function deleteOrganization(orgId, orgName) {
+      if (!confirm(`Are you sure you want to delete "${orgName}"?\n\nThis action cannot be undone and will remove all associated data.`)) {
+        return;
+      }
+
+      const confirmText = prompt('Type "DELETE" to confirm deletion:');
+      if (confirmText !== 'DELETE') {
+        alert('Deletion cancelled');
+        return;
+      }
+
+      fetch(`/admin/organization/${orgId}/delete`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ confirm: 'DELETE' })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          alert('Organization deleted successfully');
+          window.location.href = '/admin/dashboard';
+        } else {
+          alert('Error: ' + data.error);
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('Error deleting organization');
+      });
+    }
+
+    function switchAndView(orgId, docId) {
+      // First switch to the organization
+      fetch(`/auth/select`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ organizationId: orgId })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          // Then redirect to document viewer
+          window.location.href = `/dashboard/document/${docId}`;
+        } else {
+          alert('Error switching organization: ' + data.error);
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('Error switching organization');
+      });
+    }
+
+    function sendInvite() {
+      const email = document.getElementById('inviteEmail').value;
+      const name = document.getElementById('inviteName').value;
+      const role = document.getElementById('inviteRole').value;
+      const orgId = '<%= organization.id %>';
+
+      if (!email) {
+        alert('Please enter an email address');
+        return;
+      }
+
+      // Disable button during request
+      const btn = event.target;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Sending...';
+
+      fetch('/auth/invite-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email,
+          name: name,
+          role: role,
+          organizationId: orgId
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-send"></i> Send Invitation';
+
+        if (data.success) {
+          alert(`Invitation sent successfully to ${email}`);
+          // Close modal
+          const modal = bootstrap.Modal.getInstance(document.getElementById('inviteUserModal'));
+          modal.hide();
+          // Reset form
+          document.getElementById('inviteUserForm').reset();
+          // Reload page to show new user
+          setTimeout(() => window.location.reload(), 500);
+        } else {
+          alert('Error: ' + data.error);
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-send"></i> Send Invitation';
+        alert('Error sending invitation');
+      });
+    }
+  </script>
+</body>
+</html>

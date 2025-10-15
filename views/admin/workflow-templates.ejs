@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %> - Bylaws Amendment Tracker</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+  <style>
+    body {
+      background: #f5f7fa;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .admin-header {
+      background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+      color: white;
+      padding: 2rem 0;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      margin-bottom: 2rem;
+    }
+
+    .content-card {
+      background: white;
+      border-radius: 15px;
+      padding: 2rem;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      margin-bottom: 2rem;
+    }
+
+    .template-row {
+      padding: 1.25rem;
+      border: 1px solid #e9ecef;
+      border-radius: 10px;
+      margin-bottom: 1rem;
+      transition: all 0.2s;
+      background: white;
+    }
+
+    .template-row:hover {
+      border-color: #667eea;
+      box-shadow: 0 4px 10px rgba(102, 126, 234, 0.1);
+    }
+
+    .template-name {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #333;
+    }
+
+    .stage-badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 15px;
+      font-size: 0.85rem;
+      margin-right: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .status-toggle {
+      cursor: pointer;
+    }
+
+    .default-badge {
+      background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+      color: #333;
+      font-weight: bold;
+      padding: 0.35rem 1rem;
+      border-radius: 20px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .active-badge {
+      background: #28a745;
+      color: white;
+    }
+
+    .inactive-badge {
+      background: #6c757d;
+      color: white;
+    }
+
+    .doc-count {
+      color: #6c757d;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="admin-header">
+    <div class="container">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <h1 class="mb-0">
+            <i class="bi bi-diagram-3"></i> Workflow Templates
+          </h1>
+          <p class="mb-0 mt-2">Manage approval workflows for your organization</p>
+        </div>
+        <div>
+          <a href="/admin/dashboard" class="btn btn-light me-2">
+            <i class="bi bi-arrow-left"></i> Back to Admin
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="content-card">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="mb-0">Workflow Templates</h3>
+        <a href="/admin/workflows/create" class="btn btn-primary">
+          <i class="bi bi-plus-circle"></i> Create New Template
+        </a>
+      </div>
+
+      <% if (templates && templates.length > 0) { %>
+        <% templates.forEach(template => { %>
+          <div class="template-row">
+            <div class="row align-items-center">
+              <div class="col-md-6">
+                <div class="template-name">
+                  <%= template.name %>
+                  <% if (template.is_default) { %>
+                    <span class="badge default-badge ms-2">
+                      <i class="bi bi-star-fill"></i> Default
+                    </span>
+                  <% } %>
+                  <% if (template.is_active) { %>
+                    <span class="badge active-badge ms-2">Active</span>
+                  <% } else { %>
+                    <span class="badge inactive-badge ms-2">Inactive</span>
+                  <% } %>
+                </div>
+                <p class="text-muted mb-2"><%= template.description || 'No description' %></p>
+
+                <div class="mb-2">
+                  <strong>Stages:</strong>
+                  <% if (template.stages && template.stages.length > 0) { %>
+                    <div class="mt-1">
+                      <% template.stages.forEach(stage => { %>
+                        <span class="stage-badge" style="background-color: <%= stage.display_color || '#6c757d' %>; color: white;">
+                          <% if (stage.icon) { %>
+                            <i class="bi bi-<%= stage.icon %>"></i>
+                          <% } %>
+                          <%= stage.stage_name %>
+                        </span>
+                      <% }); %>
+                    </div>
+                  <% } else { %>
+                    <span class="text-muted">No stages defined</span>
+                  <% } %>
+                </div>
+
+                <div class="doc-count">
+                  <i class="bi bi-file-earmark-text"></i>
+                  <%= template.document_count || 0 %> documents using this template
+                </div>
+              </div>
+
+              <div class="col-md-6 text-end">
+                <div class="btn-group" role="group">
+                  <% if (!template.is_default) { %>
+                    <button class="btn btn-sm btn-outline-warning" onclick="setAsDefault('<%= template.id %>', '<%= template.name %>')" title="Set as default template">
+                      <i class="bi bi-star"></i> Set Default
+                    </button>
+                  <% } %>
+
+                  <button class="btn btn-sm btn-outline-<%= template.is_active ? 'secondary' : 'success' %>"
+                          onclick="toggleStatus('<%= template.id %>', <%= !template.is_active %>)"
+                          title="<%= template.is_active ? 'Deactivate' : 'Activate' %> template">
+                    <i class="bi bi-<%= template.is_active ? 'pause' : 'play' %>"></i>
+                    <%= template.is_active ? 'Deactivate' : 'Activate' %>
+                  </button>
+
+                  <a href="/admin/workflows/<%= template.id %>/edit" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-pencil"></i> Edit
+                  </a>
+
+                  <% if (template.document_count === 0 && !template.is_default) { %>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteTemplate('<%= template.id %>', '<%= template.name %>')">
+                      <i class="bi bi-trash"></i> Delete
+                    </button>
+                  <% } else { %>
+                    <button class="btn btn-sm btn-outline-secondary" disabled title="Cannot delete default template or template in use">
+                      <i class="bi bi-trash"></i> Delete
+                    </button>
+                  <% } %>
+                </div>
+              </div>
+            </div>
+          </div>
+        <% }); %>
+      <% } else { %>
+        <div class="text-center text-muted py-5">
+          <i class="bi bi-diagram-3" style="font-size: 4rem;"></i>
+          <p class="mt-3">No workflow templates found</p>
+          <a href="/admin/workflows/create" class="btn btn-primary mt-3">
+            <i class="bi bi-plus-circle"></i> Create Your First Template
+          </a>
+        </div>
+      <% } %>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    function setAsDefault(templateId, templateName) {
+      if (!confirm(`Set "${templateName}" as the default workflow template?\n\nNew documents will automatically use this template.`)) {
+        return;
+      }
+
+      fetch(`/api/workflows/${templateId}/set-default`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          showToast('Default template updated successfully', 'success');
+          setTimeout(() => location.reload(), 1000);
+        } else {
+          showToast('Error: ' + data.error, 'danger');
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        showToast('Error updating default template', 'danger');
+      });
+    }
+
+    function toggleStatus(templateId, newStatus) {
+      const action = newStatus ? 'activate' : 'deactivate';
+
+      fetch(`/api/workflows/${templateId}/toggle-status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_active: newStatus })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          showToast(`Template ${action}d successfully`, 'success');
+          setTimeout(() => location.reload(), 1000);
+        } else {
+          showToast('Error: ' + data.error, 'danger');
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        showToast(`Error ${action}ing template`, 'danger');
+      });
+    }
+
+    function deleteTemplate(templateId, templateName) {
+      if (!confirm(`Are you sure you want to delete "${templateName}"?\n\nThis action cannot be undone.`)) {
+        return;
+      }
+
+      const confirmText = prompt('Type "DELETE" to confirm deletion:');
+      if (confirmText !== 'DELETE') {
+        showToast('Deletion cancelled', 'info');
+        return;
+      }
+
+      fetch(`/api/workflows/${templateId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          showToast('Template deleted successfully', 'success');
+          setTimeout(() => location.reload(), 1000);
+        } else {
+          showToast('Error: ' + data.error, 'danger');
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        showToast('Error deleting template', 'danger');
+      });
+    }
+
+    function showToast(message, type) {
+      // Create toast container if it doesn't exist
+      let container = document.getElementById('toast-container');
+      if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        container.className = 'position-fixed top-0 end-0 p-3';
+        container.style.zIndex = '9999';
+        document.body.appendChild(container);
+      }
+
+      // Create toast
+      const toast = document.createElement('div');
+      toast.className = `toast align-items-center text-white bg-${type} border-0`;
+      toast.setAttribute('role', 'alert');
+      toast.innerHTML = `
+        <div class="d-flex">
+          <div class="toast-body">${message}</div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+      `;
+
+      container.appendChild(toast);
+      const bsToast = new bootstrap.Toast(toast);
+      bsToast.show();
+
+      // Remove after hidden
+      toast.addEventListener('hidden.bs.toast', () => toast.remove());
+    }
+  </script>
+</body>
+</html>
