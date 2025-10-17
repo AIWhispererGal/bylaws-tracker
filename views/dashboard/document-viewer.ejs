@@ -1,0 +1,1169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %> - Document Viewer</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+  <style>
+    /* Change Tracking Styles */
+    .diff-text {
+      line-height: 1.8;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    .diff-deleted {
+      background-color: #ffebee;
+      color: #c62828;
+      text-decoration: line-through;
+      padding: 2px 4px;
+      border-radius: 3px;
+    }
+    .diff-added {
+      background-color: #e8f5e9;
+      color: #2e7d32;
+      padding: 2px 4px;
+      border-radius: 3px;
+    }
+    body {
+      background-color: #f8f9fa;
+    }
+    .document-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 2rem;
+      margin-bottom: 2rem;
+    }
+    .section-card {
+      background: white;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+    }
+    .section-card:hover {
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .section-card.expanded {
+      background: #e8f4fd;
+      border: 2px solid #0066cc;
+    }
+    .section-number {
+      font-weight: bold;
+      color: #667eea;
+      font-size: 1.1rem;
+    }
+    .suggestion-badge {
+      font-size: 0.85rem;
+    }
+    .section-content {
+      display: none;
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid #dee2e6;
+    }
+    .section-card.expanded .section-content {
+      display: block;
+    }
+    .section-text-full {
+      background: #f8f9fa;
+      padding: 1rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      white-space: pre-wrap;
+    }
+    .new-suggestion-form {
+      background: #f0f8ff;
+      border: 2px dashed #0066cc;
+      padding: 1.5rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+    }
+    .suggestion-item {
+      background: white;
+      border: 1px solid #dee2e6;
+      padding: 1rem;
+      border-radius: 8px;
+      margin-bottom: 0.5rem;
+    }
+    .suggestion-item:hover {
+      border-color: #0066cc;
+      background: #f0f8ff;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 3rem;
+      color: #6c757d;
+    }
+    .empty-state i {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      opacity: 0.5;
+    }
+    /* Workflow Status Styles */
+    .workflow-status {
+      margin-top: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .workflow-status .badge {
+      font-size: 0.8rem;
+      padding: 0.35rem 0.65rem;
+    }
+    .approval-actions {
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid #dee2e6;
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .approval-actions .btn {
+      font-size: 0.875rem;
+    }
+    .workflow-progress {
+      background: white;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .workflow-progress .progress {
+      height: 30px;
+      margin-bottom: 0.5rem;
+    }
+    .workflow-progress .progress-bar {
+      font-size: 0.9rem;
+      line-height: 30px;
+    }
+    .approval-history-timeline {
+      margin-top: 1rem;
+    }
+    .approval-history-item {
+      padding: 0.75rem;
+      border-left: 3px solid #667eea;
+      margin-bottom: 0.75rem;
+      background: #f8f9fa;
+      border-radius: 4px;
+    }
+    .approval-history-item.approved {
+      border-left-color: #28a745;
+    }
+    .approval-history-item.rejected {
+      border-left-color: #dc3545;
+    }
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 9999;
+    }
+    .toast {
+      min-width: 300px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+  </style>
+</head>
+<body>
+  <div class="document-header">
+    <div class="container">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <h1><i class="bi bi-file-text me-2"></i><%= document.title %></h1>
+          <p class="mb-0">
+            <span class="badge bg-light text-dark me-2"><%= document.document_type %></span>
+            <span class="text-white-50">Version <%= document.version_number || '1.0' %></span>
+          </p>
+        </div>
+        <div>
+          <a href="/dashboard" class="btn btn-light">
+            <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container mb-5">
+    <!-- Workflow Progress Bar -->
+    <div class="workflow-progress">
+      <h5 class="mb-3"><i class="bi bi-diagram-3 me-2"></i>Workflow Progress</h5>
+      <div class="progress">
+        <div class="progress-bar bg-success" role="progressbar" style="width: 0%" id="workflow-progress-bar">
+          <span id="workflow-progress-text">0 / <%= sections.length %> sections approved</span>
+        </div>
+      </div>
+      <small class="text-muted" id="workflow-stage-text">Current Stage: Loading...</small>
+    </div>
+
+    <!-- Document Info -->
+    <div class="row mb-4">
+      <div class="col-md-12">
+        <div class="card">
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-3">
+                <h6 class="text-muted">Sections</h6>
+                <h3><%= sections.length %></h3>
+              </div>
+              <div class="col-md-3">
+                <h6 class="text-muted">Pending Suggestions</h6>
+                <h3><%= suggestions.length %></h3>
+              </div>
+              <div class="col-md-3">
+                <h6 class="text-muted">Created</h6>
+                <p class="mb-0"><%= new Date(document.created_at).toLocaleDateString() %></p>
+              </div>
+              <div class="col-md-3">
+                <h6 class="text-muted">Last Modified</h6>
+                <p class="mb-0"><%= new Date(document.updated_at || document.created_at).toLocaleDateString() %></p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Document Sections -->
+    <div class="row">
+      <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h3><i class="bi bi-list-ol me-2"></i>Document Sections</h3>
+          <button class="btn btn-primary" disabled>
+            <i class="bi bi-plus-circle me-2"></i>Add Section
+          </button>
+        </div>
+
+        <% if (sections && sections.length > 0) { %>
+          <% sections.forEach((section, index) => { %>
+            <div class="section-card" id="section-<%= section.id %>" onclick="toggleSection('<%= section.id %>')">
+              <div class="d-flex justify-content-between align-items-start">
+                <div class="flex-grow-1">
+                  <div class="d-flex align-items-center mb-2">
+                    <span class="section-number"><%= section.section_number || (index + 1) %></span>
+                    <span class="ms-2 badge bg-secondary"><%= section.section_type || 'Section' %></span>
+                    <span class="ms-2 badge bg-info" id="suggestion-count-<%= section.id %>">0 suggestions</span>
+                    <% if (section.is_locked) { %>
+                      <span class="ms-2 badge bg-primary">
+                        <i class="bi bi-lock-fill me-1"></i>Locked
+                      </span>
+                      <% if (section.locked_text && (section.locked_text != section.original_text)) { %>
+                        <span class="ms-2 badge bg-success">
+                          <i class="bi bi-pencil-square me-1"></i>Amended
+                        </span>
+                      <% } %>
+                    <% } %>
+                  </div>
+
+                  <!-- Workflow Status Badge -->
+                  <div class="workflow-status" id="workflow-status-<%= section.id %>">
+                    <span class="badge bg-warning" data-section-id="<%= section.id %>">
+                      <i class="bi bi-clock-history me-1"></i>Loading status...
+                    </span>
+                  </div>
+                  <h5><%= section.section_title || 'Untitled Section' %></h5>
+                  <%
+                    // Display locked_text if locked, otherwise current_text
+                    const displayText = section.is_locked && section.locked_text
+                      ? section.locked_text
+                      : (section.current_text || section.original_text);
+                  %>
+                  <% if (displayText) { %>
+                    <p class="text-muted mb-0">
+                      <%= displayText.substring(0, 200) %><%
+ if (displayText.length > 200) { %>...<%
+ } %>
+                    </p>
+                  <% } %>
+                </div>
+                <div class="ms-3">
+                  <i class="bi bi-chevron-down" id="chevron-<%= section.id %>"></i>
+                </div>
+              </div>
+
+              <!-- Expanded Content -->
+              <div class="section-content" onclick="event.stopPropagation()">
+                <% if (section.is_locked) { %>
+                  <!-- Locked Section Notice -->
+                  <div class="alert alert-info mb-3">
+                    <i class="bi bi-lock-fill me-2"></i>
+                    <strong>This section is locked.</strong>
+                    <% if (section.locked_text && (section.locked_text != section.original_text)) { %>
+                      Changes have been approved and locked in.
+                      <button class="btn btn-sm btn-outline-primary ms-2" onclick="showDiffView('<%= section.id %>', event)">
+                        <i class="bi bi-eye me-1"></i>Show Changes
+                      </button>
+                    <% } else { %>
+                      Original text has been locked without changes.
+                    <% } %>
+                  </div>
+                <% } %>
+
+                <!-- Full Section Text -->
+                <div class="section-text-full" id="section-text-<%= section.id %>">
+                  <%
+                    // Display locked_text if locked, otherwise current_text
+                    const fullText = section.is_locked && section.locked_text
+                      ? section.locked_text
+                      : (section.current_text || section.original_text || 'No text available');
+                  %>
+                  <%= fullText %>
+                </div>
+
+                <% if (section.is_locked && section.locked_text && (section.locked_text != section.original_text)) { %>
+                  <!-- Hidden diff view -->
+                  <div id="diff-view-<%= section.id %>" style="display: none;" class="section-text-full">
+                    <!-- Diff will be generated dynamically by JavaScript -->
+                  </div>
+                <% } %>
+
+                <!-- Suggestions Header -->
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                  <h6 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Suggestions</h6>
+                  <button class="btn btn-sm btn-primary" onclick="showSuggestionForm('<%= section.id %>')">
+                    <i class="bi bi-plus-circle me-1"></i>Add Suggestion
+                  </button>
+                </div>
+
+                <!-- New Suggestion Form -->
+                <div id="suggestion-form-<%= section.id %>" style="display: none;">
+                  <div class="new-suggestion-form">
+                    <h6>New Suggestion</h6>
+                    <div class="mb-2">
+                      <label class="form-label">Your Name</label>
+                      <input type="text" class="form-control" id="author-name-<%= section.id %>"
+                             value="<%= user ? (user.name || user.email) : '' %>"
+                             placeholder="Enter your name">
+                      <div class="form-check mt-2">
+                        <input class="form-check-input" type="checkbox" id="anonymous-<%= section.id %>"
+                               onchange="toggleAnonymous('<%= section.id %>')">
+                        <label class="form-check-label" for="anonymous-<%= section.id %>">
+                          Submit as Anonymous
+                        </label>
+                      </div>
+                    </div>
+                    <div class="mb-2">
+                      <label class="form-label">Suggested Text</label>
+                      <textarea class="form-control" id="suggested-text-<%= section.id %>"
+                                rows="4" placeholder="Enter your suggested amendment"><%= section.current_text || '' %></textarea>
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label">Rationale (Optional)</label>
+                      <textarea class="form-control" id="rationale-<%= section.id %>"
+                                rows="2" placeholder="Why is this change needed?"></textarea>
+                    </div>
+                    <div class="d-flex gap-2">
+                      <button class="btn btn-success btn-sm" onclick="submitSuggestion('<%= section.id %>')">
+                        <i class="bi bi-check-circle me-1"></i>Submit
+                      </button>
+                      <button class="btn btn-secondary btn-sm" onclick="hideSuggestionForm('<%= section.id %>')">
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Suggestions List -->
+                <div id="suggestions-list-<%= section.id %>">
+                  <div class="text-center text-muted py-3">
+                    <i class="bi bi-inbox"></i>
+                    <p class="mb-0">Click "Add Suggestion" to propose changes</p>
+                  </div>
+                </div>
+
+                <!-- Approval Action Panel (conditional based on permissions) -->
+                <div id="approval-actions-<%= section.id %>" style="display: none;">
+                  <div class="approval-actions">
+                    <!-- Buttons will be dynamically added based on permissions -->
+                  </div>
+                </div>
+              </div>
+            </div>
+          <% }); %>
+        <% } else { %>
+          <div class="section-card">
+            <div class="empty-state">
+              <i class="bi bi-inbox"></i>
+              <h4>No Sections Yet</h4>
+              <p>This document doesn't have any sections yet. Sections will appear here once they're added.</p>
+            </div>
+          </div>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- Pending Suggestions -->
+    <% if (suggestions && suggestions.length > 0) { %>
+    <div class="row mt-4">
+      <div class="col-md-12">
+        <h3><i class="bi bi-lightbulb me-2"></i>Pending Suggestions</h3>
+        <div class="card">
+          <div class="card-body">
+            <div class="list-group list-group-flush">
+              <% suggestions.slice(0, 5).forEach(suggestion => { %>
+                <div class="list-group-item">
+                  <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                      <h6 class="mb-1"><%= suggestion.author_name || 'Anonymous' %></h6>
+                      <p class="mb-1 text-muted"><%= suggestion.rationale || 'No rationale provided' %></p>
+                      <small class="text-muted">
+                        <i class="bi bi-calendar me-1"></i>
+                        <%= new Date(suggestion.created_at).toLocaleDateString() %>
+                      </small>
+                    </div>
+                    <span class="badge bg-warning text-dark"><%= suggestion.status %></span>
+                  </div>
+                </div>
+              <% }); %>
+            </div>
+            <% if (suggestions.length > 5) { %>
+              <div class="text-center mt-3">
+                <button class="btn btn-sm btn-outline-secondary" disabled>
+                  View All <%= suggestions.length %> Suggestions
+                </button>
+              </div>
+            <% } %>
+          </div>
+        </div>
+      </div>
+    </div>
+    <% } %>
+  </div>
+
+  <!-- Approval History Modal -->
+  <div class="modal fade" id="approvalHistoryModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-clock-history me-2"></i>Approval History</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="approval-history-timeline" id="approvalHistoryTimeline">
+            <div class="text-center text-muted py-3">
+              <i class="bi bi-inbox"></i>
+              <p>Loading approval history...</p>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/diff@5.1.0/dist/diff.min.js"></script>
+  <script src="/js/workflow-actions.js"></script>
+  <script>
+    const documentId = '<%= document.id %>';
+    const expandedSections = new Set();
+
+    // Toggle section expand/collapse
+    async function toggleSection(sectionId) {
+      const card = document.getElementById('section-' + sectionId);
+      const chevron = document.getElementById('chevron-' + sectionId);
+
+      if (expandedSections.has(sectionId)) {
+        expandedSections.delete(sectionId);
+        card.classList.remove('expanded');
+        chevron.classList.remove('bi-chevron-up');
+        chevron.classList.add('bi-chevron-down');
+      } else {
+        expandedSections.add(sectionId);
+        card.classList.add('expanded');
+        chevron.classList.remove('bi-chevron-down');
+        chevron.classList.add('bi-chevron-up');
+
+        // Load suggestions when expanding
+        loadSuggestions(sectionId);
+
+        // Load workflow state and show approval buttons
+        await loadSectionWorkflowState(sectionId);
+      }
+    }
+
+    // Load workflow state for a specific section and show buttons
+    async function loadSectionWorkflowState(sectionId) {
+      try {
+        console.log('[WORKFLOW] Loading state for section:', sectionId);
+        const response = await fetch(`/api/workflow/sections/${sectionId}/state`);
+        const data = await response.json();
+
+        console.log('[WORKFLOW] State response:', data);
+
+        if (data.success) {
+          updateSectionWorkflowBadge(sectionId, data);
+        } else {
+          console.error('[WORKFLOW] Failed to load state:', data.error);
+        }
+      } catch (error) {
+        console.error('[WORKFLOW] Error loading workflow state:', error);
+      }
+    }
+
+    // Show suggestion form
+    function showSuggestionForm(sectionId) {
+      document.getElementById('suggestion-form-' + sectionId).style.display = 'block';
+    }
+
+    // Hide suggestion form
+    function hideSuggestionForm(sectionId) {
+      document.getElementById('suggestion-form-' + sectionId).style.display = 'none';
+    }
+
+    // Toggle anonymous checkbox
+    function toggleAnonymous(sectionId) {
+      const nameInput = document.getElementById('author-name-' + sectionId);
+      const anonymousCheckbox = document.getElementById('anonymous-' + sectionId);
+
+      if (anonymousCheckbox.checked) {
+        nameInput.value = 'Anonymous';
+        nameInput.disabled = true;
+      } else {
+        nameInput.value = '<%= user ? (user.name || user.email) : '' %>';
+        nameInput.disabled = false;
+      }
+    }
+
+    // Submit suggestion
+    async function submitSuggestion(sectionId) {
+      const authorName = document.getElementById('author-name-' + sectionId).value;
+      const suggestedText = document.getElementById('suggested-text-' + sectionId).value;
+      const rationale = document.getElementById('rationale-' + sectionId).value;
+
+      if (!suggestedText.trim()) {
+        alert('Please enter suggested text');
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/dashboard/suggestions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            document_id: documentId,
+            section_id: sectionId,
+            suggested_text: suggestedText,
+            rationale: rationale || null,
+            author_name: authorName || 'Anonymous',
+            author_email: '<%= user ? user.email : "anonymous@example.com" %>',
+            status: 'open'
+          })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          alert('Suggestion submitted successfully!');
+          hideSuggestionForm(sectionId);
+
+          // Clear form (except name)
+          document.getElementById('suggested-text-' + sectionId).value = '';
+          document.getElementById('rationale-' + sectionId).value = '';
+          document.getElementById('anonymous-' + sectionId).checked = false;
+
+          // Reload suggestions
+          loadSuggestions(sectionId);
+        } else {
+          alert('Error: ' + (data.error || 'Failed to submit suggestion'));
+        }
+      } catch (error) {
+        console.error('Error submitting suggestion:', error);
+        alert('An error occurred while submitting your suggestion');
+      }
+    }
+
+    // Load suggestions for a section
+    async function loadSuggestions(sectionId) {
+      try {
+        const response = await fetch(`/api/dashboard/suggestions?section_id=${sectionId}`);
+        const data = await response.json();
+
+        if (data.success) {
+          renderSuggestions(sectionId, data.suggestions);
+
+          // Update count badge
+          const count = data.suggestions.length;
+          document.getElementById('suggestion-count-' + sectionId).textContent = count + ' suggestion' + (count !== 1 ? 's' : '');
+        }
+      } catch (error) {
+        console.error('Error loading suggestions:', error);
+      }
+    }
+
+    // Generate HTML with change tracking (red strikethrough for deletions, green for additions)
+    function generateDiffHTML(originalText, suggestedText) {
+      if (!originalText) originalText = '';
+      if (!suggestedText) suggestedText = '';
+
+      const diff = Diff.diffWords(originalText, suggestedText);
+      let html = '';
+
+      diff.forEach(part => {
+        if (part.added) {
+          html += `<span class="diff-added">${escapeHtml(part.value)}</span>`;
+        } else if (part.removed) {
+          html += `<span class="diff-deleted">${escapeHtml(part.value)}</span>`;
+        } else {
+          html += escapeHtml(part.value);
+        }
+      });
+
+      return html;
+    }
+
+    // Track which suggestions are showing changes
+    const suggestionTrackChanges = new Map();
+
+    // Toggle change tracking for individual suggestion
+    function toggleSuggestionTrackChanges(suggestionId, sectionId) {
+      const currentState = suggestionTrackChanges.get(suggestionId) || false;
+      suggestionTrackChanges.set(suggestionId, !currentState);
+
+      // Re-render this section's suggestions
+      loadSuggestions(sectionId);
+    }
+
+    // Get original text for a section (for diff comparison)
+    async function getSectionOriginalText(sectionId) {
+      try {
+        const response = await fetch(`/api/dashboard/sections/${sectionId}`);
+        const data = await response.json();
+        if (data.success && data.section) {
+          return data.section.current_text || '';
+        }
+      } catch (error) {
+        console.error('Error loading section text:', error);
+      }
+      return '';
+    }
+
+    // Render suggestions list with diff view support
+    async function renderSuggestions(sectionId, suggestions) {
+      const container = document.getElementById('suggestions-list-' + sectionId);
+
+      if (!suggestions || suggestions.length === 0) {
+        container.innerHTML = `
+          <div class="text-center text-muted py-3">
+            <i class="bi bi-inbox"></i>
+            <p class="mb-0">No suggestions yet. Be the first to suggest changes!</p>
+          </div>
+        `;
+        return;
+      }
+
+      // Get original text for diff comparison
+      const originalText = await getSectionOriginalText(sectionId);
+
+      let html = '';
+
+      // Add "Keep Original Text" option first
+      html += `
+        <div class="suggestion-item border-primary">
+          <div class="d-flex justify-content-between align-items-start">
+            <div class="form-check me-3 mt-1">
+              <input class="form-check-input" type="radio"
+                     name="suggestion-select-${sectionId}"
+                     id="suggestion-original-${sectionId}"
+                     value="original"
+                     onchange="updateLockButton('${sectionId}', 'original')">
+              <label class="form-check-label" for="suggestion-original-${sectionId}"></label>
+            </div>
+            <div class="flex-grow-1">
+              <h6 class="mb-2">
+                <i class="bi bi-file-text me-2"></i>Keep Original Text
+                <span class="badge bg-info ms-2">No Changes</span>
+              </h6>
+              <div class="text-muted small mb-2">
+                Lock this section without selecting any suggestion (keeps current text as-is)
+              </div>
+              <div class="mb-2" style="white-space: pre-wrap; padding: 0.5rem; background-color: #f8f9fa; border-radius: 4px;">
+                ${escapeHtml(originalText)}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      suggestions.forEach(suggestion => {
+        const showChanges = suggestionTrackChanges.get(suggestion.id) || false;
+        const displayText = showChanges ?
+          generateDiffHTML(originalText, suggestion.suggested_text) :
+          escapeHtml(suggestion.suggested_text);
+
+        html += `
+          <div class="suggestion-item">
+            <div class="d-flex justify-content-between align-items-start">
+              <div class="form-check me-3 mt-1">
+                <input class="form-check-input" type="radio"
+                       name="suggestion-select-${sectionId}"
+                       id="suggestion-${suggestion.id}"
+                       value="${suggestion.id}"
+                       onchange="updateLockButton('${sectionId}', '${suggestion.id}')">
+                <label class="form-check-label" for="suggestion-${suggestion.id}"></label>
+              </div>
+              <div class="flex-grow-1">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                  <h6 class="mb-0">${escapeHtml(suggestion.author_name)}</h6>
+                  <button class="btn btn-sm btn-outline-secondary"
+                          onclick="event.stopPropagation(); toggleSuggestionTrackChanges('${suggestion.id}', '${sectionId}')">
+                    <i class="bi bi-eye${showChanges ? '-slash' : ''}"></i>
+                    ${showChanges ? 'Hide' : 'Show'} Changes
+                  </button>
+                </div>
+                <div class="text-muted small mb-2">
+                  <i class="bi bi-calendar me-1"></i>${new Date(suggestion.created_at).toLocaleDateString()}
+                  <span class="badge bg-${suggestion.status === 'open' ? 'warning' : 'success'} ms-2">${suggestion.status}</span>
+                </div>
+                <div class="mb-2 ${showChanges ? 'diff-text' : ''}"
+                     style="white-space: pre-wrap; padding: 0.5rem; background-color: ${showChanges ? '#f8f9fa' : 'transparent'}; border-radius: 4px;"
+                     id="suggestion-text-${suggestion.id}">
+                  ${displayText}
+                </div>
+                ${suggestion.rationale ? `
+                  <div class="text-muted small">
+                    <strong>Rationale:</strong> ${escapeHtml(suggestion.rationale)}
+                  </div>
+                ` : ''}
+              </div>
+            </div>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+    }
+
+    // Escape HTML to prevent XSS
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Load all suggestion counts on page load
+    async function loadAllSuggestionCounts() {
+      const sectionIds = [
+        <% sections.forEach((section, index) => { %>
+          '<%= section.id %>'<%= index < sections.length - 1 ? ',' : '' %>
+        <% }); %>
+      ];
+
+      // Load counts for all sections in parallel
+      const countPromises = sectionIds.map(sectionId =>
+        fetch(`/api/dashboard/suggestions?section_id=${sectionId}`)
+          .then(r => r.json())
+          .then(data => ({
+            sectionId,
+            count: data.success ? data.suggestions.length : 0
+          }))
+          .catch(err => {
+            console.error(`Error loading count for section ${sectionId}:`, err);
+            return { sectionId, count: 0 };
+          })
+      );
+
+      const results = await Promise.all(countPromises);
+
+      // Update all badges
+      results.forEach(({ sectionId, count }) => {
+        const badge = document.getElementById('suggestion-count-' + sectionId);
+        if (badge) {
+          badge.textContent = count + ' suggestion' + (count !== 1 ? 's' : '');
+        }
+      });
+    }
+
+    // Track selected suggestions per section
+    const selectedSuggestions = new Map();
+
+    // Update lock button when suggestion is selected
+    function updateLockButton(sectionId, suggestionId) {
+      selectedSuggestions.set(sectionId, suggestionId);
+      console.log('[SUGGESTION SELECT] Section:', sectionId, 'Suggestion:', suggestionId);
+
+      // Reload the section to update button state
+      loadSectionWorkflowState(sectionId);
+    }
+
+    // Lock the selected suggestion
+    async function lockSelectedSuggestion(sectionId) {
+      const suggestionId = selectedSuggestions.get(sectionId);
+
+      if (!suggestionId) {
+        showToast('Please select a suggestion to lock', 'warning');
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/workflow/sections/${sectionId}/lock`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            suggestionId: suggestionId === 'original' ? null : suggestionId,
+            notes: 'Locked via workflow'
+          })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          showToast('Suggestion locked successfully', 'success');
+
+          // Clear selection
+          selectedSuggestions.delete(sectionId);
+
+          // Reload the section state
+          await loadSectionWorkflowState(sectionId);
+          await loadSuggestions(sectionId);
+          await updateWorkflowProgress();
+        } else {
+          showToast('Error: ' + (data.error || 'Failed to lock suggestion'), 'danger');
+        }
+      } catch (error) {
+        console.error('[LOCK] Error:', error);
+        showToast('An error occurred while locking the suggestion', 'danger');
+      }
+    }
+
+    // Unlock section (admin/owner/global admin only)
+    async function unlockSection(sectionId) {
+      if (!confirm('Are you sure you want to unlock this section? This will allow it to be edited and re-locked.')) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/workflow/sections/${sectionId}/unlock`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            notes: 'Unlocked by admin'
+          })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          showToast('Section unlocked successfully', 'success');
+
+          // Reload the section state
+          await loadSectionWorkflowState(sectionId);
+          await loadSuggestions(sectionId);
+          await updateWorkflowProgress();
+
+          // Refresh the page to show updated lock status
+          location.reload();
+        } else {
+          showToast('Error: ' + (data.error || 'Failed to unlock section'), 'danger');
+        }
+      } catch (error) {
+        console.error('[UNLOCK] Error:', error);
+        showToast('An error occurred while unlocking the section', 'danger');
+      }
+    }
+
+    // Show toast notification
+    function showToast(message, type = 'info') {
+      const toastContainer = document.getElementById('toastContainer');
+      const toastId = 'toast-' + Date.now();
+
+      const toast = document.createElement('div');
+      toast.className = `toast align-items-center text-white bg-${type} border-0`;
+      toast.id = toastId;
+      toast.setAttribute('role', 'alert');
+      toast.setAttribute('aria-live', 'assertive');
+      toast.setAttribute('aria-atomic', 'true');
+
+      toast.innerHTML = `
+        <div class="d-flex">
+          <div class="toast-body">${message}</div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+      `;
+
+      toastContainer.appendChild(toast);
+
+      const bsToast = new bootstrap.Toast(toast, { delay: 3000 });
+      bsToast.show();
+
+      // Remove after hidden
+      toast.addEventListener('hidden.bs.toast', () => {
+        toast.remove();
+      });
+    }
+
+    // Show diff view for locked section
+    async function showDiffView(sectionId, event) {
+      try {
+        // Get section data to compare original vs locked text
+        const response = await fetch(`/api/dashboard/sections/${sectionId}`);
+        const data = await response.json();
+
+        if (!data.success || !data.section) {
+          showToast('Could not load section data', 'danger');
+          return;
+        }
+
+        const originalText = data.section.current_text || '';
+
+        // Get locked text from the DOM (it's already rendered)
+        const sections = <%- JSON.stringify(sections) %>;
+        const section = sections.find(s => s.id === sectionId);
+        const lockedText = section?.locked_text || '';
+
+        // Generate diff HTML
+        const diffHTML = generateDiffHTML(originalText, lockedText);
+
+        // Show diff view
+        const textContainer = document.getElementById('section-text-' + sectionId);
+        const diffContainer = document.getElementById('diff-view-' + sectionId);
+
+        if (diffContainer.style.display === 'none') {
+          // Show diff
+          diffContainer.innerHTML = `<div class="diff-text">${diffHTML}</div>`;
+          diffContainer.style.display = 'block';
+          textContainer.style.display = 'none';
+
+          // Update button text
+          if (event && event.target) {
+            const button = event.target.closest('button');
+            if (button) {
+              button.innerHTML = '<i class="bi bi-eye-slash me-1"></i>Hide Changes';
+            }
+          }
+        } else {
+          // Hide diff
+          diffContainer.style.display = 'none';
+          textContainer.style.display = 'block';
+
+          // Update button text
+          if (event && event.target) {
+            const button = event.target.closest('button');
+            if (button) {
+              button.innerHTML = '<i class="bi bi-eye me-1"></i>Show Changes';
+            }
+          }
+        }
+      } catch (error) {
+        console.error('[DIFF VIEW] Error:', error);
+        showToast('Error displaying changes', 'danger');
+      }
+    }
+
+    // Load counts when page loads
+    document.addEventListener('DOMContentLoaded', () => {
+      loadAllSuggestionCounts();
+      loadAllWorkflowStates();
+      updateWorkflowProgress();
+    });
+
+    // Load workflow states for all sections
+    async function loadAllWorkflowStates() {
+      const sectionIds = [
+        <% sections.forEach((section, index) => { %>
+          '<%= section.id %>'<%= index < sections.length - 1 ? ',' : '' %>
+        <% }); %>
+      ];
+
+      // Load workflow states in parallel
+      const statePromises = sectionIds.map(sectionId =>
+        fetch(`/api/workflow/sections/${sectionId}/state`)
+          .then(r => r.json())
+          .then(data => ({ sectionId, data }))
+          .catch(err => {
+            console.error(`Error loading workflow state for section ${sectionId}:`, err);
+            return { sectionId, data: null };
+          })
+      );
+
+      const results = await Promise.all(statePromises);
+
+      // Update all section workflow badges
+      results.forEach(({ sectionId, data }) => {
+        if (data && data.success) {
+          updateSectionWorkflowBadge(sectionId, data);
+        }
+      });
+    }
+
+    // Update section workflow badge with state data
+    function updateSectionWorkflowBadge(sectionId, workflowData) {
+      const statusContainer = document.getElementById('workflow-status-' + sectionId);
+      if (!statusContainer) return;
+
+      const state = workflowData.state || {};
+      const stage = workflowData.stage || {};
+      const permissions = workflowData.permissions || {};
+      const section = workflowData.section || {};
+
+      // Check if section is locked from the returned data
+      const isLocked = section.is_locked || false;
+
+      // Determine badge color based on status
+      const statusColors = {
+        'pending': 'warning',
+        'approved': 'success',
+        'rejected': 'danger',
+        'locked': 'primary',
+        'in_progress': 'info'
+      };
+      const badgeColor = statusColors[state.status] || 'secondary';
+
+      // Build status badge HTML
+      let badgeHTML = `
+        <span class="badge bg-${badgeColor}" data-section-id="${sectionId}">
+          <i class="bi bi-${state.status === 'approved' ? 'check-circle' : state.status === 'rejected' ? 'x-circle' : isLocked ? 'lock-fill' : 'clock-history'} me-1"></i>
+          ${stage.stage_name || 'Draft'} - ${isLocked ? 'Locked' : (state.status || 'Pending')}
+        </span>
+      `;
+
+      // Add last approved info if available
+      if (state.approved_by_email && state.approved_at) {
+        const approvedDate = new Date(state.approved_at).toLocaleDateString();
+        badgeHTML += `
+          <small class="text-muted ms-2">
+            <i class="bi bi-person-check me-1"></i>
+            by ${state.approved_by_email} on ${approvedDate}
+          </small>
+        `;
+      }
+
+      // Add history link
+      badgeHTML += `
+        <button class="btn btn-sm btn-link text-muted p-0 ms-2"
+                onclick="viewApprovalHistory('${sectionId}')"
+                title="View approval history">
+          <i class="bi bi-clock-history"></i>
+        </button>
+      `;
+
+      statusContainer.innerHTML = badgeHTML;
+
+      // Show approval actions if user has permission
+      if (permissions.canApprove || permissions.canLock || permissions.canReject) {
+        showApprovalActions(sectionId, permissions, state, stage);
+      }
+    }
+
+    // Show approval action buttons based on permissions
+    function showApprovalActions(sectionId, permissions, state, stage) {
+      const actionsContainer = document.getElementById('approval-actions-' + sectionId);
+      if (!actionsContainer) return;
+
+      let actionsHTML = '';
+
+      // Only show actions if section is expanded
+      if (expandedSections.has(sectionId)) {
+        // Show approve/reject buttons if not locked
+        if (state.status !== 'locked') {
+          if (permissions.canApprove && state.status === 'pending') {
+            actionsHTML += `
+              <button class="btn btn-success btn-sm" onclick="approveSection('${sectionId}')">
+                <i class="bi bi-check-circle me-1"></i>Approve
+              </button>
+            `;
+          }
+
+          if (permissions.canReject && state.status !== 'rejected') {
+            actionsHTML += `
+              <button class="btn btn-danger btn-sm" onclick="rejectSection('${sectionId}')">
+                <i class="bi bi-x-circle me-1"></i>Reject
+              </button>
+            `;
+          }
+
+          // Lock button should ALWAYS show if stage allows locking
+          if (permissions.canLock && stage.can_lock) {
+            const hasSuggestion = typeof selectedSuggestions !== 'undefined' && selectedSuggestions.has(sectionId);
+            actionsHTML += `
+              <button class="btn ${hasSuggestion ? 'btn-primary' : 'btn-secondary'} btn-sm"
+                      onclick="lockSelectedSuggestion('${sectionId}')"
+                      ${!hasSuggestion ? 'disabled' : ''}>
+                <i class="bi bi-lock me-1"></i>Lock Selected Suggestion
+              </button>
+              <small class="text-muted d-block mt-1">Select a suggestion above to lock it as current</small>
+            `;
+          }
+        }
+
+        // Show unlock button for admins/owners/global admins if section is locked
+        if (permissions.canUnlock) {
+          actionsHTML += `
+            <button class="btn btn-warning btn-sm" onclick="unlockSection('${sectionId}')">
+              <i class="bi bi-unlock me-1"></i>Unlock Section
+            </button>
+            <small class="text-muted d-block mt-1">Unlock this section to allow editing and re-locking (admin only)</small>
+          `;
+        }
+      }
+
+      if (actionsHTML) {
+        actionsContainer.querySelector('.approval-actions').innerHTML = actionsHTML;
+        actionsContainer.style.display = 'block';
+      } else {
+        actionsContainer.style.display = 'none';
+      }
+    }
+
+    // Update workflow progress bar
+    async function updateWorkflowProgress() {
+      try {
+        // TODO: Implement /api/workflow/documents/:id/progress endpoint
+        // For now, calculate progress from section states
+        const sectionIds = [
+          <% sections.forEach((section, index) => { %>
+            '<%= section.id %>'<%= index < sections.length - 1 ? ',' : '' %>
+          <% }); %>
+        ];
+
+        if (sectionIds.length === 0) {
+          return;
+        }
+
+        // Count approved sections
+        let approvedCount = 0;
+        for (const sectionId of sectionIds) {
+          try {
+            const response = await fetch(`/api/workflow/sections/${sectionId}/state`);
+            const data = await response.json();
+            if (data.success && data.state && data.state.status === 'approved') {
+              approvedCount++;
+            }
+          } catch (err) {
+            console.error(`Error checking section ${sectionId}:`, err);
+          }
+        }
+
+        const totalSections = sectionIds.length;
+        const progressPercentage = Math.round((approvedCount / totalSections) * 100);
+
+        const progressBar = document.getElementById('workflow-progress-bar');
+        const progressText = document.getElementById('workflow-progress-text');
+        const stageText = document.getElementById('workflow-stage-text');
+
+        if (progressBar) {
+          progressBar.style.width = progressPercentage + '%';
+          progressBar.setAttribute('aria-valuenow', progressPercentage);
+        }
+
+        if (progressText) {
+          progressText.textContent = `${approvedCount} / ${totalSections} sections approved`;
+        }
+
+        if (stageText) {
+          stageText.textContent = `Progress: ${progressPercentage}% complete`;
+        }
+      } catch (error) {
+        console.error('Error updating workflow progress:', error);
+      }
+    }
+  </script>
+</body>
+</html>
