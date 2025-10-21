@@ -1,0 +1,405 @@
+# Admin Section Restrictions - Flow Diagrams
+
+## Task 3.1: Delete Restriction Flow
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    ADMIN TRIES TO DELETE                    │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+                    ┌─────────────────┐
+                    │   UI Layer      │
+                    │  (View EJS)     │
+                    └─────────────────┘
+                              │
+                              ▼
+                    ┌─────────────────┐
+                    │ Delete Button   │
+                    │   NOT SHOWN     │───► Admin sees only rename,
+                    │  (Removed)      │    move, split, join
+                    └─────────────────┘
+                              │
+                              │ IF admin bypasses UI
+                              │ (direct API call)
+                              ▼
+                    ┌─────────────────┐
+                    │  Backend API    │
+                    │ /admin/sections │
+                    │    /:id         │
+                    └─────────────────┘
+                              │
+                              ▼
+                    ┌─────────────────┐
+                    │ Admin Check     │
+                    │ isGlobalAdmin?  │
+                    │ isAdmin?        │
+                    └─────────────────┘
+                              │
+                    ┌─────────┴─────────┐
+                    │                   │
+                    ▼                   ▼
+            ┌──────────┐        ┌──────────┐
+            │   YES    │        │    NO    │
+            │ (Admin)  │        │ (Other)  │
+            └──────────┘        └──────────┘
+                    │                   │
+                    ▼                   ▼
+            ┌──────────┐        ┌──────────┐
+            │ Return   │        │ Continue │
+            │  403     │        │ Deletion │
+            │ FORBIDDEN│        │  Logic   │
+            └──────────┘        └──────────┘
+                    │                   │
+                    ▼                   ▼
+            ┌──────────┐        ┌──────────┐
+            │  Error:  │        │ Section  │
+            │ Admins   │        │ Deleted  │
+            │ Cannot   │        │Successfully│
+            │ Delete   │        └──────────┘
+            └──────────┘
+```
+
+## Task 3.2: Split with Suggestions Flow
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                   ADMIN TRIES TO SPLIT                      │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+                    ┌─────────────────┐
+                    │  Page Load      │
+                    │  (Server-side)  │
+                    └─────────────────┘
+                              │
+                              ▼
+                    ┌─────────────────┐
+                    │ Count Active    │
+                    │ Suggestions     │───► Filter: rejected_at IS NULL
+                    │ Per Section     │
+                    └─────────────────┘
+                              │
+                    ┌─────────┴─────────┐
+                    │                   │
+                    ▼                   ▼
+            ┌──────────┐        ┌──────────┐
+            │   Has    │        │   No     │
+            │Suggestions│        │Suggestions│
+            └──────────┘        └──────────┘
+                    │                   │
+                    ▼                   ▼
+            ┌──────────┐        ┌──────────┐
+            │  Split   │        │  Split   │
+            │  Button  │        │  Button  │
+            │ DISABLED │        │ ENABLED  │
+            └──────────┘        └──────────┘
+                    │                   │
+                    │                   │
+                    ▼                   ▼
+            ┌──────────┐        ┌──────────┐
+            │ Warning  │        │ User Can │
+            │ Message: │        │  Click   │
+            │ "N active│        │  Button  │
+            │suggestions"│      └──────────┘
+            └──────────┘                │
+                    │                   │
+                    │                   ▼
+                    │           ┌──────────┐
+                    │           │JavaScript│
+                    │           │Validation│
+                    │           └──────────┘
+                    │                   │
+                    │                   ▼
+                    │           ┌──────────┐
+                    │           │ Fetch    │
+                    │           │Suggestion│
+                    │           │  Count   │
+                    │           └──────────┘
+                    │                   │
+                    │         ┌─────────┴─────────┐
+                    │         │                   │
+                    │         ▼                   ▼
+                    │   ┌──────────┐      ┌──────────┐
+                    │   │   Has    │      │   No     │
+                    │   │Suggestions│      │Suggestions│
+                    │   └──────────┘      └──────────┘
+                    │         │                   │
+                    │         ▼                   ▼
+                    │   ┌──────────┐      ┌──────────┐
+                    │   │  Toast   │      │  Open    │
+                    │   │ "Cannot  │      │  Split   │
+                    │   │  split"  │      │  Modal   │
+                    │   └──────────┘      └──────────┘
+                    │                             │
+                    │                             ▼
+                    │                     ┌──────────┐
+                    │                     │ User Sets│
+                    │                     │  Split   │
+                    │                     │ Position │
+                    │                     └──────────┘
+                    │                             │
+                    │                             ▼
+                    │                     ┌──────────┐
+                    │                     │  API     │
+                    │                     │  POST    │
+                    │                     │ /split   │
+                    │                     └──────────┘
+                    │                             │
+                    │                             ▼
+                    │                     ┌──────────┐
+                    │                     │ Backend  │
+                    │                     │ Re-checks│
+                    │                     │Suggestions│
+                    │                     └──────────┘
+                    │                             │
+                    │                   ┌─────────┴─────────┐
+                    │                   │                   │
+                    ▼                   ▼                   ▼
+            ┌──────────┐        ┌──────────┐      ┌──────────┐
+            │  BLOCKED │        │  Has     │      │   No     │
+            │ (All     │        │Suggestions│      │Suggestions│
+            │  Paths)  │        └──────────┘      └──────────┘
+            └──────────┘                │                 │
+                                        ▼                 ▼
+                                ┌──────────┐      ┌──────────┐
+                                │ Return   │      │ Execute  │
+                                │  400     │      │  Split   │
+                                │ HAS_     │      │ Operation│
+                                │SUGGESTIONS│     └──────────┘
+                                └──────────┘              │
+                                                          ▼
+                                                  ┌──────────┐
+                                                  │ Section  │
+                                                  │  Split   │
+                                                  │Successfully│
+                                                  └──────────┘
+```
+
+## Task 3.2: Join with Suggestions Flow
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                   ADMIN TRIES TO JOIN                       │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+                    ┌─────────────────┐
+                    │  Page Load      │
+                    │  Check Each     │
+                    │  Section        │
+                    └─────────────────┘
+                              │
+                              ▼
+                    ┌─────────────────┐
+                    │ Section Has     │
+                    │ Suggestions?    │
+                    └─────────────────┘
+                              │
+                    ┌─────────┴─────────┐
+                    │                   │
+                    ▼                   ▼
+            ┌──────────┐        ┌──────────┐
+            │   YES    │        │    NO    │
+            │ (Disable)│        │ (Enable) │
+            └──────────┘        └──────────┘
+                    │                   │
+                    │                   ▼
+                    │           ┌──────────┐
+                    │           │ Click    │
+                    │           │  Join    │
+                    │           │ Button   │
+                    │           └──────────┘
+                    │                   │
+                    │                   ▼
+                    │           ┌──────────┐
+                    │           │JavaScript│
+                    │           │ Checks   │
+                    │           │ Button   │
+                    │           └──────────┘
+                    │                   │
+                    │                   ▼
+                    │           ┌──────────┐
+                    │           │  Fetch   │
+                    │           │Suggestions│
+                    │           │ for Each │
+                    │           │ Section  │
+                    │           └──────────┘
+                    │                   │
+                    │         ┌─────────┴─────────┐
+                    │         │                   │
+                    │         ▼                   ▼
+                    │   ┌──────────┐      ┌──────────┐
+                    │   │Any Section│     │   All    │
+                    │   │   Has    │      │ Sections │
+                    │   │Suggestions│      │  Clear   │
+                    │   └──────────┘      └──────────┘
+                    │         │                   │
+                    │         ▼                   ▼
+                    │   ┌──────────┐      ┌──────────┐
+                    │   │  Toast   │      │  Show    │
+                    │   │ "Cannot  │      │  Join    │
+                    │   │  join"   │      │  Modal   │
+                    │   └──────────┘      └──────────┘
+                    │                             │
+                    │                             ▼
+                    │                     ┌──────────┐
+                    │                     │ User     │
+                    │                     │ Selects  │
+                    │                     │ Sections │
+                    │                     └──────────┘
+                    │                             │
+                    │                             ▼
+                    │                     ┌──────────┐
+                    │                     │  API     │
+                    │                     │  POST    │
+                    │                     │  /join   │
+                    │                     └──────────┘
+                    │                             │
+                    │                             ▼
+                    │                     ┌──────────┐
+                    │                     │ Backend  │
+                    │                     │Checks ALL│
+                    │                     │ Sections │
+                    │                     └──────────┘
+                    │                             │
+                    │                   ┌─────────┴─────────┐
+                    │                   │                   │
+                    ▼                   ▼                   ▼
+            ┌──────────┐        ┌──────────┐      ┌──────────┐
+            │  BLOCKED │        │  Any Has │      │   None   │
+            │ (All     │        │Suggestions│      │   Have   │
+            │  Paths)  │        └──────────┘      └──────────┘
+            └──────────┘                │                 │
+                                        ▼                 ▼
+                                ┌──────────┐      ┌──────────┐
+                                │ Return   │      │ Execute  │
+                                │  400     │      │  Join    │
+                                │ List All │      │ Operation│
+                                │Affected  │      └──────────┘
+                                │Sections  │              │
+                                └──────────┘              ▼
+                                                  ┌──────────┐
+                                                  │ Sections │
+                                                  │  Joined  │
+                                                  │Successfully│
+                                                  └──────────┘
+```
+
+## Defense in Depth - Security Layers
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     SECURITY LAYERS                         │
+└─────────────────────────────────────────────────────────────┘
+
+LAYER 1: UI Prevention
+┌──────────────────────────────────────┐
+│ • Delete button removed              │
+│ • Split/Join buttons disabled        │
+│ • Visual warning messages            │
+│ • Tooltip explanations               │
+└──────────────────────────────────────┘
+                │
+                ▼
+LAYER 2: Client JavaScript
+┌──────────────────────────────────────┐
+│ • Button state check                 │
+│ • API call for current count         │
+│ • Toast notifications                │
+│ • Prevent modal opening              │
+└──────────────────────────────────────┘
+                │
+                ▼
+LAYER 3: Backend Validation
+┌──────────────────────────────────────┐
+│ • Session-based role check           │
+│ • Database suggestion count          │
+│ • Authoritative decision             │
+│ • Detailed error responses           │
+└──────────────────────────────────────┘
+                │
+                ▼
+LAYER 4: Database Constraints
+┌──────────────────────────────────────┐
+│ • Foreign key relationships          │
+│ • NOT NULL constraints               │
+│ • Timestamp validation               │
+│ • RLS policies                       │
+└──────────────────────────────────────┘
+```
+
+## Button State Decision Tree
+
+```
+                        ┌──────────────┐
+                        │ Load Section │
+                        └──────────────┘
+                               │
+                               ▼
+                        ┌──────────────┐
+                        │ Count Active │
+                        │ Suggestions  │
+                        └──────────────┘
+                               │
+                ┌──────────────┴──────────────┐
+                │                             │
+                ▼                             ▼
+         ┌──────────┐                  ┌──────────┐
+         │ Count > 0│                  │ Count = 0│
+         └──────────┘                  └──────────┘
+                │                             │
+                ▼                             ▼
+    ┌────────────────────┐        ┌────────────────────┐
+    │ Split Button:      │        │ Split Button:      │
+    │ • disabled=true    │        │ • enabled          │
+    │ • opacity: 0.5     │        │ • opacity: 1.0     │
+    │ • cursor: not-allow│        │ • cursor: pointer  │
+    │                    │        │                    │
+    │ Join Button:       │        │ Join Button:       │
+    │ • disabled=true    │        │ • enabled          │
+    │ • opacity: 0.5     │        │ • opacity: 1.0     │
+    │ • cursor: not-allow│        │ • cursor: pointer  │
+    │                    │        │                    │
+    │ Warning Shown:     │        │ Warning Hidden     │
+    │ ⚠ N suggestions    │        │                    │
+    └────────────────────┘        └────────────────────┘
+```
+
+## Error Response Decision Tree
+
+```
+                    ┌──────────────┐
+                    │  API Call    │
+                    │ DELETE/SPLIT/│
+                    │     JOIN     │
+                    └──────────────┘
+                           │
+            ┌──────────────┴──────────────┐
+            │                             │
+            ▼                             ▼
+     ┌──────────┐                  ┌──────────┐
+     │ DELETE   │                  │SPLIT/JOIN│
+     └──────────┘                  └──────────┘
+            │                             │
+            ▼                             ▼
+     ┌──────────┐                  ┌──────────┐
+     │ Is Admin?│                  │   Has    │
+     └──────────┘                  │Suggestions?│
+            │                      └──────────┘
+    ┌───────┴───────┐                     │
+    │               │          ┌──────────┴──────────┐
+    ▼               ▼          │                     │
+┌────────┐    ┌────────┐  ┌────────┐           ┌────────┐
+│  YES   │    │   NO   │  │  YES   │           │   NO   │
+└────────┘    └────────┘  └────────┘           └────────┘
+    │               │          │                     │
+    ▼               ▼          ▼                     ▼
+┌────────┐    ┌────────┐  ┌────────┐           ┌────────┐
+│ 403    │    │ 200    │  │ 400    │           │ 200    │
+│ADMIN_  │    │Success │  │HAS_    │           │Success │
+│DELETE_ │    │        │  │ACTIVE_ │           │        │
+│FORBIDDEN│   │        │  │SUGGEST │           │        │
+└────────┘    └────────┘  │IONS    │           └────────┘
+                          └────────┘
+```

@@ -5,6 +5,7 @@ const path = require('path');
 const session = require('express-session');
 const csrf = require('csurf');
 const expressLayouts = require('express-ejs-layouts');
+const { attachGlobalAdminStatus } = require('./src/middleware/globalAdmin');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -12,11 +13,15 @@ const PORT = process.env.PORT || 3000;
 // Load from environment variables
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const APP_URL = process.env.APP_URL || 'http://localhost:3000';
 const SESSION_SECRET = process.env.SESSION_SECRET || 'development-secret-change-in-production';
 
-// Initialize Supabase client
+// Initialize Supabase clients
+// - Anon client: Used for regular operations with RLS enabled
+// - Service client: Used for setup wizard to bypass RLS (has service_role privileges)
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabaseService = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY);
 
 // Session middleware (must be before routes)
 app.use(session({
@@ -38,9 +43,11 @@ app.use(express.static(path.join(__dirname, 'public')));
 // CSRF protection (after session, before routes)
 const csrfProtection = csrf({ cookie: false });
 app.use((req, res, next) => {
-  // Skip CSRF for API routes and setup routes (setup uses multipart/form-data with file uploads)
+  // Skip CSRF for API routes, auth routes, admin routes, and setup routes
   if (req.path.startsWith('/bylaws/api/') ||
       req.path.startsWith('/api/') ||
+      req.path.startsWith('/auth/') ||
+      req.path.startsWith('/admin/') ||
       req.path.startsWith('/setup/')) {
     return next();
   }
@@ -61,9 +68,111 @@ app.set('views', path.join(__dirname, 'views'));
 app.use(expressLayouts);
 app.set('layout', false); // Disable default layout, we'll specify per route
 
-// Make supabase available to all routes
-app.use((req, res, next) => {
-  req.supabase = supabase;
+/**
+ * Authenticated Supabase Middleware
+ * Creates Supabase clients with proper auth context for RLS
+ * - req.supabase: Authenticated client (uses JWT from session if available)
+ * - req.supabaseService: Service role client for admin operations (bypasses RLS)
+ */
+app.use(async (req, res, next) => {
+  // Validate supabaseService is initialized
+  if (!supabaseService) {
+    console.error('CRITICAL: supabaseService is not initialized!');
+    console.error('Check SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in .env');
+    console.error('SUPABASE_URL:', SUPABASE_URL ? 'Set' : 'MISSING');
+    console.error('SUPABASE_SERVICE_ROLE_KEY:', SUPABASE_SERVICE_ROLE_KEY ? 'Set' : 'MISSING');
+    return res.status(500).json({
+      error: 'Server configuration error',
+      message: 'Database client not initialized'
+    });
+  }
+
+  // Always provide service role client for admin operations
+  req.supabaseService = supabaseService;
+
+  // Check if we have a JWT token in session
+  const sessionJWT = req.session?.supabaseJWT;
+  const sessionRefreshToken = req.session?.supabaseRefreshToken;
+
+  if (sessionJWT) {
+    try {
+      // Create authenticated client with stored JWT
+      const authenticatedClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        auth: {
+          persistSession: false, // We manage sessions via Express
+          autoRefreshToken: false, // We handle refresh manually
+        },
+        global: {
+          headers: {
+            Authorization: `Bearer ${sessionJWT}`
+          }
+        }
+      });
+
+      // Check if token needs refresh (Supabase JWTs expire after 1 hour by default)
+      if (sessionRefreshToken) {
+        try {
+          // Verify token is still valid
+          const { data: { user }, error: userError } = await authenticatedClient.auth.getUser(sessionJWT);
+
+          if (userError || !user) {
+            // Token is invalid or expired, try to refresh
+            console.log('JWT expired or invalid, attempting refresh...');
+            const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession({
+              refresh_token: sessionRefreshToken
+            });
+
+            if (refreshError || !refreshData.session) {
+              // Refresh failed, clear session and fall back to anon client
+              console.error('Token refresh failed:', refreshError?.message);
+              delete req.session.supabaseJWT;
+              delete req.session.supabaseRefreshToken;
+              delete req.session.supabaseUser;
+              req.supabase = supabase; // Fall back to anon client
+            } else {
+              // Refresh succeeded, update session with new tokens
+              req.session.supabaseJWT = refreshData.session.access_token;
+              req.session.supabaseRefreshToken = refreshData.session.refresh_token;
+              req.session.supabaseUser = refreshData.user;
+
+              // Create new authenticated client with fresh token
+              req.supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+                auth: {
+                  persistSession: false,
+                  autoRefreshToken: false,
+                },
+                global: {
+                  headers: {
+                    Authorization: `Bearer ${refreshData.session.access_token}`
+                  }
+                }
+              });
+
+              console.log('JWT refreshed successfully for user:', refreshData.user.email);
+            }
+          } else {
+            // Token is still valid, use authenticated client
+            req.supabase = authenticatedClient;
+          }
+        } catch (refreshCheckError) {
+          console.error('Error checking/refreshing token:', refreshCheckError);
+          // Fall back to anon client on any error
+          req.supabase = supabase;
+        }
+      } else {
+        // No refresh token available, use authenticated client as-is
+        req.supabase = authenticatedClient;
+      }
+    } catch (error) {
+      console.error('Error creating authenticated Supabase client:', error);
+      // Fall back to anon client
+      req.supabase = supabase;
+    }
+  } else {
+    // No JWT in session, use anonymous client
+    req.supabase = supabase;
+  }
+
   next();
 });
 
@@ -76,29 +185,34 @@ app.use((req, res, next) => {
  * Caches result in session to avoid repeated DB queries
  */
 async function checkSetupStatus(req) {
-  // Check session cache first
-  if (req.session && req.session.isConfigured !== undefined) {
-    return req.session.isConfigured;
-  }
+  // IMPORTANT: Don't cache in session - always check database
+  // Caching causes issues when orgs are created/deleted
 
   try {
     // Check if organizations table has any entries
-    const { data, error } = await supabase
+    // Use service client to bypass RLS for setup check
+    console.log('[Setup Check] Querying organizations table...');
+    console.log('[Setup Check] Supabase URL:', SUPABASE_URL);
+    console.log('[Setup Check] Using service role key:', SUPABASE_SERVICE_ROLE_KEY ? 'YES' : 'NO');
+
+    const { data, error } = await supabaseService
       .from('organizations')
       .select('id')
       .limit(1);
 
+    console.log('[Setup Check] Query completed');
+    console.log('[Setup Check] Error:', error);
+    console.log('[Setup Check] Data:', JSON.stringify(data));
+    console.log('[Setup Check] Data length:', data?.length);
+
     if (error) {
       console.error('Error checking setup status:', error);
+      console.error('Error details:', JSON.stringify(error));
       return false;
     }
 
     const isConfigured = data && data.length > 0;
-
-    // Cache in session
-    if (req.session) {
-      req.session.isConfigured = isConfigured;
-    }
+    console.log(`[Setup Check] Found ${data?.length || 0} organizations - isConfigured: ${isConfigured}`);
 
     return isConfigured;
   } catch (error) {
@@ -111,11 +225,49 @@ async function checkSetupStatus(req) {
 const setupRoutes = require('./src/routes/setup');
 app.use('/setup', setupRoutes);
 
+// Mount authentication routes (no global admin check needed for auth routes)
+const authRoutes = require('./src/routes/auth');
+app.use('/auth', authRoutes);
+
+// Apply global admin status middleware to all authenticated routes
+// This attaches req.isGlobalAdmin and req.accessibleOrganizations
+app.use(attachGlobalAdminStatus);
+
+// Apply organization context middleware to all routes
+// This attaches res.locals.currentOrganization and res.locals.currentUser
+const { attachOrganizationContext } = require('./src/middleware/organization-context');
+app.use(attachOrganizationContext);
+
+// Mount admin routes (now has access to req.isGlobalAdmin)
+const adminRoutes = require('./src/routes/admin');
+app.use('/admin', adminRoutes);
+
+// Mount dashboard routes (now has access to req.isGlobalAdmin)
+const dashboardRoutes = require('./src/routes/dashboard');
+app.use('/dashboard', dashboardRoutes); // Main dashboard view at /dashboard
+app.use('/api/dashboard', dashboardRoutes); // API routes at /api/dashboard/*
+
+// Mount user management routes (now has access to req.isGlobalAdmin)
+const usersRoutes = require('./src/routes/users');
+app.use('/api/users', usersRoutes);
+
+// Mount approval workflow routes (now has access to req.isGlobalAdmin)
+const approvalRoutes = require('./src/routes/approval');
+app.use('/api/approval', approvalRoutes);
+
+// Mount workflow management routes (now has access to req.isGlobalAdmin)
+const workflowRoutes = require('./src/routes/workflow');
+app.use('/api/workflow', workflowRoutes);
+
 // Setup detection middleware - redirect to setup if not configured
 app.use(async (req, res, next) => {
   // Allowed paths that don't require setup
   const allowedPaths = [
     '/setup',
+    '/auth',
+    '/admin',  // Admin routes including /admin/sections/* are allowed
+    '/dashboard',  // Dashboard routes
+    '/api/',  // All API routes
     '/css/',
     '/js/',
     '/images/',
@@ -224,8 +376,19 @@ async function validateMultiSectionRequest(sectionIds, supabase) {
 }
 
 // Routes
-app.get('/', (req, res) => {
-  res.redirect('/bylaws');
+app.get('/', async (req, res) => {
+  // FIX: Keep it simple - just check if setup is done, then show login page
+  // No queries, no fancy logic, just login/register
+  const isConfigured = await checkSetupStatus(req);
+
+  if (!isConfigured) {
+    // Setup not complete - redirect to setup wizard
+    return res.redirect('/setup');
+  }
+
+  // Setup is complete - ALWAYS show the simple login/register page
+  // Let the user choose what to do (login or create account)
+  return res.redirect('/auth/login');
 });
 
 // Config endpoint for API clients

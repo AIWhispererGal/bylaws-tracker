@@ -1,0 +1,324 @@
+{
+  "timestamp": "2025-10-21T22:41:59.617Z",
+  "migrations": [
+    {
+      "source": "CURRENTSCHEMA.txt",
+      "target": "archive/outdated-docs/CURRENTSCHEMA.txt",
+      "category": "outdated-docs",
+      "timestamp": "2025-10-21T22:41:59.912Z"
+    },
+    {
+      "source": "INVITATION_FIX_README.txt",
+      "target": "archive/outdated-docs/INVITATION_FIX_README.txt",
+      "category": "outdated-docs",
+      "timestamp": "2025-10-21T22:42:00.135Z"
+    },
+    {
+      "source": "RECOVERY_OPTIONS.md",
+      "target": "archive/outdated-docs/RECOVERY_OPTIONS.md",
+      "category": "outdated-docs",
+      "timestamp": "2025-10-21T22:42:00.381Z"
+    },
+    {
+      "source": "SECURITY_FIXES_COMPLETED.md",
+      "target": "archive/outdated-docs/SECURITY_FIXES_COMPLETED.md",
+      "category": "outdated-docs",
+      "timestamp": "2025-10-21T22:42:00.616Z"
+    },
+    {
+      "source": "database/CHECK_DOCUMENT_SECTIONS_SCHEMA.sql",
+      "target": "archive/database-diagnostics/CHECK_DOCUMENT_SECTIONS_SCHEMA.sql",
+      "category": "database-diagnostics",
+      "timestamp": "2025-10-21T22:42:00.839Z"
+    },
+    {
+      "source": "database/CHECK_USER_TYPES.sql",
+      "target": "archive/database-diagnostics/CHECK_USER_TYPES.sql",
+      "category": "database-diagnostics",
+      "timestamp": "2025-10-21T22:42:01.068Z"
+    },
+    {
+      "source": "database/DIAGNOSE_STATUS_ERROR.sql",
+      "target": "archive/database-diagnostics/DIAGNOSE_STATUS_ERROR.sql",
+      "category": "database-diagnostics",
+      "timestamp": "2025-10-21T22:42:01.346Z"
+    },
+    {
+      "source": "database/TEST_USER_TYPES_QUERY.sql",
+      "target": "archive/database-diagnostics/TEST_USER_TYPES_QUERY.sql",
+      "category": "database-diagnostics",
+      "timestamp": "2025-10-21T22:42:01.597Z"
+    },
+    {
+      "source": "database/diagnostic_check.sql",
+      "target": "archive/database-diagnostics/diagnostic_check.sql",
+      "category": "database-diagnostics",
+      "timestamp": "2025-10-21T22:42:01.847Z"
+    },
+    {
+      "source": "database/diagnosis/verify_permissions_selector_bugs.sql",
+      "target": "archive/database-diagnostics/verify_permissions_selector_bugs.sql",
+      "category": "database-diagnostics",
+      "timestamp": "2025-10-21T22:42:03.529Z"
+    },
+    {
+      "source": "database/diagnosis/fix_user_types_immediate.sql",
+      "target": "archive/database-diagnostics/fix_user_types_immediate.sql",
+      "category": "database-diagnostics",
+      "timestamp": "2025-10-21T22:42:03.762Z"
+    },
+    {
+      "source": "database/diagnosis/check_user_types_state.sql",
+      "target": "archive/database-diagnostics/check_user_types_state.sql",
+      "category": "database-diagnostics",
+      "timestamp": "2025-10-21T22:42:04.021Z"
+    },
+    {
+      "source": "test-section-routes.js",
+      "target": "archive/old-tests/test-section-routes.js",
+      "category": "old-tests",
+      "timestamp": "2025-10-21T22:42:04.309Z"
+    },
+    {
+      "source": "test-section-routes-http.js",
+      "target": "archive/old-tests/test-section-routes-http.js",
+      "category": "old-tests",
+      "timestamp": "2025-10-21T22:42:04.632Z"
+    },
+    {
+      "source": "test-final-verification.js",
+      "target": "archive/old-tests/test-final-verification.js",
+      "category": "old-tests",
+      "timestamp": "2025-10-21T22:42:04.942Z"
+    },
+    {
+      "source": "test-setup-check.js",
+      "target": "archive/old-tests/test-setup-check.js",
+      "category": "old-tests",
+      "timestamp": "2025-10-21T22:42:05.235Z"
+    },
+    {
+      "source": "debug-middleware-order.js",
+      "target": "archive/old-tests/debug-middleware-order.js",
+      "category": "old-tests",
+      "timestamp": "2025-10-21T22:42:05.475Z"
+    },
+    {
+      "source": "debug-supabase-connection.js",
+      "target": "archive/old-tests/debug-supabase-connection.js",
+      "category": "old-tests",
+      "timestamp": "2025-10-21T22:42:05.725Z"
+    },
+    {
+      "source": "check-database-tables.js",
+      "target": "archive/old-tests/check-database-tables.js",
+      "category": "old-tests",
+      "timestamp": "2025-10-21T22:42:05.981Z"
+    },
+    {
+      "source": "check-if-data-still-exists.js",
+      "target": "archive/old-tests/check-if-data-still-exists.js",
+      "category": "old-tests",
+      "timestamp": "2025-10-21T22:42:06.235Z"
+    },
+    {
+      "source": "seed-test-organization.js",
+      "target": "archive/old-tests/seed-test-organization.js",
+      "category": "old-tests",
+      "timestamp": "2025-10-21T22:42:06.493Z"
+    },
+    {
+      "source": "query-with-raw-sql.js",
+      "target": "archive/old-tests/query-with-raw-sql.js",
+      "category": "old-tests",
+      "timestamp": "2025-10-21T22:42:06.801Z"
+    },
+    {
+      "source": "quick-login.js",
+      "target": "archive/old-tests/quick-login.js",
+      "category": "old-tests",
+      "timestamp": "2025-10-21T22:42:07.084Z"
+    },
+    {
+      "source": "database/migrations/003_fix_rls_policies.sql",
+      "target": "archive/migration-history/003_fix_rls_policies.sql",
+      "category": "migration-history",
+      "timestamp": "2025-10-21T22:42:07.390Z"
+    },
+    {
+      "source": "database/migrations/004_fix_rls_recursion.sql",
+      "target": "archive/migration-history/004_fix_rls_recursion.sql",
+      "category": "migration-history",
+      "timestamp": "2025-10-21T22:42:07.673Z"
+    },
+    {
+      "source": "database/migrations/005_implement_proper_rls_FIXED.sql",
+      "target": "archive/migration-history/005_implement_proper_rls_FIXED.sql",
+      "category": "migration-history",
+      "timestamp": "2025-10-21T22:42:07.973Z"
+    },
+    {
+      "source": "database/migrations/006_implement_supabase_auth.sql",
+      "target": "archive/migration-history/006_implement_supabase_auth.sql",
+      "category": "migration-history",
+      "timestamp": "2025-10-21T22:42:08.285Z"
+    },
+    {
+      "source": "database/migrations/007_create_global_superuser.sql",
+      "target": "archive/migration-history/007_create_global_superuser.sql",
+      "category": "migration-history",
+      "timestamp": "2025-10-21T22:42:08.616Z"
+    },
+    {
+      "source": "database/migrations/008_enhance_user_roles_and_approval.sql",
+      "target": "archive/migration-history/008_enhance_user_roles_and_approval.sql",
+      "category": "migration-history",
+      "timestamp": "2025-10-21T22:42:08.951Z"
+    },
+    {
+      "source": "database/migrations/009_enhance_rls_organization_filtering.sql",
+      "target": "archive/migration-history/009_enhance_rls_organization_filtering.sql",
+      "category": "migration-history",
+      "timestamp": "2025-10-21T22:42:09.272Z"
+    },
+    {
+      "source": "database/migrations/010_fix_first_user_admin.sql",
+      "target": "archive/migration-history/010_fix_first_user_admin.sql",
+      "category": "migration-history",
+      "timestamp": "2025-10-21T22:42:09.595Z"
+    },
+    {
+      "source": "database/migrations/011_add_global_admin_suggestions.sql",
+      "target": "archive/migration-history/011_add_global_admin_suggestions.sql",
+      "category": "migration-history",
+      "timestamp": "2025-10-21T22:42:09.905Z"
+    },
+    {
+      "source": "database/migrations/012_workflow_enhancements_fixed.sql",
+      "target": "archive/migration-history/012_workflow_enhancements_fixed.sql",
+      "category": "migration-history",
+      "timestamp": "2025-10-21T22:42:10.219Z"
+    },
+    {
+      "source": "database/migrations/013_fix_global_admin_rls.sql",
+      "target": "archive/migration-history/013_fix_global_admin_rls.sql",
+      "category": "migration-history",
+      "timestamp": "2025-10-21T22:42:10.560Z"
+    },
+    {
+      "source": "database/migrations/014_user_invitations.sql",
+      "target": "archive/migration-history/014_user_invitations.sql",
+      "category": "migration-history",
+      "timestamp": "2025-10-21T22:42:10.891Z"
+    },
+    {
+      "source": "database/migrations/015_fix_invitations_global_admin_rls.sql",
+      "target": "archive/migration-history/015_fix_invitations_global_admin_rls.sql",
+      "category": "migration-history",
+      "timestamp": "2025-10-21T22:42:11.182Z"
+    },
+    {
+      "source": "database/migrations/016_fix_verification_function.sql",
+      "target": "archive/migration-history/016_fix_verification_function.sql",
+      "category": "migration-history",
+      "timestamp": "2025-10-21T22:42:11.467Z"
+    },
+    {
+      "source": "database/migrations/017_workflow_schema_fixes.sql",
+      "target": "archive/migration-history/017_workflow_schema_fixes.sql",
+      "category": "migration-history",
+      "timestamp": "2025-10-21T22:42:11.752Z"
+    },
+    {
+      "source": "database/migrations/018_add_per_document_hierarchy.sql",
+      "target": "archive/migration-history/018_add_per_document_hierarchy.sql",
+      "category": "migration-history",
+      "timestamp": "2025-10-21T22:42:12.045Z"
+    },
+    {
+      "source": "database/migrations/019_add_suggestion_rejection_tracking.sql",
+      "target": "archive/migration-history/019_add_suggestion_rejection_tracking.sql",
+      "category": "migration-history",
+      "timestamp": "2025-10-21T22:42:12.364Z"
+    },
+    {
+      "source": "database/migrations/020_section_editing_functions.sql",
+      "target": "archive/migration-history/020_section_editing_functions.sql",
+      "category": "migration-history",
+      "timestamp": "2025-10-21T22:42:12.687Z"
+    },
+    {
+      "source": "database/migrations/021_document_workflow_progression.sql",
+      "target": "archive/migration-history/021_document_workflow_progression.sql",
+      "category": "migration-history",
+      "timestamp": "2025-10-21T22:42:12.996Z"
+    },
+    {
+      "source": "database/migrations/022_fix_multi_org_email_support.sql",
+      "target": "archive/migration-history/022_fix_multi_org_email_support.sql",
+      "category": "migration-history",
+      "timestamp": "2025-10-21T22:42:13.307Z"
+    },
+    {
+      "source": "database/migrations/023_fix_rls_infinite_recursion_v2.sql",
+      "target": "archive/migration-history/023_fix_rls_infinite_recursion_v2.sql",
+      "category": "migration-history",
+      "timestamp": "2025-10-21T22:42:13.621Z"
+    },
+    {
+      "source": "database/migrations/024_permissions_architecture.sql",
+      "target": "archive/migration-history/024_permissions_architecture.sql",
+      "category": "migration-history",
+      "timestamp": "2025-10-21T22:42:13.952Z"
+    },
+    {
+      "source": "database/migrations/025_seed_organization_roles.sql",
+      "target": "archive/migration-history/025_seed_organization_roles.sql",
+      "category": "migration-history",
+      "timestamp": "2025-10-21T22:42:14.249Z"
+    },
+    {
+      "source": "database/migrations/026_fix_multi_org_setup_SIMPLE.sql",
+      "target": "archive/migration-history/026_fix_multi_org_setup_SIMPLE.sql",
+      "category": "migration-history",
+      "timestamp": "2025-10-21T22:42:14.584Z"
+    },
+    {
+      "source": "database/migrations/027_fix_user_types_rls.sql",
+      "target": "archive/migration-history/027_fix_user_types_rls.sql",
+      "category": "migration-history",
+      "timestamp": "2025-10-21T22:42:14.890Z"
+    },
+    {
+      "source": "database/migrations/030_disable_rls_all_setup_tables.sql",
+      "target": "archive/migration-history/030_disable_rls_all_setup_tables.sql",
+      "category": "migration-history",
+      "timestamp": "2025-10-21T22:42:15.227Z"
+    },
+    {
+      "source": "database/migrations/031_fix_missing_user_type_ids.sql",
+      "target": "archive/migration-history/031_fix_missing_user_type_ids.sql",
+      "category": "migration-history",
+      "timestamp": "2025-10-21T22:42:15.534Z"
+    },
+    {
+      "source": "database/migrations/README_RLS_FIX.md",
+      "target": "archive/migration-history/README_RLS_FIX.md",
+      "category": "migration-history",
+      "timestamp": "2025-10-21T22:42:15.868Z"
+    },
+    {
+      "source": "database/migrations/TESTRESULT_AFTER_FIXES.txt",
+      "target": "archive/migration-history/TESTRESULT_AFTER_FIXES.txt",
+      "category": "migration-history",
+      "timestamp": "2025-10-21T22:42:16.211Z"
+    },
+    {
+      "source": "database/migrations/TESTRESULT.txt",
+      "target": "archive/migration-history/TESTRESULT.txt",
+      "category": "migration-history",
+      "timestamp": "2025-10-21T22:42:16.535Z"
+    }
+  ],
+  "rollbackable": true
+}

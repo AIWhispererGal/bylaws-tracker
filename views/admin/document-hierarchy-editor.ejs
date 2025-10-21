@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %> - Hierarchy Editor</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="/css/hierarchy-editor.css">
+  <style>
+    body {
+      background: #f5f7fa;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .admin-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 2rem 0;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      margin-bottom: 2rem;
+    }
+
+    .content-card {
+      background: white;
+      border-radius: 15px;
+      padding: 2rem;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      margin-bottom: 2rem;
+    }
+
+    .section-title {
+      font-size: 1.3rem;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+      color: #333;
+      border-bottom: 2px solid #e9ecef;
+      padding-bottom: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <!-- Toast Container -->
+  <div id="toastContainer" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;"></div>
+
+  <!-- Header -->
+  <div class="admin-header">
+    <div class="container">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <h1 class="mb-0">
+            <i class="bi bi-diagram-3"></i> Hierarchy Editor
+          </h1>
+          <p class="mb-0 mt-2">Configure 10-level document structure for <%= document.title %></p>
+        </div>
+        <div>
+          <a href="/admin/organization/<%= document.organization_id %>" class="btn btn-light">
+            <i class="bi bi-arrow-left"></i> Back
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="row">
+      <!-- Hierarchy Editor -->
+      <div class="col-lg-8">
+        <div class="content-card">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="section-title mb-0">Document Hierarchy Configuration</h3>
+            <button class="btn btn-sm btn-outline-primary" id="detectBtn">
+              <i class="bi bi-magic"></i> Detect from Document
+            </button>
+          </div>
+
+          <!-- Template Selector -->
+          <div class="mb-4">
+            <label for="templateSelector" class="form-label fw-bold">
+              <i class="bi bi-file-earmark-ruled"></i> Quick Start Templates
+            </label>
+            <select class="form-select" id="templateSelector">
+              <option value="">-- Select a template to load --</option>
+              <option value="standard-bylaws">Standard Bylaws (Article → Section → Subsection...)</option>
+              <option value="legal-document">Legal Document (Chapter → Section → Clause...)</option>
+              <option value="policy-manual">Policy Manual (Part → Section → Paragraph...)</option>
+              <option value="technical-standard">Technical Standard (1.1.1.1.1...)</option>
+            </select>
+            <div class="form-text">
+              Select a pre-built template to quickly configure your hierarchy, or customize levels below
+            </div>
+          </div>
+
+          <!-- Hierarchy Editor Table -->
+          <div class="table-responsive">
+            <table class="table table-bordered hierarchy-table" id="hierarchyTable">
+              <thead class="table-light">
+                <tr>
+                  <th style="width: 50px;">Depth</th>
+                  <th style="width: 180px;">Level Name</th>
+                  <th style="width: 150px;">Numbering Type</th>
+                  <th style="width: 120px;">Prefix</th>
+                  <th style="width: 80px;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="hierarchyTableBody">
+                <!-- Will be populated by JavaScript -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="d-flex justify-content-between align-items-center mt-4">
+            <button class="btn btn-outline-secondary" id="resetBtn">
+              <i class="bi bi-arrow-counterclockwise"></i> Reset to Org Default
+            </button>
+            <div>
+              <button class="btn btn-secondary me-2" id="cancelBtn">
+                <i class="bi bi-x-circle"></i> Cancel
+              </button>
+              <button class="btn btn-primary" id="saveBtn">
+                <i class="bi bi-check-circle"></i> Save Configuration
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Preview Panel -->
+      <div class="col-lg-4">
+        <div class="content-card preview-panel">
+          <h3 class="section-title">
+            <i class="bi bi-eye"></i> Live Preview
+          </h3>
+          <p class="text-muted small mb-3">
+            Example hierarchy with your current configuration
+          </p>
+          <div id="hierarchyPreview" class="hierarchy-preview">
+            <!-- Will be populated by JavaScript -->
+          </div>
+        </div>
+
+        <!-- Info Panel -->
+        <div class="content-card">
+          <h3 class="section-title">
+            <i class="bi bi-info-circle"></i> Information
+          </h3>
+          <ul class="list-unstyled small">
+            <li class="mb-2">
+              <i class="bi bi-check-circle text-success"></i>
+              <strong>10 Levels:</strong> Configure all levels (depth 0-9)
+            </li>
+            <li class="mb-2">
+              <i class="bi bi-check-circle text-success"></i>
+              <strong>Numbering:</strong> Roman, numeric, alpha (upper/lower)
+            </li>
+            <li class="mb-2">
+              <i class="bi bi-check-circle text-success"></i>
+              <strong>Prefixes:</strong> Customize text before numbers
+            </li>
+            <li class="mb-2">
+              <i class="bi bi-check-circle text-success"></i>
+              <strong>Templates:</strong> Quick start with pre-built schemas
+            </li>
+            <li class="mb-2">
+              <i class="bi bi-check-circle text-success"></i>
+              <strong>Detect:</strong> Auto-suggest based on document content
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/js/workflow-actions.js"></script>
+  <script src="/js/hierarchy-editor.js"></script>
+  <script>
+    // Initialize editor on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      const editor = new HierarchyEditor({
+        documentId: '<%= document.id %>',
+        documentTitle: '<%= document.title %>',
+        organizationId: '<%= document.organization_id %>'
+      });
+      editor.init();
+    });
+  </script>
+</body>
+</html>

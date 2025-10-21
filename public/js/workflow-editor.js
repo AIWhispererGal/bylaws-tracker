@@ -20,6 +20,13 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
   });
+
+  // Initialize approval type change handlers for existing stages
+  document.querySelectorAll('.stage-approval-type').forEach(select => {
+    select.addEventListener('change', function() {
+      toggleVoteThreshold(this);
+    });
+  });
 });
 
 /**
@@ -103,6 +110,24 @@ function addStage() {
             <input type="text" class="form-control stage-icon" value=""
                    placeholder="e.g., check-circle">
             <small class="text-muted">Bootstrap icon name (without 'bi-' prefix)</small>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label class="form-label">Approval Type</label>
+            <select class="form-control stage-approval-type" onchange="toggleVoteThreshold(this)">
+              <option value="single" selected>Single Approver</option>
+              <option value="majority">Majority Vote</option>
+              <option value="unanimous">Unanimous</option>
+              <option value="supermajority">Supermajority/Vote Threshold</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row mb-3 supermajority-field" style="display: none;">
+          <div class="col-md-6">
+            <label class="form-label">Vote Threshold (%)</label>
+            <input type="number" class="form-control stage-vote-threshold"
+                   placeholder="e.g., 67 for 2/3 majority" min="1" max="100">
+            <small class="text-muted">Required percentage for approval</small>
           </div>
         </div>
 
@@ -210,6 +235,17 @@ function updateStageDisplay(input) {
 }
 
 /**
+ * Toggle vote threshold field visibility based on approval type
+ */
+function toggleVoteThreshold(selectElement) {
+  const stageItem = selectElement.closest('.stage-item');
+  const thresholdField = stageItem.querySelector('.supermajority-field');
+  if (thresholdField) {
+    thresholdField.style.display = selectElement.value === 'supermajority' ? 'flex' : 'none';
+  }
+}
+
+/**
  * Initialize form submission
  */
 function initializeFormSubmit() {
@@ -227,8 +263,8 @@ function initializeFormSubmit() {
 
     try {
       const url = window.templateId
-        ? `/api/workflows/${window.templateId}`
-        : '/api/workflows';
+        ? `/api/workflow/templates/${window.templateId}`
+        : '/api/workflow/templates';
       const method = window.templateId ? 'PUT' : 'POST';
 
       const response = await fetch(url, {
@@ -294,8 +330,9 @@ function collectTemplateData() {
   stageItems.forEach((item, index) => {
     const rolesSelect = item.querySelector('.stage-roles');
     const selectedRoles = Array.from(rolesSelect.selectedOptions).map(opt => opt.value);
+    const approvalType = item.querySelector('.stage-approval-type')?.value || 'single';
 
-    stages.push({
+    const stage = {
       id: item.dataset.stageId.startsWith('new-') ? null : item.dataset.stageId,
       stage_name: item.querySelector('.stage-name').value.trim(),
       stage_order: index + 1,
@@ -306,14 +343,25 @@ function collectTemplateData() {
       can_edit: item.querySelector('.stage-can-edit').checked,
       can_approve: item.querySelector('.stage-can-approve').checked,
       requires_approval: item.querySelector('.stage-requires-approval').checked,
-      required_roles: selectedRoles
-    });
+      required_roles: selectedRoles,
+      approval_type: approvalType
+    };
+
+    // Add vote threshold if supermajority
+    if (approvalType === 'supermajority') {
+      const threshold = item.querySelector('.stage-vote-threshold')?.value;
+      if (threshold) {
+        stage.vote_threshold = parseInt(threshold, 10);
+      }
+    }
+
+    stages.push(stage);
   });
 
   return {
     name: document.getElementById('templateName').value.trim(),
     description: document.getElementById('templateDescription').value.trim(),
-    is_active: document.getElementById('isActive').checked,
+    isActive: document.getElementById('isActive').checked,
     stages: stages
   };
 }
@@ -345,7 +393,7 @@ async function deleteTemplate() {
   }
 
   try {
-    const response = await fetch(`/api/workflows/${window.templateId}`, {
+    const response = await fetch(`/api/workflow/templates/${window.templateId}`, {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' }
     });

@@ -1,0 +1,1216 @@
+mgall@mother:/mnt/c/Users/mgall/OneDrive/Desktop/BYLAWSCOMMITTEE/BYLAWSTOOL_Generalized$ npm update cookie csurf
+
+up to date, audited 500 packages in 1s
+
+66 packages are looking for funding
+  run `npm fund` for details
+
+2 low severity vulnerabilities
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+mgall@mother:/mnt/c/Users/mgall/OneDrive/Desktop/BYLAWSCOMMITTEE/BYLAWSTOOL_Generalized$ npm start
+
+> bylaws-amendment-tracker@1.0.0 start
+> node server.js
+
+[dotenv@17.2.2] injecting env (7) from .env -- tip: ⚙️  enable debug logging with { debug: true }
+Bylaws Amendment Tracker running on https://3eed1324c595.ngrok-free.app
+
+Current Configuration:
+- App URL: https://3eed1324c595.ngrok-free.app
+- Supabase: Connected
+
+[SETUP-DEBUG] 🔔 Triggering async processSetupData via setImmediate
+[SETUP-DEBUG] 📊 Current session setupData: {
+  "organization": {
+    "organization_name": "AnotherNgrokyTest",
+    "organization_type": "club",
+    "state": "CA",
+    "country": "USA",
+    "contact_email": "mgallagh@gmail.com",
+    "logo_path": "/mnt/c/Users/mgall/OneDrive/Desktop/BYLAWSCOMMITTEE/BYLAWSTOOL_Generalized/uploads/setup/setup-1760243226847-847402273.png"
+  },
+  "completedSteps": [
+    "organization",
+    "document",
+    "workflow",
+    "import"
+  ],
+  "documentType": {
+    "structure_type": "article-section",
+    "level1_name": "Article",
+    "level2_name": "Section",
+    "numbering_style": "roman"
+  },
+  "workflow": {
+    "template": "committee",
+    "stages": [
+      {
+        "name": "Committee Review",
+        "approvalType": "majority",
+        "approvers": [],
+        "skipIfAuthor": false
+      },
+      {
+        "name": "Board Approval",
+        "approvalType": "majority",
+        "approvers": [],
+        "skipIfAuthor": false
+      },
+      {
+        "name": "President Signature",
+        "approvalType": "single",
+        "approvers": [],
+        "skipIfAuthor": false
+      }
+    ],
+    "notifications": {
+      "onSubmit": true,
+      "onApproval": true,
+      "onRejection": true,
+      "onComplete": true
+    }
+  },
+  "import": {
+    "source": "file_upload",
+    "file_path": "/mnt/c/Users/mgall/OneDrive/Desktop/BYLAWSCOMMITTEE/BYLAWSTOOL_Generalized/uploads/setup/setup-1760243259365-2671958.docx",
+    "file_name": "RNCBYLAWS_2024.docx",
+    "auto_detect_structure": true,
+    "preserve_formatting": false,
+    "create_initial_version": true
+  }
+}
+[SETUP-DEBUG] 🏃 setImmediate callback executing...
+[SETUP-DEBUG] 🚀 START processSetupData()
+[SETUP-DEBUG] 📊 Initial setupData: {
+  "organization": {
+    "organization_name": "AnotherNgrokyTest",
+    "organization_type": "club",
+    "state": "CA",
+    "country": "USA",
+    "contact_email": "mgallagh@gmail.com",
+    "logo_path": "/mnt/c/Users/mgall/OneDrive/Desktop/BYLAWSCOMMITTEE/BYLAWSTOOL_Generalized/uploads/setup/setup-1760243226847-847402273.png"
+  },
+  "completedSteps": [
+    "organization",
+    "document",
+    "workflow",
+    "import"
+  ],
+  "documentType": {
+    "structure_type": "article-section",
+    "level1_name": "Article",
+    "level2_name": "Section",
+    "numbering_style": "roman"
+  },
+  "workflow": {
+    "template": "committee",
+    "stages": [
+      {
+        "name": "Committee Review",
+        "approvalType": "majority",
+        "approvers": [],
+        "skipIfAuthor": false
+      },
+      {
+        "name": "Board Approval",
+        "approvalType": "majority",
+        "approvers": [],
+        "skipIfAuthor": false
+      },
+      {
+        "name": "President Signature",
+        "approvalType": "single",
+        "approvers": [],
+        "skipIfAuthor": false
+      }
+    ],
+    "notifications": {
+      "onSubmit": true,
+      "onApproval": true,
+      "onRejection": true,
+      "onComplete": true
+    }
+  },
+  "import": {
+    "source": "file_upload",
+    "file_path": "/mnt/c/Users/mgall/OneDrive/Desktop/BYLAWSCOMMITTEE/BYLAWSTOOL_Generalized/uploads/setup/setup-1760243259365-2671958.docx",
+    "file_name": "RNCBYLAWS_2024.docx",
+    "auto_detect_structure": true,
+    "preserve_formatting": false,
+    "create_initial_version": true
+  }
+}
+[SETUP-DEBUG] 📊 Initial completedSteps: [ 'organization', 'document', 'workflow', 'import' ]
+[SETUP-DEBUG] 📝 Steps to process: [
+  'organization',
+  'document',
+  'workflow',
+  'import',
+  'database',
+  'finalize'
+]
+[SETUP-DEBUG] ⏳ BEFORE step 1/6: "organization"
+[SETUP-DEBUG] 📊 completedSteps before step: [organization, document, workflow, import]
+[SETUP-DEBUG] ⏱️  Starting 1-second delay for step: "organization"
+[SETUP-DEBUG] 🔔 Triggering async processSetupData via setImmediate
+[SETUP-DEBUG] 📊 Current session setupData: {
+  "organization": {
+    "organization_name": "AnotherNgrokyTest",
+    "organization_type": "club",
+    "state": "CA",
+    "country": "USA",
+    "contact_email": "mgallagh@gmail.com",
+    "logo_path": "/mnt/c/Users/mgall/OneDrive/Desktop/BYLAWSCOMMITTEE/BYLAWSTOOL_Generalized/uploads/setup/setup-1760243226847-847402273.png"
+  },
+  "completedSteps": [
+    "organization",
+    "document",
+    "workflow",
+    "import"
+  ],
+  "documentType": {
+    "structure_type": "article-section",
+    "level1_name": "Article",
+    "level2_name": "Section",
+    "numbering_style": "roman"
+  },
+  "workflow": {
+    "template": "committee",
+    "stages": [
+      {
+        "name": "Committee Review",
+        "approvalType": "majority",
+        "approvers": [],
+        "skipIfAuthor": false
+      },
+      {
+        "name": "Board Approval",
+        "approvalType": "majority",
+        "approvers": [],
+        "skipIfAuthor": false
+      },
+      {
+        "name": "President Signature",
+        "approvalType": "single",
+        "approvers": [],
+        "skipIfAuthor": false
+      }
+    ],
+    "notifications": {
+      "onSubmit": true,
+      "onApproval": true,
+      "onRejection": true,
+      "onComplete": true
+    }
+  },
+  "import": {
+    "source": "file_upload",
+    "file_path": "/mnt/c/Users/mgall/OneDrive/Desktop/BYLAWSCOMMITTEE/BYLAWSTOOL_Generalized/uploads/setup/setup-1760243259448-941840668.docx",
+    "file_name": "RNCBYLAWS_2024.docx",
+    "auto_detect_structure": true,
+    "preserve_formatting": false,
+    "create_initial_version": true
+  }
+}
+[SETUP-DEBUG] 🏃 setImmediate callback executing...
+[SETUP-DEBUG] 🚀 START processSetupData()
+[SETUP-DEBUG] 📊 Initial setupData: {
+  "organization": {
+    "organization_name": "AnotherNgrokyTest",
+    "organization_type": "club",
+    "state": "CA",
+    "country": "USA",
+    "contact_email": "mgallagh@gmail.com",
+    "logo_path": "/mnt/c/Users/mgall/OneDrive/Desktop/BYLAWSCOMMITTEE/BYLAWSTOOL_Generalized/uploads/setup/setup-1760243226847-847402273.png"
+  },
+  "completedSteps": [
+    "organization",
+    "document",
+    "workflow",
+    "import"
+  ],
+  "documentType": {
+    "structure_type": "article-section",
+    "level1_name": "Article",
+    "level2_name": "Section",
+    "numbering_style": "roman"
+  },
+  "workflow": {
+    "template": "committee",
+    "stages": [
+      {
+        "name": "Committee Review",
+        "approvalType": "majority",
+        "approvers": [],
+        "skipIfAuthor": false
+      },
+      {
+        "name": "Board Approval",
+        "approvalType": "majority",
+        "approvers": [],
+        "skipIfAuthor": false
+      },
+      {
+        "name": "President Signature",
+        "approvalType": "single",
+        "approvers": [],
+        "skipIfAuthor": false
+      }
+    ],
+    "notifications": {
+      "onSubmit": true,
+      "onApproval": true,
+      "onRejection": true,
+      "onComplete": true
+    }
+  },
+  "import": {
+    "source": "file_upload",
+    "file_path": "/mnt/c/Users/mgall/OneDrive/Desktop/BYLAWSCOMMITTEE/BYLAWSTOOL_Generalized/uploads/setup/setup-1760243259448-941840668.docx",
+    "file_name": "RNCBYLAWS_2024.docx",
+    "auto_detect_structure": true,
+    "preserve_formatting": false,
+    "create_initial_version": true
+  }
+}
+[SETUP-DEBUG] 📊 Initial completedSteps: [ 'organization', 'document', 'workflow', 'import' ]
+[SETUP-DEBUG] 📝 Steps to process: [
+  'organization',
+  'document',
+  'workflow',
+  'import',
+  'database',
+  'finalize'
+]
+[SETUP-DEBUG] ⏳ BEFORE step 1/6: "organization"
+[SETUP-DEBUG] 📊 completedSteps before step: [organization, document, workflow, import]
+[SETUP-DEBUG] ⏱️  Starting 1-second delay for step: "organization"
+[SETUP-DEBUG] 📡 /setup/status endpoint called
+[SETUP-DEBUG] 📊 setupData from session: {
+  "organization": {
+    "organization_name": "AnotherNgrokyTest",
+    "organization_type": "club",
+    "state": "CA",
+    "country": "USA",
+    "contact_email": "mgallagh@gmail.com",
+    "logo_path": "/mnt/c/Users/mgall/OneDrive/Desktop/BYLAWSCOMMITTEE/BYLAWSTOOL_Generalized/uploads/setup/setup-1760243226847-847402273.png"
+  },
+  "completedSteps": [
+    "organization",
+    "document",
+    "workflow",
+    "import"
+  ],
+  "documentType": {
+    "structure_type": "article-section",
+    "level1_name": "Article",
+    "level2_name": "Section",
+    "numbering_style": "roman"
+  },
+  "workflow": {
+    "template": "committee",
+    "stages": [
+      {
+        "name": "Committee Review",
+        "approvalType": "majority",
+        "approvers": [],
+        "skipIfAuthor": false
+      },
+      {
+        "name": "Board Approval",
+        "approvalType": "majority",
+        "approvers": [],
+        "skipIfAuthor": false
+      },
+      {
+        "name": "President Signature",
+        "approvalType": "single",
+        "approvers": [],
+        "skipIfAuthor": false
+      }
+    ],
+    "notifications": {
+      "onSubmit": true,
+      "onApproval": true,
+      "onRejection": true,
+      "onComplete": true
+    }
+  },
+  "import": {
+    "source": "file_upload",
+    "file_path": "/mnt/c/Users/mgall/OneDrive/Desktop/BYLAWSCOMMITTEE/BYLAWSTOOL_Generalized/uploads/setup/setup-1760243259448-941840668.docx",
+    "file_name": "RNCBYLAWS_2024.docx",
+    "auto_detect_structure": true,
+    "preserve_formatting": false,
+    "create_initial_version": true
+  }
+}
+[SETUP-DEBUG] 📊 completedSteps: [ 'organization', 'document', 'workflow', 'import' ]
+[SETUP-DEBUG] 📊 status: processing
+[SETUP-DEBUG] 📊 progressPercentage: 66.66666666666666
+[SETUP-DEBUG] 📊 currentStep: database
+[SETUP-DEBUG] 📊 estimatedSeconds: 10
+[SETUP-DEBUG] 📤 Sending response: {
+  "status": "processing",
+  "completedSteps": [
+    "organization",
+    "document",
+    "workflow",
+    "import"
+  ],
+  "currentStep": "database",
+  "progressPercentage": 67,
+  "estimatedSeconds": 10,
+  "totalSteps": 6,
+  "error": null,
+  "errorDetails": null
+}
+[SETUP-DEBUG] ✅ Delay completed for step: "organization"
+[SETUP-DEBUG] ⏭️  Step "organization" already in completedSteps, skipping add
+[SETUP-DEBUG] 🔧 Processing step logic: "organization"
+[SETUP-DEBUG] 🏢 Processing organization step
+[SETUP-DEBUG] 📋 orgData: {
+  "organization_name": "AnotherNgrokyTest",
+  "organization_type": "club",
+  "state": "CA",
+  "country": "USA",
+  "contact_email": "mgallagh@gmail.com",
+  "logo_path": "/mnt/c/Users/mgall/OneDrive/Desktop/BYLAWSCOMMITTEE/BYLAWSTOOL_Generalized/uploads/setup/setup-1760243226847-847402273.png"
+}
+[SETUP-DEBUG] ✅ orgData exists, creating organization...
+[SETUP-DEBUG] 🔗 Generated slug: anotherngrokytest-mgn7e1gv
+[SETUP-DEBUG] 💾 Inserting into Supabase organizations table...
+[SETUP-DEBUG] ✅ Delay completed for step: "organization"
+[SETUP-DEBUG] ⏭️  Step "organization" already in completedSteps, skipping add
+[SETUP-DEBUG] 🔧 Processing step logic: "organization"
+[SETUP-DEBUG] 🏢 Processing organization step
+[SETUP-DEBUG] 📋 orgData: {
+  "organization_name": "AnotherNgrokyTest",
+  "organization_type": "club",
+  "state": "CA",
+  "country": "USA",
+  "contact_email": "mgallagh@gmail.com",
+  "logo_path": "/mnt/c/Users/mgall/OneDrive/Desktop/BYLAWSCOMMITTEE/BYLAWSTOOL_Generalized/uploads/setup/setup-1760243226847-847402273.png"
+}
+[SETUP-DEBUG] ✅ orgData exists, creating organization...
+[SETUP-DEBUG] 🔗 Generated slug: anotherngrokytest-mgn7e1hk
+[SETUP-DEBUG] 💾 Inserting into Supabase organizations table...
+[SETUP-DEBUG] ✅ Organization created with ID: 2ca7e9ca-61a8-481d-90a5-55bb80082562
+[SETUP-DEBUG] ✅ AFTER step 1/6: "organization" completed
+[SETUP-DEBUG] 📊 completedSteps after step: [organization, document, workflow, import]
+[SETUP-DEBUG] ⏳ BEFORE step 2/6: "document"
+[SETUP-DEBUG] 📊 completedSteps before step: [organization, document, workflow, import]
+[SETUP-DEBUG] ⏱️  Starting 1-second delay for step: "document"
+[SETUP-DEBUG] ✅ Organization created with ID: fb63e42f-f18e-492f-b685-98ac85163c37
+[SETUP-DEBUG] ✅ AFTER step 1/6: "organization" completed
+[SETUP-DEBUG] 📊 completedSteps after step: [organization, document, workflow, import]
+[SETUP-DEBUG] ⏳ BEFORE step 2/6: "document"
+[SETUP-DEBUG] 📊 completedSteps before step: [organization, document, workflow, import]
+[SETUP-DEBUG] ⏱️  Starting 1-second delay for step: "document"
+[SETUP-DEBUG] ✅ Delay completed for step: "document"
+[SETUP-DEBUG] ⏭️  Step "document" already in completedSteps, skipping add
+[SETUP-DEBUG] 🔧 Processing step logic: "document"
+[SETUP-DEBUG] 📄 Processing document step (no-op)
+[SETUP-DEBUG] ✅ AFTER step 2/6: "document" completed
+[SETUP-DEBUG] 📊 completedSteps after step: [organization, document, workflow, import]
+[SETUP-DEBUG] ⏳ BEFORE step 3/6: "workflow"
+[SETUP-DEBUG] 📊 completedSteps before step: [organization, document, workflow, import]
+[SETUP-DEBUG] ⏱️  Starting 1-second delay for step: "workflow"
+[SETUP-DEBUG] ✅ Delay completed for step: "document"
+[SETUP-DEBUG] ⏭️  Step "document" already in completedSteps, skipping add
+[SETUP-DEBUG] 🔧 Processing step logic: "document"
+[SETUP-DEBUG] 📄 Processing document step (no-op)
+[SETUP-DEBUG] ✅ AFTER step 2/6: "document" completed
+[SETUP-DEBUG] 📊 completedSteps after step: [organization, document, workflow, import]
+[SETUP-DEBUG] ⏳ BEFORE step 3/6: "workflow"
+[SETUP-DEBUG] 📊 completedSteps before step: [organization, document, workflow, import]
+[SETUP-DEBUG] ⏱️  Starting 1-second delay for step: "workflow"
+[SETUP-DEBUG] 📡 /setup/status endpoint called
+[SETUP-DEBUG] 📊 setupData from session: {
+  "organization": {
+    "organization_name": "AnotherNgrokyTest",
+    "organization_type": "club",
+    "state": "CA",
+    "country": "USA",
+    "contact_email": "mgallagh@gmail.com",
+    "logo_path": "/mnt/c/Users/mgall/OneDrive/Desktop/BYLAWSCOMMITTEE/BYLAWSTOOL_Generalized/uploads/setup/setup-1760243226847-847402273.png"
+  },
+  "completedSteps": [
+    "organization",
+    "document",
+    "workflow",
+    "import"
+  ],
+  "documentType": {
+    "structure_type": "article-section",
+    "level1_name": "Article",
+    "level2_name": "Section",
+    "numbering_style": "roman"
+  },
+  "workflow": {
+    "template": "committee",
+    "stages": [
+      {
+        "name": "Committee Review",
+        "approvalType": "majority",
+        "approvers": [],
+        "skipIfAuthor": false
+      },
+      {
+        "name": "Board Approval",
+        "approvalType": "majority",
+        "approvers": [],
+        "skipIfAuthor": false
+      },
+      {
+        "name": "President Signature",
+        "approvalType": "single",
+        "approvers": [],
+        "skipIfAuthor": false
+      }
+    ],
+    "notifications": {
+      "onSubmit": true,
+      "onApproval": true,
+      "onRejection": true,
+      "onComplete": true
+    }
+  },
+  "import": {
+    "source": "file_upload",
+    "file_path": "/mnt/c/Users/mgall/OneDrive/Desktop/BYLAWSCOMMITTEE/BYLAWSTOOL_Generalized/uploads/setup/setup-1760243259448-941840668.docx",
+    "file_name": "RNCBYLAWS_2024.docx",
+    "auto_detect_structure": true,
+    "preserve_formatting": false,
+    "create_initial_version": true
+  }
+}
+[SETUP-DEBUG] 📊 completedSteps: [ 'organization', 'document', 'workflow', 'import' ]
+[SETUP-DEBUG] 📊 status: processing
+[SETUP-DEBUG] 📊 progressPercentage: 66.66666666666666
+[SETUP-DEBUG] 📊 currentStep: database
+[SETUP-DEBUG] 📊 estimatedSeconds: 10
+[SETUP-DEBUG] 📤 Sending response: {
+  "status": "processing",
+  "completedSteps": [
+    "organization",
+    "document",
+    "workflow",
+    "import"
+  ],
+  "currentStep": "database",
+  "progressPercentage": 67,
+  "estimatedSeconds": 10,
+  "totalSteps": 6,
+  "error": null,
+  "errorDetails": null
+}
+[SETUP-DEBUG] ✅ Delay completed for step: "workflow"
+[SETUP-DEBUG] ⏭️  Step "workflow" already in completedSteps, skipping add
+[SETUP-DEBUG] 🔧 Processing step logic: "workflow"
+[SETUP-DEBUG] 🔄 Processing workflow step (no-op)
+[SETUP-DEBUG] ✅ AFTER step 3/6: "workflow" completed
+[SETUP-DEBUG] 📊 completedSteps after step: [organization, document, workflow, import]
+[SETUP-DEBUG] ⏳ BEFORE step 4/6: "import"
+[SETUP-DEBUG] 📊 completedSteps before step: [organization, document, workflow, import]
+[SETUP-DEBUG] ⏱️  Starting 1-second delay for step: "import"
+[SETUP-DEBUG] ✅ Delay completed for step: "workflow"
+[SETUP-DEBUG] ⏭️  Step "workflow" already in completedSteps, skipping add
+[SETUP-DEBUG] 🔧 Processing step logic: "workflow"
+[SETUP-DEBUG] 🔄 Processing workflow step (no-op)
+[SETUP-DEBUG] ✅ AFTER step 3/6: "workflow" completed
+[SETUP-DEBUG] 📊 completedSteps after step: [organization, document, workflow, import]
+[SETUP-DEBUG] ⏳ BEFORE step 4/6: "import"
+[SETUP-DEBUG] 📊 completedSteps before step: [organization, document, workflow, import]
+[SETUP-DEBUG] ⏱️  Starting 1-second delay for step: "import"
+[SETUP-DEBUG] ✅ Delay completed for step: "import"
+[SETUP-DEBUG] ⏭️  Step "import" already in completedSteps, skipping add
+[SETUP-DEBUG] 🔧 Processing step logic: "import"
+[SETUP-DEBUG] 📥 Processing import step
+[SETUP-DEBUG] 📄 Processing uploaded file: /mnt/c/Users/mgall/OneDrive/Desktop/BYLAWSCOMMITTEE/BYLAWSTOOL_Generalized/uploads/setup/setup-1760243259365-2671958.docx
+[SETUP-DEBUG] 🔄 Calling setupService.processDocumentImport...
+[SETUP-DEBUG] ✅ Delay completed for step: "import"
+[SETUP-DEBUG] ⏭️  Step "import" already in completedSteps, skipping add
+[SETUP-DEBUG] 🔧 Processing step logic: "import"
+[SETUP-DEBUG] 📥 Processing import step
+[SETUP-DEBUG] 📄 Processing uploaded file: /mnt/c/Users/mgall/OneDrive/Desktop/BYLAWSCOMMITTEE/BYLAWSTOOL_Generalized/uploads/setup/setup-1760243259448-941840668.docx
+[SETUP-DEBUG] 🔄 Calling setupService.processDocumentImport...
+[SETUP-DEBUG] 📡 /setup/status endpoint called
+[SETUP-DEBUG] 📊 setupData from session: {
+  "organization": {
+    "organization_name": "AnotherNgrokyTest",
+    "organization_type": "club",
+    "state": "CA",
+    "country": "USA",
+    "contact_email": "mgallagh@gmail.com",
+    "logo_path": "/mnt/c/Users/mgall/OneDrive/Desktop/BYLAWSCOMMITTEE/BYLAWSTOOL_Generalized/uploads/setup/setup-1760243226847-847402273.png"
+  },
+  "completedSteps": [
+    "organization",
+    "document",
+    "workflow",
+    "import"
+  ],
+  "documentType": {
+    "structure_type": "article-section",
+    "level1_name": "Article",
+    "level2_name": "Section",
+    "numbering_style": "roman"
+  },
+  "workflow": {
+    "template": "committee",
+    "stages": [
+      {
+        "name": "Committee Review",
+        "approvalType": "majority",
+        "approvers": [],
+        "skipIfAuthor": false
+      },
+      {
+        "name": "Board Approval",
+        "approvalType": "majority",
+        "approvers": [],
+        "skipIfAuthor": false
+      },
+      {
+        "name": "President Signature",
+        "approvalType": "single",
+        "approvers": [],
+        "skipIfAuthor": false
+      }
+    ],
+    "notifications": {
+      "onSubmit": true,
+      "onApproval": true,
+      "onRejection": true,
+      "onComplete": true
+    }
+  },
+  "import": {
+    "source": "file_upload",
+    "file_path": "/mnt/c/Users/mgall/OneDrive/Desktop/BYLAWSCOMMITTEE/BYLAWSTOOL_Generalized/uploads/setup/setup-1760243259448-941840668.docx",
+    "file_name": "RNCBYLAWS_2024.docx",
+    "auto_detect_structure": true,
+    "preserve_formatting": false,
+    "create_initial_version": true
+  }
+}
+[SETUP-DEBUG] 📊 completedSteps: [ 'organization', 'document', 'workflow', 'import' ]
+[SETUP-DEBUG] 📊 status: processing
+[SETUP-DEBUG] 📊 progressPercentage: 66.66666666666666
+[SETUP-DEBUG] 📊 currentStep: database
+[SETUP-DEBUG] 📊 estimatedSeconds: 10
+[SETUP-DEBUG] 📤 Sending response: {
+  "status": "processing",
+  "completedSteps": [
+    "organization",
+    "document",
+    "workflow",
+    "import"
+  ],
+  "currentStep": "database",
+  "progressPercentage": 67,
+  "estimatedSeconds": 10,
+  "totalSteps": 6,
+  "error": null,
+  "errorDetails": null
+}
+[CONFIG-DEBUG] 📊 Database returned:
+[CONFIG-DEBUG]   - settings keys: []
+[CONFIG-DEBUG]   - hierarchy_config: present
+[CONFIG-DEBUG]   - settings.hierarchy: absent
+[CONFIG-DEBUG] 📦 Returning dbConfig with keys: [ 'hierarchy' ]
+[CONFIG-DEBUG]   - dbConfig.hierarchy: present
+[CONFIG-DEBUG]   - dbConfig.hierarchy.levels: 2
+[SETUP-DEBUG] 📋 Loaded organization config:
+[SETUP-DEBUG]   - Has hierarchy: true
+[SETUP-DEBUG]   - Hierarchy levels: 2
+[SETUP-DEBUG]     * Article (type: undefined, depth: undefined)
+[SETUP-DEBUG]     * Section (type: undefined, depth: undefined)
+[CONFIG-DEBUG] 📊 Database returned:
+[CONFIG-DEBUG]   - settings keys: []
+[CONFIG-DEBUG]   - hierarchy_config: present
+[CONFIG-DEBUG]   - settings.hierarchy: absent
+[CONFIG-DEBUG] 📦 Returning dbConfig with keys: [ 'hierarchy' ]
+[CONFIG-DEBUG]   - dbConfig.hierarchy: present
+[CONFIG-DEBUG]   - dbConfig.hierarchy.levels: 2
+[SETUP-DEBUG] 📋 Loaded organization config:
+[SETUP-DEBUG]   - Has hierarchy: true
+[SETUP-DEBUG]   - Hierarchy levels: 2
+[SETUP-DEBUG]     * Article (type: undefined, depth: undefined)
+[SETUP-DEBUG]     * Section (type: undefined, depth: undefined)
+[SETUP-DEBUG] 📡 /setup/status endpoint called
+[SETUP-DEBUG] 📊 setupData from session: {
+  "organization": {
+    "organization_name": "AnotherNgrokyTest",
+    "organization_type": "club",
+    "state": "CA",
+    "country": "USA",
+    "contact_email": "mgallagh@gmail.com",
+    "logo_path": "/mnt/c/Users/mgall/OneDrive/Desktop/BYLAWSCOMMITTEE/BYLAWSTOOL_Generalized/uploads/setup/setup-1760243226847-847402273.png"
+  },
+  "completedSteps": [
+    "organization",
+    "document",
+    "workflow",
+    "import"
+  ],
+  "documentType": {
+    "structure_type": "article-section",
+    "level1_name": "Article",
+    "level2_name": "Section",
+    "numbering_style": "roman"
+  },
+  "workflow": {
+    "template": "committee",
+    "stages": [
+      {
+        "name": "Committee Review",
+        "approvalType": "majority",
+        "approvers": [],
+        "skipIfAuthor": false
+      },
+      {
+        "name": "Board Approval",
+        "approvalType": "majority",
+        "approvers": [],
+        "skipIfAuthor": false
+      },
+      {
+        "name": "President Signature",
+        "approvalType": "single",
+        "approvers": [],
+        "skipIfAuthor": false
+      }
+    ],
+    "notifications": {
+      "onSubmit": true,
+      "onApproval": true,
+      "onRejection": true,
+      "onComplete": true
+    }
+  },
+  "import": {
+    "source": "file_upload",
+    "file_path": "/mnt/c/Users/mgall/OneDrive/Desktop/BYLAWSCOMMITTEE/BYLAWSTOOL_Generalized/uploads/setup/setup-1760243259448-941840668.docx",
+    "file_name": "RNCBYLAWS_2024.docx",
+    "auto_detect_structure": true,
+    "preserve_formatting": false,
+    "create_initial_version": true
+  }
+}
+[SETUP-DEBUG] 📊 completedSteps: [ 'organization', 'document', 'workflow', 'import' ]
+[SETUP-DEBUG] 📊 status: processing
+[SETUP-DEBUG] 📊 progressPercentage: 66.66666666666666
+[SETUP-DEBUG] 📊 currentStep: database
+[SETUP-DEBUG] 📊 estimatedSeconds: 10
+[SETUP-DEBUG] 📤 Sending response: {
+  "status": "processing",
+  "completedSteps": [
+    "organization",
+    "document",
+    "workflow",
+    "import"
+  ],
+  "currentStep": "database",
+  "progressPercentage": 67,
+  "estimatedSeconds": 10,
+  "totalSteps": 6,
+  "error": null,
+  "errorDetails": null
+}
+[WordParser] Detected TOC: lines 30-128 (50 lines matched pattern)
+[WordParser] Filtered 47 TOC items, kept 60 real headers
+[WordParser] Scanning for orphaned content...
+[WordParser] Detected TOC: lines 30-128 (50 lines matched pattern)
+[WordParser] Found 3 orphaned content block(s)
+[WordParser] Orphan details: [
+  { lines: '18-18', preview: 'BYLAWS OF THE...' },
+  {
+    lines: '22-22',
+    preview: 'RESEDA NEIGHBORHOOD COUNCIL May 17, 2024...'
+  },
+  { lines: '24-24', preview: 'Table of Contents...' }
+]
+[WordParser] Created preamble section for orphan at lines 18-18
+[WordParser] Attached orphan (lines 22-22) to section: Preamble
+[WordParser] Attached orphan (lines 24-24) to section: Preamble
+[WordParser] Checking for duplicate sections...
+[WordParser] Skipping duplicate Section1 (keeping original with 742 chars)
+[WordParser] Skipping duplicate Section2 (keeping original with 1047 chars)
+[WordParser] Replacing duplicate Section1 (742 → 1928 chars)
+[WordParser] Skipping duplicate Section2 (keeping original with 1047 chars)
+[WordParser] Skipping duplicate Section3 (keeping original with 485 chars)
+[WordParser] Skipping duplicate Section1 (keeping original with 1928 chars)
+[WordParser] Replacing duplicate Section2 (1047 → 4913 chars)
+[WordParser] Replacing duplicate Section3 (485 → 1593 chars)
+[WordParser] Skipping duplicate Section4 (keeping original with 466 chars)
+[WordParser] Replacing duplicate Section1 (1928 → 6108 chars)
+[WordParser] Skipping duplicate Section2 (keeping original with 4913 chars)
+[WordParser] Replacing duplicate Section3 (1593 → 2649 chars)
+[WordParser] Skipping duplicate Section1 (keeping original with 6108 chars)
+[WordParser] Skipping duplicate Section2 (keeping original with 4913 chars)
+[WordParser] Skipping duplicate Section3 (keeping original with 2649 chars)
+[WordParser] Replacing duplicate Section4 (466 → 1985 chars)
+[WordParser] Skipping duplicate Section1 (keeping original with 6108 chars)
+[WordParser] Skipping duplicate Section2 (keeping original with 4913 chars)
+[WordParser] Skipping duplicate Section3 (keeping original with 2649 chars)
+[WordParser] Skipping duplicate Section4 (keeping original with 1985 chars)
+[WordParser] Skipping duplicate Section5 (keeping original with 903 chars)
+[WordParser] Skipping duplicate Section6 (keeping original with 4765 chars)
+[WordParser] Skipping duplicate Section1 (keeping original with 6108 chars)
+[WordParser] Skipping duplicate Section2 (keeping original with 4913 chars)
+[WordParser] Skipping duplicate Section3 (keeping original with 2649 chars)
+[WordParser] ⚠️  Removed 25 duplicate sections
+[WordParser] Note: Source document contains duplicate content (e.g., table of contents + body)
+[WordParser] Deduplicated citations: Section1, Section2, Section3, Section4, Section5, Section6
+[WordParser] Detected TOC: lines 30-128 (50 lines matched pattern)
+[WordParser] Filtered 47 TOC items, kept 60 real headers
+[WordParser] Scanning for orphaned content...
+[WordParser] Detected TOC: lines 30-128 (50 lines matched pattern)
+[WordParser] Found 3 orphaned content block(s)
+[WordParser] Orphan details: [
+  { lines: '18-18', preview: 'BYLAWS OF THE...' },
+  {
+    lines: '22-22',
+    preview: 'RESEDA NEIGHBORHOOD COUNCIL May 17, 2024...'
+  },
+  { lines: '24-24', preview: 'Table of Contents...' }
+]
+[WordParser] Created preamble section for orphan at lines 18-18
+[WordParser] Attached orphan (lines 22-22) to section: Preamble
+[WordParser] Attached orphan (lines 24-24) to section: Preamble
+[WordParser] Checking for duplicate sections...
+[WordParser] Skipping duplicate Section1 (keeping original with 742 chars)
+[WordParser] Skipping duplicate Section2 (keeping original with 1047 chars)
+[WordParser] Replacing duplicate Section1 (742 → 1928 chars)
+[WordParser] Skipping duplicate Section2 (keeping original with 1047 chars)
+[WordParser] Skipping duplicate Section3 (keeping original with 485 chars)
+[WordParser] Skipping duplicate Section1 (keeping original with 1928 chars)
+[WordParser] Replacing duplicate Section2 (1047 → 4913 chars)
+[WordParser] Replacing duplicate Section3 (485 → 1593 chars)
+[WordParser] Skipping duplicate Section4 (keeping original with 466 chars)
+[WordParser] Replacing duplicate Section1 (1928 → 6108 chars)
+[WordParser] Skipping duplicate Section2 (keeping original with 4913 chars)
+[WordParser] Replacing duplicate Section3 (1593 → 2649 chars)
+[WordParser] Skipping duplicate Section1 (keeping original with 6108 chars)
+[WordParser] Skipping duplicate Section2 (keeping original with 4913 chars)
+[WordParser] Skipping duplicate Section3 (keeping original with 2649 chars)
+[WordParser] Replacing duplicate Section4 (466 → 1985 chars)
+[WordParser] Skipping duplicate Section1 (keeping original with 6108 chars)
+[WordParser] Skipping duplicate Section2 (keeping original with 4913 chars)
+[WordParser] Skipping duplicate Section3 (keeping original with 2649 chars)
+[WordParser] Skipping duplicate Section4 (keeping original with 1985 chars)
+[WordParser] Skipping duplicate Section5 (keeping original with 903 chars)
+[WordParser] Skipping duplicate Section6 (keeping original with 4765 chars)
+[WordParser] Skipping duplicate Section1 (keeping original with 6108 chars)
+[WordParser] Skipping duplicate Section2 (keeping original with 4913 chars)
+[WordParser] Skipping duplicate Section3 (keeping original with 2649 chars)
+[WordParser] ⚠️  Removed 25 duplicate sections
+[WordParser] Note: Source document contains duplicate content (e.g., table of contents + body)
+[WordParser] Deduplicated citations: Section1, Section2, Section3, Section4, Section5, Section6
+[SETUP-DEBUG] ❌ Import failed: Document validation failed
+[SETUP-DEBUG] ❌ Validation errors: [
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "Preamble"
+  },
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "ArticleI"
+  },
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "ArticleII"
+  },
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "Section1"
+  },
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "Section2"
+  },
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "Section3"
+  },
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "ArticleIII"
+  },
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "ArticleIV"
+  },
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "ArticleV"
+  },
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "Section4"
+  },
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "Section5"
+  },
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "Section6"
+  },
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "Section7"
+  },
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "Section8"
+  },
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "Section9"
+  },
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "Section10"
+  },
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "Section11"
+  },
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "ArticleVI"
+  },
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "ArticleVII"
+  },
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "ArticleVIII"
+  },
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "ArticleIX"
+  },
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "ArticleX"
+  },
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "ArticleXI"
+  },
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "ArticleXII"
+  },
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "ArticleXIII"
+  },
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "ArticleXIV"
+  }
+]
+[SETUP-DEBUG] ⚠️  Validation warnings: [
+  {
+    "type": "warning",
+    "message": "2 sections have no content",
+    "sections": [
+      "ArticleVI",
+      "ArticleX"
+    ]
+  }
+]
+[SETUP-DEBUG] ❌ Parse error: Error: Failed to import document: Document validation failed
+    at processSetupData (/mnt/c/Users/mgall/OneDrive/Desktop/BYLAWSCOMMITTEE/BYLAWSTOOL_Generalized/src/routes/setup.js:562:39)
+[SETUP-DEBUG] ❌ Stack trace: Error: Failed to import document: Document validation failed
+    at processSetupData (/mnt/c/Users/mgall/OneDrive/Desktop/BYLAWSCOMMITTEE/BYLAWSTOOL_Generalized/src/routes/setup.js:562:39)
+[SETUP-DEBUG] ❌ ERROR in step "import": Error: Failed to parse document: Failed to import document: Document validation failed
+    at processSetupData (/mnt/c/Users/mgall/OneDrive/Desktop/BYLAWSCOMMITTEE/BYLAWSTOOL_Generalized/src/routes/setup.js:567:35)
+[SETUP-DEBUG] ❌ Error stack: Error: Failed to parse document: Failed to import document: Document validation failed
+    at processSetupData (/mnt/c/Users/mgall/OneDrive/Desktop/BYLAWSCOMMITTEE/BYLAWSTOOL_Generalized/src/routes/setup.js:567:35)
+[SETUP-DEBUG] ❌ Error details: {}
+[SETUP-DEBUG] ❌ Import failed: Document validation failed
+[SETUP-DEBUG] ❌ Validation errors: [
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "Preamble"
+  },
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "ArticleI"
+  },
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "ArticleII"
+  },
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "Section1"
+  },
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "Section2"
+  },
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "Section3"
+  },
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "ArticleIII"
+  },
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "ArticleIV"
+  },
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "ArticleV"
+  },
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "Section4"
+  },
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "Section5"
+  },
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "Section6"
+  },
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "Section7"
+  },
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "Section8"
+  },
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "Section9"
+  },
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "Section10"
+  },
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "Section11"
+  },
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "ArticleVI"
+  },
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "ArticleVII"
+  },
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "ArticleVIII"
+  },
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "ArticleIX"
+  },
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "ArticleX"
+  },
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "ArticleXI"
+  },
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "ArticleXII"
+  },
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "ArticleXIII"
+  },
+  {
+    "type": "error",
+    "message": "No level definition found for depth 0",
+    "section": "ArticleXIV"
+  }
+]
+[SETUP-DEBUG] ⚠️  Validation warnings: [
+  {
+    "type": "warning",
+    "message": "2 sections have no content",
+    "sections": [
+      "ArticleVI",
+      "ArticleX"
+    ]
+  }
+]
+[SETUP-DEBUG] ❌ Parse error: Error: Failed to import document: Document validation failed
+    at processSetupData (/mnt/c/Users/mgall/OneDrive/Desktop/BYLAWSCOMMITTEE/BYLAWSTOOL_Generalized/src/routes/setup.js:562:39)
+[SETUP-DEBUG] ❌ Stack trace: Error: Failed to import document: Document validation failed
+    at processSetupData (/mnt/c/Users/mgall/OneDrive/Desktop/BYLAWSCOMMITTEE/BYLAWSTOOL_Generalized/src/routes/setup.js:562:39)
+[SETUP-DEBUG] ❌ ERROR in step "import": Error: Failed to parse document: Failed to import document: Document validation failed
+    at processSetupData (/mnt/c/Users/mgall/OneDrive/Desktop/BYLAWSCOMMITTEE/BYLAWSTOOL_Generalized/src/routes/setup.js:567:35)
+[SETUP-DEBUG] ❌ Error stack: Error: Failed to parse document: Failed to import document: Document validation failed
+    at processSetupData (/mnt/c/Users/mgall/OneDrive/Desktop/BYLAWSCOMMITTEE/BYLAWSTOOL_Generalized/src/routes/setup.js:567:35)
+[SETUP-DEBUG] ❌ Error details: {}
+[SETUP-DEBUG] ❌ Setup processing error: Error: Failed to parse document: Failed to import document: Document validation failed
+    at processSetupData (/mnt/c/Users/mgall/OneDrive/Desktop/BYLAWSCOMMITTEE/BYLAWSTOOL_Generalized/src/routes/setup.js:567:35)
+[SETUP-DEBUG] ❌ Error stack: Error: Failed to parse document: Failed to import document: Document validation failed
+    at processSetupData (/mnt/c/Users/mgall/OneDrive/Desktop/BYLAWSCOMMITTEE/BYLAWSTOOL_Generalized/src/routes/setup.js:567:35)
+[SETUP-DEBUG] ❌ Set status to "error"
+[SETUP-DEBUG] ❌ Setup processing error: Error: Failed to parse document: Failed to import document: Document validation failed
+    at processSetupData (/mnt/c/Users/mgall/OneDrive/Desktop/BYLAWSCOMMITTEE/BYLAWSTOOL_Generalized/src/routes/setup.js:567:35)
+[SETUP-DEBUG] ❌ Error stack: Error: Failed to parse document: Failed to import document: Document validation failed
+    at processSetupData (/mnt/c/Users/mgall/OneDrive/Desktop/BYLAWSCOMMITTEE/BYLAWSTOOL_Generalized/src/routes/setup.js:567:35)
+[SETUP-DEBUG] ❌ Set status to "error"
+[SETUP-DEBUG] ❌ Error session saved
+[SETUP-DEBUG] ❌ Error session saved
+[SETUP-DEBUG] 📡 /setup/status endpoint called
+[SETUP-DEBUG] 📊 setupData from session: {
+  "organization": {
+    "organization_name": "AnotherNgrokyTest",
+    "organization_type": "club",
+    "state": "CA",
+    "country": "USA",
+    "contact_email": "mgallagh@gmail.com",
+    "logo_path": "/mnt/c/Users/mgall/OneDrive/Desktop/BYLAWSCOMMITTEE/BYLAWSTOOL_Generalized/uploads/setup/setup-1760243226847-847402273.png"
+  },
+  "completedSteps": [
+    "organization",
+    "document",
+    "workflow",
+    "import"
+  ],
+  "documentType": {
+    "structure_type": "article-section",
+    "level1_name": "Article",
+    "level2_name": "Section",
+    "numbering_style": "roman"
+  },
+  "workflow": {
+    "template": "committee",
+    "stages": [
+      {
+        "name": "Committee Review",
+        "approvalType": "majority",
+        "approvers": [],
+        "skipIfAuthor": false
+      },
+      {
+        "name": "Board Approval",
+        "approvalType": "majority",
+        "approvers": [],
+        "skipIfAuthor": false
+      },
+      {
+        "name": "President Signature",
+        "approvalType": "single",
+        "approvers": [],
+        "skipIfAuthor": false
+      }
+    ],
+    "notifications": {
+      "onSubmit": true,
+      "onApproval": true,
+      "onRejection": true,
+      "onComplete": true
+    }
+  },
+  "import": {
+    "source": "file_upload",
+    "file_path": "/mnt/c/Users/mgall/OneDrive/Desktop/BYLAWSCOMMITTEE/BYLAWSTOOL_Generalized/uploads/setup/setup-1760243259365-2671958.docx",
+    "file_name": "RNCBYLAWS_2024.docx",
+    "auto_detect_structure": true,
+    "preserve_formatting": false,
+    "create_initial_version": true
+  },
+  "organizationId": "2ca7e9ca-61a8-481d-90a5-55bb80082562",
+  "status": "error",
+  "error": "Failed to parse document: Failed to import document: Document validation failed",
+  "errorDetails": "Error: Failed to parse document: Failed to import document: Document validation failed\n    at processSetupData (/mnt/c/Users/mgall/OneDrive/Desktop/BYLAWSCOMMITTEE/BYLAWSTOOL_Generalized/src/routes/setup.js:567:35)"
+}
+[SETUP-DEBUG] 📊 completedSteps: [ 'organization', 'document', 'workflow', 'import' ]
+[SETUP-DEBUG] 📊 status: error
+[SETUP-DEBUG] 📊 progressPercentage: 66.66666666666666
+[SETUP-DEBUG] 📊 currentStep: database
+[SETUP-DEBUG] 📊 estimatedSeconds: 10
+[SETUP-DEBUG] 📤 Sending response: {
+  "status": "error",
+  "completedSteps": [
+    "organization",
+    "document",
+    "workflow",
+    "import"
+  ],
+  "currentStep": "database",
+  "progressPercentage": 67,
+  "estimatedSeconds": 10,
+  "totalSteps": 6,
+  "error": "Failed to parse document: Failed to import document: Document validation failed",
+  "errorDetails": "Error: Failed to parse document: Failed to import document: Document validation failed\n    at processSetupData (/mnt/c/Users/mgall/OneDrive/Desktop/BYLAWSCOMMITTEE/BYLAWSTOOL_Generalized/src/routes/setup.js:567:35)"
+}
+^A^A

@@ -1,0 +1,84 @@
+{
+  "timestamp": "2025-10-21T22:41:39.526Z",
+  "migrations": [
+    {
+      "source": "IMPLEMENTATION_GUIDE.md",
+      "target": "archive/outdated-docs/IMPLEMENTATION_GUIDE.md",
+      "category": "outdated-docs",
+      "timestamp": "2025-10-21T22:41:39.584Z"
+    },
+    {
+      "source": "PARSER_COMPLETE.md",
+      "target": "archive/outdated-docs/PARSER_COMPLETE.md",
+      "category": "outdated-docs",
+      "timestamp": "2025-10-21T22:41:39.640Z"
+    },
+    {
+      "source": "DEPLOYMENT_GUIDE.md",
+      "target": "archive/outdated-docs/DEPLOYMENT_GUIDE.md",
+      "category": "outdated-docs",
+      "timestamp": "2025-10-21T22:41:39.696Z"
+    },
+    {
+      "source": "FINAL_SETUP_CHECKLIST.md",
+      "target": "archive/outdated-docs/FINAL_SETUP_CHECKLIST.md",
+      "category": "outdated-docs",
+      "timestamp": "2025-10-21T22:41:39.752Z"
+    },
+    {
+      "source": "GENERALIZATION_GUIDE.md",
+      "target": "archive/outdated-docs/GENERALIZATION_GUIDE.md",
+      "category": "outdated-docs",
+      "timestamp": "2025-10-21T22:41:39.813Z"
+    },
+    {
+      "source": "SETUP_GUIDE.md",
+      "target": "archive/outdated-docs/SETUP_GUIDE.md",
+      "category": "outdated-docs",
+      "timestamp": "2025-10-21T22:41:39.873Z"
+    },
+    {
+      "source": "CONFIGURATION_GUIDE.md",
+      "target": "archive/outdated-docs/CONFIGURATION_GUIDE.md",
+      "category": "outdated-docs",
+      "timestamp": "2025-10-21T22:41:39.933Z"
+    },
+    {
+      "source": "MIGRATION_GUIDE.md",
+      "target": "archive/outdated-docs/MIGRATION_GUIDE.md",
+      "category": "outdated-docs",
+      "timestamp": "2025-10-21T22:41:39.991Z"
+    },
+    {
+      "source": "IMPLEMENTATION_SUMMARY.md",
+      "target": "archive/outdated-docs/IMPLEMENTATION_SUMMARY.md",
+      "category": "outdated-docs",
+      "timestamp": "2025-10-21T22:41:40.052Z"
+    },
+    {
+      "source": "QUICKSTART.md",
+      "target": "archive/outdated-docs/QUICKSTART.md",
+      "category": "outdated-docs",
+      "timestamp": "2025-10-21T22:41:40.110Z"
+    },
+    {
+      "source": "DEBUG_FORM.md",
+      "target": "archive/outdated-docs/DEBUG_FORM.md",
+      "category": "outdated-docs",
+      "timestamp": "2025-10-21T22:41:40.171Z"
+    },
+    {
+      "source": "RENDER_DEPLOYMENT_COMPLETE.md",
+      "target": "archive/outdated-docs/RENDER_DEPLOYMENT_COMPLETE.md",
+      "category": "outdated-docs",
+      "timestamp": "2025-10-21T22:41:40.231Z"
+    },
+    {
+      "source": "database/migrations/002_migrate_existing_data.sql",
+      "target": "archive/migration-history/002_migrate_existing_data.sql",
+      "category": "migration-history",
+      "timestamp": "2025-10-21T22:41:41.724Z"
+    }
+  ],
+  "rollbackable": true
+}

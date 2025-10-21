@@ -93,8 +93,55 @@ class SetupMiddleware {
 // Export singleton instance
 const setupMiddleware = new SetupMiddleware();
 
-module.exports = (req, res, next) => {
+// Named function exports for testing
+const requireSetupComplete = async (req, res, next) => {
+  const configured = await setupMiddleware.checkConfiguration(req.supabase);
+  if (!configured) {
+    if (req.xhr || req.path.startsWith('/api/')) {
+      return res.status(503).json({
+        success: false,
+        error: 'Setup required',
+        redirectUrl: '/setup'
+      });
+    } else {
+      return res.redirect('/setup');
+    }
+  }
+  next();
+};
+
+const preventSetupIfConfigured = async (req, res, next) => {
+  const configured = await setupMiddleware.checkConfiguration(req.supabase);
+  if (configured) {
+    return res.redirect('/dashboard');
+  }
+  next();
+};
+
+const checkSetupStatus = async (req) => {
+  return await setupMiddleware.checkConfiguration(req.supabase);
+};
+
+const initializeSetupStatus = (app) => {
+  // Initialize setup status tracking
+  setupMiddleware.clearCache();
+  return setupMiddleware;
+};
+
+// Default export for backward compatibility
+const middleware = (req, res, next) => {
   setupMiddleware.middleware(req, res, next);
 };
 
-module.exports.clearCache = () => setupMiddleware.clearCache();
+// Export all functions
+module.exports = {
+  requireSetupComplete,
+  preventSetupIfConfigured,
+  checkSetupStatus,
+  initializeSetupStatus,
+  middleware,
+  clearCache: () => setupMiddleware.clearCache()
+};
+
+// Default export for backward compatibility with existing code
+module.exports.default = middleware;

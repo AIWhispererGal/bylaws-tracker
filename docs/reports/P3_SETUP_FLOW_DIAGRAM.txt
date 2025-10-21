@@ -1,0 +1,351 @@
+# Org Admin Setup Flow - Visual Diagram
+
+================================================================================
+                    COMPLETE SETUP WIZARD USER FLOW
+================================================================================
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│                         BROWSER: SETUP WIZARD                            │
+└──────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    │ 1. Submit org + admin info
+                                    ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│                    POST /setup/organization                              │
+│  src/routes/setup.js:79-186                                              │
+│                                                                           │
+│  Input:                                                                   │
+│    • organization_name: "Test Organization"                              │
+│    • admin_email: "admin@example.com"                                    │
+│    • admin_password: "password123"                                       │
+└──────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    │ 2. Check if first organization
+                                    ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│  const isFirstOrganization = !existingOrgs || existingOrgs.length === 0  │
+│  Line 140                                                                 │
+└──────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    │ 3. Create Supabase Auth user
+                                    ▼
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                    SUPABASE AUTH USER CREATION                            ║
+║  Line 144-152                                                             ║
+║                                                                           ║
+║  supabaseService.auth.admin.createUser({                                 ║
+║    email: "admin@example.com",                                           ║
+║    password: "password123",                                              ║
+║    email_confirm: true,              // ✅ Auto-confirm                  ║
+║    user_metadata: {                                                      ║
+║      setup_user: true,                                                   ║
+║      created_via: 'setup_wizard'                                         ║
+║    }                                                                      ║
+║  });                                                                      ║
+║                                                                           ║
+║  Returns: authUser.user.id = "uuid-1234-5678-90ab-cdef"                 ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+                                    │
+                                    │ 4. Database trigger fires
+                                    ▼
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                    DATABASE: auth.users INSERT                            ║
+║  Supabase Auth Schema                                                     ║
+║                                                                           ║
+║  INSERT INTO auth.users (                                                ║
+║    id: "uuid-1234-5678-90ab-cdef",                                       ║
+║    email: "admin@example.com",                                           ║
+║    encrypted_password: "...",                                            ║
+║    email_confirmed_at: NOW(),        // ✅ Confirmed                     ║
+║    raw_user_meta_data: {                                                 ║
+║      setup_user: true                                                    ║
+║    }                                                                      ║
+║  );                                                                       ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+                                    │
+                                    │ 5. TRIGGER: on_auth_user_created
+                                    ▼
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                    DATABASE: public.users INSERT                          ║
+║  Migration: 001_generalized_schema.sql                                    ║
+║                                                                           ║
+║  CREATE FUNCTION handle_new_user() RETURNS trigger AS $$                 ║
+║  BEGIN                                                                    ║
+║    INSERT INTO public.users (                                            ║
+║      id,                          -- Same UUID as auth.users             ║
+║      email,                                                              ║
+║      name,                                                               ║
+║      auth_provider,                                                      ║
+║      created_at                                                          ║
+║    ) VALUES (                                                            ║
+║      NEW.id,                      -- "uuid-1234-5678-90ab-cdef"         ║
+║      NEW.email,                   -- "admin@example.com"                ║
+║      NEW.raw_user_meta_data->>'name',                                   ║
+║      'supabase',                                                         ║
+║      NOW()                                                               ║
+║    );                                                                    ║
+║    RETURN NEW;                                                           ║
+║  END;                                                                    ║
+║  $$ LANGUAGE plpgsql SECURITY DEFINER;                                   ║
+║                                                                           ║
+║  ✅ RESULT: User automatically created in public.users                   ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+                                    │
+                                    │ 6. Store in session
+                                    ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│  req.session.setupData = {                                               │
+│    organization: { ... },                                                │
+│    adminUser: {                                                          │
+│      user_id: "uuid-1234-5678-90ab-cdef",  // ✅ From auth creation     │
+│      email: "admin@example.com",                                         │
+│      is_first_org: true/false                                            │
+│    },                                                                    │
+│    completedSteps: ['organization']                                      │
+│  };                                                                      │
+│                                                                           │
+│  req.session.adminPassword = "password123";  // ⚠️ Temporary            │
+│  Lines 165-175                                                           │
+└──────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    │ 7. User continues setup
+                                    ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│  User completes:                                                         │
+│    • Document Type (Article/Section structure)                           │
+│    • Workflow Configuration (Committee Review → Board Approval)          │
+│    • Document Import (optional)                                          │
+└──────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    │ 8. Processing begins
+                                    ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│  POST /setup/import → GET /setup/processing                              │
+│  Background: processSetupData(setupData, supabase)                       │
+│  Lines 362-388                                                           │
+└──────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    │ 9. Create organization
+                                    ▼
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                    DATABASE: organizations INSERT                         ║
+║  processSetupData() - Lines 626-647                                       ║
+║                                                                           ║
+║  INSERT INTO organizations (                                             ║
+║    name: "Test Organization",                                            ║
+║    slug: "test-organization-abc123",                                     ║
+║    organization_type: "neighborhood-council",                            ║
+║    state: "CA",                                                          ║
+║    country: "US",                                                        ║
+║    contact_email: "admin@example.com",                                   ║
+║    logo_url: "/uploads/logo.png",                                        ║
+║    hierarchy_config: {                                                   ║
+║      structure_type: "standard",                                         ║
+║      level1_name: "Article",                                             ║
+║      level2_name: "Section",                                             ║
+║      numbering_style: "roman"                                            ║
+║    },                                                                    ║
+║    is_configured: true                                                   ║
+║  ) RETURNING id;                                                         ║
+║                                                                           ║
+║  Returns: organization.id = "org-uuid-abcd"                              ║
+║  Stored in: setupData.organizationId                                     ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+                                    │
+                                    │ 10. Link user to organization
+                                    ▼
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                    DATABASE: user_organizations INSERT                    ║
+║  processSetupData() - Lines 654-669                                       ║
+║                                                                           ║
+║  const userRole = adminUser.is_first_org                                 ║
+║    ? 'superuser'                                                         ║
+║    : 'org_admin';                                                        ║
+║                                                                           ║
+║  INSERT INTO user_organizations (                                        ║
+║    user_id: "uuid-1234-5678-90ab-cdef",   // ✅ From Step 3             ║
+║    organization_id: "org-uuid-abcd",      // ✅ From Step 9             ║
+║    role: "org_admin" or "superuser",      // ✅ Based on first org      ║
+║    created_at: NOW()                                                     ║
+║  );                                                                      ║
+║                                                                           ║
+║  ✅ RESULT: User linked to organization with admin privileges            ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+                                    │
+                                    │ 11. Create default workflow
+                                    ▼
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                    DATABASE: workflow_templates INSERT                    ║
+║  processSetupData() - Lines 674-684                                       ║
+║                                                                           ║
+║  INSERT INTO workflow_templates (                                        ║
+║    organization_id: "org-uuid-abcd",                                     ║
+║    name: "Default Approval Workflow",                                    ║
+║    description: "Standard two-stage approval...",                        ║
+║    is_default: true,                                                     ║
+║    is_active: true                                                       ║
+║  ) RETURNING id;                                                         ║
+║                                                                           ║
+║  Returns: workflowTemplate.id = "workflow-uuid-xyz"                      ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+                                    │
+                                    │ 12. Create workflow stages
+                                    ▼
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                    DATABASE: workflow_stages INSERT                       ║
+║  processSetupData() - Lines 693-722                                       ║
+║                                                                           ║
+║  INSERT INTO workflow_stages VALUES                                      ║
+║    (                                                                     ║
+║      workflow_template_id: "workflow-uuid-xyz",                          ║
+║      stage_name: "Committee Review",                                     ║
+║      stage_order: 1,                                                     ║
+║      can_lock: true,                                                     ║
+║      can_edit: true,                                                     ║
+║      can_approve: true,                                                  ║
+║      requires_approval: true,                                            ║
+║      required_roles: ["admin", "owner"],                                 ║
+║      display_color: "#FFD700",                                           ║
+║      icon: "clipboard-check"                                             ║
+║    ),                                                                    ║
+║    (                                                                     ║
+║      workflow_template_id: "workflow-uuid-xyz",                          ║
+║      stage_name: "Board Approval",                                       ║
+║      stage_order: 2,                                                     ║
+║      can_lock: false,                                                    ║
+║      can_edit: false,                                                    ║
+║      can_approve: true,                                                  ║
+║      requires_approval: true,                                            ║
+║      required_roles: ["owner"],                                          ║
+║      display_color: "#90EE90",                                           ║
+║      icon: "check-circle"                                                ║
+║    );                                                                    ║
+║                                                                           ║
+║  ✅ RESULT: 2-stage approval workflow created                            ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+                                    │
+                                    │ 13. Process document (if uploaded)
+                                    ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│  Optional: Parse and store document sections                             │
+│  Lines 755-813                                                           │
+│  Creates: document record + document_sections                            │
+└──────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    │ 14. Setup complete, redirect
+                                    ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│                    GET /setup/success                                    │
+│  Lines 463-528                                                           │
+└──────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    │ 15. Auto-login with JWT
+                                    ▼
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                    SUPABASE AUTH: Sign In                                 ║
+║  Lines 476-490                                                            ║
+║                                                                           ║
+║  supabaseService.auth.signInWithPassword({                               ║
+║    email: "admin@example.com",                                           ║
+║    password: "password123"           // From req.session.adminPassword   ║
+║  });                                                                      ║
+║                                                                           ║
+║  Returns:                                                                ║
+║    • access_token (JWT)                                                  ║
+║    • refresh_token                                                       ║
+║    • user object                                                         ║
+║    • session metadata                                                    ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+                                    │
+                                    │ 16. Store JWT in session
+                                    ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│  EXPRESS SESSION: Store authentication                                   │
+│  Lines 486-507                                                           │
+│                                                                           │
+│  req.session.supabaseJWT = authData.session.access_token;  ✅           │
+│  req.session.supabaseRefreshToken = authData.session.refresh_token; ✅  │
+│  req.session.supabaseUser = authData.user;                 ✅           │
+│                                                                           │
+│  req.session.userId = "uuid-1234-5678-90ab-cdef";          ✅           │
+│  req.session.userEmail = "admin@example.com";              ✅           │
+│  req.session.isAuthenticated = true;                       ✅           │
+│  req.session.organizationId = "org-uuid-abcd";             ✅           │
+│  req.session.isConfigured = true;                          ✅           │
+│                                                                           │
+│  delete req.session.adminPassword;                         ✅ Cleared   │
+└──────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    │ 17. Save session & redirect
+                                    ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│  req.session.save((err) => {                                             │
+│    res.redirect('/dashboard');       ✅ User now logged in               │
+│  });                                                                     │
+│  Lines 514-518                                                           │
+└──────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    │ 18. Future requests
+                                    ▼
+╔═══════════════════════════════════════════════════════════════════════════╗
+║              AUTHENTICATED SUPABASE CLIENT (Middleware)                   ║
+║  server.js:77-165                                                         ║
+║                                                                           ║
+║  app.use(async (req, res, next) => {                                     ║
+║    const sessionJWT = req.session?.supabaseJWT;                          ║
+║                                                                           ║
+║    if (sessionJWT) {                                                     ║
+║      // Create authenticated Supabase client                             ║
+║      req.supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {      ║
+║        auth: { persistSession: false },                                  ║
+║        global: {                                                         ║
+║          headers: {                                                      ║
+║            Authorization: `Bearer ${sessionJWT}`    ✅ JWT in header     ║
+║          }                                                               ║
+║        }                                                                 ║
+║      });                                                                 ║
+║    }                                                                     ║
+║                                                                           ║
+║    // Auto-refresh expired JWT if refresh_token available               ║
+║    if (JWT expired && refreshToken available) {                          ║
+║      const refreshed = await supabase.auth.refreshSession({              ║
+║        refresh_token: req.session.supabaseRefreshToken                   ║
+║      });                                                                 ║
+║      req.session.supabaseJWT = refreshed.session.access_token;           ║
+║    }                                                                     ║
+║                                                                           ║
+║    next();                                                               ║
+║  });                                                                     ║
+║                                                                           ║
+║  ✅ RESULT: All subsequent requests use authenticated client             ║
+║  ✅ RLS policies can identify user via auth.uid()                        ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+================================================================================
+                            END OF FLOW
+================================================================================
+
+FINAL STATE:
+  ✅ auth.users: User created and confirmed
+  ✅ public.users: User populated via trigger
+  ✅ user_organizations: User linked to org with role
+  ✅ organizations: Organization created and configured
+  ✅ workflow_templates: Default workflow created
+  ✅ workflow_stages: 2 stages created
+  ✅ req.session: JWT tokens stored
+  ✅ req.supabase: Authenticated client available
+
+================================================================================
+                        VALIDATION CHECKPOINTS
+================================================================================
+
+Checkpoint 1 (Step 3):  auth.users populated
+Checkpoint 2 (Step 5):  public.users populated
+Checkpoint 3 (Step 10): user_organizations linked
+Checkpoint 4 (Step 11): workflow_templates created
+Checkpoint 5 (Step 16): JWT tokens stored in session
+Checkpoint 6 (Step 18): Authenticated client available
+
+If ANY checkpoint fails → See P3_ORG_ADMIN_SETUP_TRACE.md for debugging
+
+================================================================================

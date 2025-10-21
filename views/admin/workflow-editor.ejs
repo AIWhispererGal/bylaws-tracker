@@ -144,10 +144,25 @@
           </h1>
           <p class="mb-0 mt-2">Configure approval stages and permissions</p>
         </div>
-        <div>
-          <a href="/admin/workflows" class="btn btn-light">
-            <i class="bi bi-arrow-left"></i> Back to Templates
-          </a>
+        <div class="d-flex align-items-center gap-3">
+          <!-- Role Badge -->
+          <% if (typeof currentUser !== 'undefined' && currentUser) { %>
+            <% if (currentUser.is_global_admin) { %>
+              <span class="badge bg-light text-danger border border-danger" style="padding: 0.5rem 1rem;">
+                <i class="bi bi-shield-fill-check"></i> Global Admin
+              </span>
+            <% } else if (currentUser.role === 'admin' || currentUser.role === 'owner') { %>
+              <span class="badge bg-light text-warning border border-warning" style="padding: 0.5rem 1rem;">
+                <i class="bi bi-star-fill"></i> <%= currentUser.role === 'owner' ? 'Owner' : 'Admin' %>
+              </span>
+            <% } %>
+          <% } %>
+
+          <div>
+            <a href="/admin/workflows" class="btn btn-light">
+              <i class="bi bi-arrow-left"></i> Back to Templates
+            </a>
+          </div>
         </div>
       </div>
     </div>
@@ -203,7 +218,7 @@
         <div id="stagesList">
           <% if (template && template.stages && template.stages.length > 0) { %>
             <% template.stages.forEach((stage, index) => { %>
-              <%= renderStageItem(stage, index) %>
+              <%- renderStageItem(stage, index) %>
             <% }); %>
           <% } else { %>
             <p class="text-muted text-center">No stages defined. Click "Add Stage" to create your first stage.</p>
@@ -287,6 +302,25 @@ function renderStageItem(stage, index) {
             <input type="text" class="form-control stage-icon" value="${stage.icon || ''}"
                    placeholder="e.g., check-circle">
             <small class="text-muted">Bootstrap icon name (without 'bi-' prefix)</small>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label class="form-label">Approval Type</label>
+            <select class="form-control stage-approval-type">
+              <option value="single" ${(!stage.approval_type || stage.approval_type === 'single') ? 'selected' : ''}>Single Approver</option>
+              <option value="majority" ${stage.approval_type === 'majority' ? 'selected' : ''}>Majority Vote</option>
+              <option value="unanimous" ${stage.approval_type === 'unanimous' ? 'selected' : ''}>Unanimous</option>
+              <option value="supermajority" ${stage.approval_type === 'supermajority' ? 'selected' : ''}>Supermajority/Vote Threshold</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row mb-3 supermajority-field" style="display: ${stage.approval_type === 'supermajority' ? 'flex' : 'none'};">
+          <div class="col-md-6">
+            <label class="form-label">Vote Threshold (%)</label>
+            <input type="number" class="form-control stage-vote-threshold"
+                   value="${stage.vote_threshold || ''}"
+                   placeholder="e.g., 67 for 2/3 majority" min="1" max="100">
+            <small class="text-muted">Required percentage for approval</small>
           </div>
         </div>
 

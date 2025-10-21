@@ -1,0 +1,520 @@
+# Document Workflow Progression - Visual Architecture Diagram
+
+================================================================================
+SYSTEM CONTEXT: Document Versioning & Workflow Progression
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        BYLAWS MANAGEMENT PLATFORM                            │
+│                                                                              │
+│  ┌────────────┐                                                             │
+│  │   User     │  Creates & Approves Suggestions                             │
+│  │ (Member)   │────────────────────────┐                                    │
+│  └────────────┘                        │                                    │
+│                                        ▼                                    │
+│  ┌────────────┐              ┌─────────────────┐                           │
+│  │   Admin    │──Progress───▶│   Document      │                           │
+│  │            │   Workflow   │   Workflow      │                           │
+│  └────────────┘              │   Progression   │                           │
+│                               │   System        │                           │
+│  ┌────────────┐              └────────┬────────┘                           │
+│  │   Owner    │──Publish────────────┐ │                                    │
+│  │            │                     │ │                                    │
+│  └────────────┘                     │ │                                    │
+│                                     ▼ ▼                                    │
+│                              ┌────────────────┐                             │
+│                              │   PostgreSQL   │                             │
+│                              │   Database     │                             │
+│                              │   (Supabase)   │                             │
+│                              └────────────────┘                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+DATA MODEL: Version Snapshots
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  documents (1 record per document)                                          │
+│  ┌─────────────────────────────────────────────────────────────┐           │
+│  │ id: UUID                                                     │           │
+│  │ title: "RNC Bylaws"                                         │           │
+│  │ version: "1.2" ◀─── Current version pointer                │           │
+│  │ status: "in_review"                                         │           │
+│  │ organization_id: UUID                                       │           │
+│  └─────────────────────────────────────────────────────────────┘           │
+│                              │                                              │
+│                              │ 1:N                                          │
+│                              ▼                                              │
+│  document_versions (multiple snapshots per document)                        │
+│  ┌─────────────────────────────────────────────────────────────┐           │
+│  │ Version 1.0 (Original)                                      │           │
+│  │ ├─ version_number: "1.0"                                   │           │
+│  │ ├─ is_current: FALSE                                       │           │
+│  │ ├─ sections_snapshot: [{...}, {...}, {...}] ◀─── 42 sections│           │
+│  │ ├─ approval_snapshot: [{...}, {...}]                       │           │
+│  │ ├─ applied_suggestions: []                                 │           │
+│  │ ├─ workflow_stage: "Draft"                                 │           │
+│  │ └─ created_at: "2025-01-15"                                │           │
+│  └─────────────────────────────────────────────────────────────┘           │
+│                              │                                              │
+│  ┌─────────────────────────────────────────────────────────────┐           │
+│  │ Version 1.1 (Committee Review Complete)                    │           │
+│  │ ├─ version_number: "1.1"                                   │           │
+│  │ ├─ is_current: FALSE                                       │           │
+│  │ ├─ sections_snapshot: [{...}, {...}, {...}] ◀─── 42 sections│           │
+│  │ │   (8 sections modified with approved suggestions)        │           │
+│  │ ├─ approval_snapshot: [{status:"approved"}, {...}]         │           │
+│  │ ├─ applied_suggestions: [                                  │           │
+│  │ │    {"id": "uuid1", "section_id": "uuid", "action": "applied"}│       │
+│  │ │    {"id": "uuid2", "section_id": "uuid", "action": "applied"}│       │
+│  │ │  ]                                                        │           │
+│  │ ├─ workflow_stage: "Committee Review"                      │           │
+│  │ └─ created_at: "2025-03-10"                                │           │
+│  └─────────────────────────────────────────────────────────────┘           │
+│                              │                                              │
+│  ┌─────────────────────────────────────────────────────────────┐           │
+│  │ Version 1.2 (Published) ◀─── CURRENT VERSION               │           │
+│  │ ├─ version_number: "1.2"                                   │           │
+│  │ ├─ is_current: TRUE ◀─── Only one version marked current   │           │
+│  │ ├─ is_published: TRUE                                      │           │
+│  │ ├─ published_at: "2025-04-20"                              │           │
+│  │ ├─ sections_snapshot: [{...}, {...}, {...}]               │           │
+│  │ ├─ approval_snapshot: [{status:"approved"}, {...}]         │           │
+│  │ ├─ applied_suggestions: [3 more suggestions]               │           │
+│  │ ├─ workflow_stage: "Published"                             │           │
+│  │ └─ created_at: "2025-04-20"                                │           │
+│  └─────────────────────────────────────────────────────────────┘           │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+WORKFLOW PROGRESSION ALGORITHM
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Input: documentId, options                                                 │
+│  ┌─────────────────────────────────────────────────────────────┐           │
+│  │ {                                                            │           │
+│  │   applySuggestions: "approved",                             │           │
+│  │   versionName: "Q4 2025 Update",                            │           │
+│  │   moveToNextStage: true,                                    │           │
+│  │   targetStage: "board_approval"                             │           │
+│  │ }                                                            │           │
+│  └─────────────────────────────────────────────────────────────┘           │
+│                              │                                              │
+│                              ▼                                              │
+│  ┌────────────────────────────────────────────────────────────┐            │
+│  │ STEP 1: VALIDATE PERMISSIONS                                │            │
+│  │ ├─ Check user is admin or owner                            │            │
+│  │ ├─ Check document exists and belongs to user's org         │            │
+│  │ └─ If moveToNextStage, check canApproveStage()             │            │
+│  └────────────────────────────────────────────────────────────┘            │
+│                              │                                              │
+│                              ▼                                              │
+│  ┌────────────────────────────────────────────────────────────┐            │
+│  │ STEP 2: GATHER APPROVED SUGGESTIONS                         │            │
+│  │                                                             │            │
+│  │  SELECT * FROM suggestions                                  │            │
+│  │  JOIN suggestion_sections ON ...                            │            │
+│  │  WHERE status = 'approved'  ◀─── Filter strategy            │            │
+│  │    AND section_id IN (document sections)                    │            │
+│  │                                                             │            │
+│  │  Result: [                                                  │            │
+│  │    {id: "uuid1", section_id: "sec1", suggested_text: "..."}, │          │
+│  │    {id: "uuid2", section_id: "sec2", suggested_text: "..."}, │          │
+│  │    {id: "uuid5", section_id: "sec8", suggested_text: "..."}  │          │
+│  │  ]                                                          │            │
+│  └────────────────────────────────────────────────────────────┘            │
+│                              │                                              │
+│                              ▼                                              │
+│  ┌────────────────────────────────────────────────────────────┐            │
+│  │ STEP 3: BUILD NEW SECTION TREE WITH SUGGESTIONS APPLIED     │            │
+│  │                                                             │            │
+│  │  Current Sections:          Applied Suggestions:            │            │
+│  │  ┌────────────────┐         ┌────────────────┐            │            │
+│  │  │ Section 1      │         │                 │            │            │
+│  │  │ content: "Old" │─────────│ (no change)     │            │            │
+│  │  └────────────────┘         └────────────────┘            │            │
+│  │                                                             │            │
+│  │  ┌────────────────┐         ┌────────────────┐            │            │
+│  │  │ Section 2      │         │ Suggestion 1    │            │            │
+│  │  │ content: "Old" │─Apply───│ text: "New!"    │            │            │
+│  │  └────────────────┘         └────────────────┘            │            │
+│  │         │                                                   │            │
+│  │         ▼                                                   │            │
+│  │  ┌────────────────┐                                        │            │
+│  │  │ Section 2      │                                        │            │
+│  │  │ content: "New!"│ ◀─── Updated content                   │            │
+│  │  └────────────────┘                                        │            │
+│  │                                                             │            │
+│  │  New Snapshot: [{sec1: "Old"}, {sec2: "New!"}, ...]        │            │
+│  └────────────────────────────────────────────────────────────┘            │
+│                              │                                              │
+│                              ▼                                              │
+│  ┌────────────────────────────────────────────────────────────┐            │
+│  │ STEP 4: CREATE VERSION SNAPSHOT (Atomic Transaction)        │            │
+│  │                                                             │            │
+│  │  BEGIN TRANSACTION;                                         │            │
+│  │                                                             │            │
+│  │  1. Mark all previous versions as is_current = FALSE        │            │
+│  │     UPDATE document_versions                                │            │
+│  │     SET is_current = FALSE                                  │            │
+│  │     WHERE document_id = 'doc-uuid';                         │            │
+│  │                                                             │            │
+│  │  2. Generate new version number                             │            │
+│  │     new_version = increment_version("1.1")  → "1.2"        │            │
+│  │                                                             │            │
+│  │  3. Insert new version record                               │            │
+│  │     INSERT INTO document_versions (                         │            │
+│  │       version_number = "1.2",                              │            │
+│  │       is_current = TRUE,                                   │            │
+│  │       sections_snapshot = new_snapshot,                    │            │
+│  │       applied_suggestions = [uuid1, uuid2, uuid5],         │            │
+│  │       workflow_stage = "Board Approval",                   │            │
+│  │       created_by = userId                                  │            │
+│  │     );                                                      │            │
+│  │                                                             │            │
+│  │  4. Update document's version pointer                       │            │
+│  │     UPDATE documents                                        │            │
+│  │     SET version = "1.2"                                    │            │
+│  │     WHERE id = 'doc-uuid';                                 │            │
+│  │                                                             │            │
+│  │  COMMIT;                                                    │            │
+│  └────────────────────────────────────────────────────────────┘            │
+│                              │                                              │
+│                              ▼                                              │
+│  ┌────────────────────────────────────────────────────────────┐            │
+│  │ STEP 5: PROGRESS WORKFLOW STAGE (if requested)              │            │
+│  │                                                             │            │
+│  │  UPDATE document_workflows                                  │            │
+│  │  SET current_stage_id = 'board-approval-stage-uuid'        │            │
+│  │  WHERE document_id = 'doc-uuid';                           │            │
+│  │                                                             │            │
+│  │  Create section_workflow_states for all sections:          │            │
+│  │  INSERT INTO section_workflow_states (                     │            │
+│  │    section_id, workflow_stage_id, status                   │            │
+│  │  ) VALUES                                                   │            │
+│  │    (sec1, board-stage, 'pending'),                         │            │
+│  │    (sec2, board-stage, 'pending'),                         │            │
+│  │    ...                                                      │            │
+│  └────────────────────────────────────────────────────────────┘            │
+│                              │                                              │
+│                              ▼                                              │
+│  ┌────────────────────────────────────────────────────────────┐            │
+│  │ STEP 6: MARK SUGGESTIONS AS IMPLEMENTED                     │            │
+│  │                                                             │            │
+│  │  UPDATE suggestions                                         │            │
+│  │  SET status = 'implemented',                               │            │
+│  │      implemented_in_version = 'version-1.2-uuid',          │            │
+│  │      implemented_at = NOW()                                │            │
+│  │  WHERE id IN (uuid1, uuid2, uuid5);                        │            │
+│  └────────────────────────────────────────────────────────────┘            │
+│                              │                                              │
+│                              ▼                                              │
+│  ┌────────────────────────────────────────────────────────────┐            │
+│  │ STEP 7: LOG ACTIVITY                                        │            │
+│  │                                                             │            │
+│  │  INSERT INTO user_activity_log (                            │            │
+│  │    user_id, organization_id,                               │            │
+│  │    action_type = 'document.version_created',               │            │
+│  │    entity_type = 'document',                               │            │
+│  │    entity_id = 'doc-uuid',                                 │            │
+│  │    action_data = {                                         │            │
+│  │      version_number: "1.2",                                │            │
+│  │      applied_suggestions: 3,                               │            │
+│  │      workflow_stage: "Board Approval"                      │            │
+│  │    }                                                        │            │
+│  │  );                                                         │            │
+│  └────────────────────────────────────────────────────────────┘            │
+│                              │                                              │
+│                              ▼                                              │
+│  ┌────────────────────────────────────────────────────────────┐            │
+│  │ OUTPUT: Version Created                                     │            │
+│  │                                                             │            │
+│  │  {                                                          │            │
+│  │    versionId: "uuid",                                      │            │
+│  │    versionNumber: "1.2",                                   │            │
+│  │    isCurrent: true,                                        │            │
+│  │    appliedSuggestions: 3,                                  │            │
+│  │    workflowStage: "Board Approval"                         │            │
+│  │  }                                                          │            │
+│  └────────────────────────────────────────────────────────────┘            │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+WORKFLOW STAGE PROGRESSION FLOW
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                              │
+│  Document Lifecycle:                                                         │
+│                                                                              │
+│  ┌──────────┐    Apply Approved     ┌──────────┐    Board Approves         │
+│  │ Draft    │────Suggestions────────▶│ Committee│────All Sections──────┐    │
+│  │ v1.0     │                        │ Review   │                      │    │
+│  └──────────┘                        │ v1.1     │                      │    │
+│       │                              └──────────┘                      │    │
+│       │                                                                │    │
+│       │  Progress Workflow                                            │    │
+│       │  (moveToNextStage=true)                                       │    │
+│       ▼                                                                ▼    │
+│                                                                              │
+│  ┌──────────┐    Owner Publishes     ┌──────────┐                          │
+│  │ Board    │────Document────────────▶│ Published│                          │
+│  │ Approval │                        │ v1.2     │                          │
+│  │ v1.1     │                        └──────────┘                          │
+│  └──────────┘                              │                                │
+│                                            │                                │
+│                                            │  Deployed to organization      │
+│                                            ▼                                │
+│                                                                              │
+│  Version History Timeline:                                                  │
+│                                                                              │
+│  Jan 15   Mar 10      Apr 5       Apr 20                                    │
+│    │        │          │            │                                       │
+│    v1.0     v1.1       v1.2         v2.0                                    │
+│    │        │          │            │                                       │
+│    Draft    Committee  Board        Published                               │
+│             Review     Approval                                              │
+│                                                                              │
+│  ◀────────────────── Snapshots stored in document_versions ─────────────▶  │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+API REQUEST/RESPONSE FLOW
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Client Application                                                         │
+│  ┌─────────────────────────────────────────────────────────────┐           │
+│  │ User clicks "Progress to Board Approval"                     │           │
+│  └─────────────────────────┬───────────────────────────────────┘           │
+│                            │ POST /api/documents/:id/progress              │
+│                            │ {                                              │
+│                            │   applySuggestions: "approved",               │
+│                            │   versionName: "Q4 Update",                   │
+│                            │   moveToNextStage: true,                      │
+│                            │   targetStage: "board_approval"               │
+│                            │ }                                              │
+│                            ▼                                                │
+│  ┌─────────────────────────────────────────────────────────────┐           │
+│  │ Express Server: /src/routes/documents.js                    │           │
+│  └─────────────────────────┬───────────────────────────────────┘           │
+│                            │                                                │
+│                            ▼                                                │
+│  ┌─────────────────────────────────────────────────────────────┐           │
+│  │ Middleware Chain:                                            │           │
+│  │ 1. requireMember ──▶ Check session.userId exists            │           │
+│  │ 2. Joi validation ─▶ Validate request body                  │           │
+│  └─────────────────────────┬───────────────────────────────────┘           │
+│                            │                                                │
+│                            ▼                                                │
+│  ┌─────────────────────────────────────────────────────────────┐           │
+│  │ Business Logic: /src/services/documentVersionService.js     │           │
+│  │                                                              │           │
+│  │ ┌──────────────────────────────────────────────────────┐   │           │
+│  │ │ validateProgression(documentId, options)              │   │           │
+│  │ │ ├─ Check document exists                             │   │           │
+│  │ │ ├─ Check user is admin/owner                         │   │           │
+│  │ │ └─ Check canApproveStage() if progressing            │   │           │
+│  │ └──────────────────────────────────────────────────────┘   │           │
+│  │                        │                                    │           │
+│  │                        ▼                                    │           │
+│  │ ┌──────────────────────────────────────────────────────┐   │           │
+│  │ │ getSuggestionsToApply(documentId, options)            │   │           │
+│  │ │ └─ Query suggestions with status filter              │   │           │
+│  │ └──────────────────────────────────────────────────────┘   │           │
+│  │                        │                                    │           │
+│  │                        ▼                                    │           │
+│  │ ┌──────────────────────────────────────────────────────┐   │           │
+│  │ │ buildSectionSnapshot(documentId, suggestions)         │   │           │
+│  │ │ ├─ Fetch all sections                                │   │           │
+│  │ │ └─ Apply suggestion text to sections                 │   │           │
+│  │ └──────────────────────────────────────────────────────┘   │           │
+│  │                        │                                    │           │
+│  │                        ▼                                    │           │
+│  │ ┌──────────────────────────────────────────────────────┐   │           │
+│  │ │ createVersion() ──▶ Call RPC function                │   │           │
+│  │ └──────────────────────────────────────────────────────┘   │           │
+│  └─────────────────────────┬───────────────────────────────────┘           │
+│                            │ RPC: create_document_version                   │
+│                            ▼                                                │
+│  ┌─────────────────────────────────────────────────────────────┐           │
+│  │ PostgreSQL Database                                          │           │
+│  │                                                              │           │
+│  │ BEGIN TRANSACTION;                                           │           │
+│  │   UPDATE document_versions SET is_current = FALSE;          │           │
+│  │   INSERT INTO document_versions (...);                      │           │
+│  │   UPDATE documents SET version = '1.2';                     │           │
+│  │ COMMIT;                                                      │           │
+│  │                                                              │           │
+│  │ RETURN (version_id, version_number, is_current);            │           │
+│  └─────────────────────────┬───────────────────────────────────┘           │
+│                            │ {version_id, version_number, is_current}       │
+│                            ▼                                                │
+│  ┌─────────────────────────────────────────────────────────────┐           │
+│  │ Express Server Response                                      │           │
+│  │                                                              │           │
+│  │ {                                                            │           │
+│  │   success: true,                                            │           │
+│  │   version: {                                                │           │
+│  │     id: "uuid",                                             │           │
+│  │     versionNumber: "1.2",                                   │           │
+│  │     isCurrent: true                                         │           │
+│  │   },                                                         │           │
+│  │   document: {                                               │           │
+│  │     id: "uuid",                                             │           │
+│  │     version: "1.2",                                         │           │
+│  │     status: "in_review"                                     │           │
+│  │   }                                                          │           │
+│  │ }                                                            │           │
+│  └─────────────────────────┬───────────────────────────────────┘           │
+│                            │                                                │
+│                            ▼                                                │
+│  ┌─────────────────────────────────────────────────────────────┐           │
+│  │ Client Application                                           │           │
+│  │ ├─ Show success toast: "Version 1.2 created!"               │           │
+│  │ ├─ Update UI to show v1.2 as current                        │           │
+│  │ └─ Reload document viewer                                   │           │
+│  └─────────────────────────────────────────────────────────────┘           │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+ROLLBACK MECHANISM
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Scenario: Version 1.5 has problems, need to revert to 1.4                  │
+│                                                                              │
+│  Current State:                                                              │
+│  ┌────────┐  ┌────────┐  ┌────────┐  ┌────────┐  ┌────────┐               │
+│  │ v1.1   │  │ v1.2   │  │ v1.3   │  │ v1.4   │  │ v1.5   │               │
+│  │        │  │        │  │        │  │        │  │ CURRENT│               │
+│  │        │  │        │  │        │  │        │  │ ❌ BAD  │               │
+│  └────────┘  └────────┘  └────────┘  └────────┘  └────────┘               │
+│                                                                              │
+│  Rollback Options:                                                           │
+│                                                                              │
+│  Option A: Mark v1.4 as Current (Simple)                                    │
+│  ┌──────────────────────────────────────────────────────────┐              │
+│  │ POST /api/documents/:id/versions/v1.4-uuid/restore       │              │
+│  │ { createNewVersion: false }                              │              │
+│  │                                                           │              │
+│  │ Result:                                                   │              │
+│  │ ┌────────┐  ┌────────┐  ┌────────┐  ┌────────┐  ┌────────┐            │
+│  │ │ v1.1   │  │ v1.2   │  │ v1.3   │  │ v1.4   │  │ v1.5   │            │
+│  │ │        │  │        │  │        │  │ CURRENT│  │        │            │
+│  │ │        │  │        │  │        │  │ ✅     │  │        │            │
+│  │ └────────┘  └────────┘  └────────┘  └────────┘  └────────┘            │
+│  │                                                           │              │
+│  │ - Document version changes to "1.4"                      │              │
+│  │ - v1.5 still exists in history (not deleted)             │              │
+│  │ - Fast operation (no new data created)                   │              │
+│  └──────────────────────────────────────────────────────────┘              │
+│                                                                              │
+│  Option B: Create New Version from v1.4 (Recommended)                       │
+│  ┌──────────────────────────────────────────────────────────┐              │
+│  │ POST /api/documents/:id/versions/v1.4-uuid/restore       │              │
+│  │ {                                                         │              │
+│  │   createNewVersion: true,                                │              │
+│  │   reason: "Reverting broken changes from v1.5"           │              │
+│  │ }                                                         │              │
+│  │                                                           │              │
+│  │ Result:                                                   │              │
+│  │ ┌────────┐  ┌────────┐  ┌────────┐  ┌────────┐  ┌────────┐  ┌────────┐│
+│  │ │ v1.1   │  │ v1.2   │  │ v1.3   │  │ v1.4   │  │ v1.5   │  │ v1.6   ││
+│  │ │        │  │        │  │        │  │        │  │        │  │ CURRENT││
+│  │ │        │  │        │  │        │  │        │  │        │  │ ✅     ││
+│  │ └────────┘  └────────┘  └────────┘  └────────┘  └────────┘  └────────┘│
+│  │                                                           │              │
+│  │ - Creates v1.6 with identical content to v1.4            │              │
+│  │ - Preserves complete audit trail                         │              │
+│  │ - Shows rollback action in version history               │              │
+│  │ - Can continue forward from v1.6 (v1.7, v1.8...)         │              │
+│  └──────────────────────────────────────────────────────────┘              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+PERFORMANCE OPTIMIZATION: Snapshot vs View
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Use Case: List All Versions (Dashboard)                                    │
+│                                                                              │
+│  ❌ SLOW APPROACH: Query document_versions directly                         │
+│  ┌──────────────────────────────────────────────────────────┐              │
+│  │ SELECT * FROM document_versions                           │              │
+│  │ WHERE document_id = 'uuid'                                │              │
+│  │ ORDER BY created_at DESC                                  │              │
+│  │ LIMIT 20;                                                 │              │
+│  │                                                           │              │
+│  │ Problem: Returns HUGE JSONB columns                       │              │
+│  │ - sections_snapshot: 1-5 MB per version!                 │              │
+│  │ - approval_snapshot: 100-500 KB per version              │              │
+│  │ - Total data transferred: 20-100 MB for 20 versions      │              │
+│  │ - Page load time: 3-10 seconds                           │              │
+│  └──────────────────────────────────────────────────────────┘              │
+│                                                                              │
+│  ✅ FAST APPROACH: Use document_version_summary view                        │
+│  ┌──────────────────────────────────────────────────────────┐              │
+│  │ SELECT * FROM document_version_summary                    │              │
+│  │ WHERE document_id = 'uuid'                                │              │
+│  │ ORDER BY created_at DESC                                  │              │
+│  │ LIMIT 20;                                                 │              │
+│  │                                                           │              │
+│  │ Optimization: Excludes heavy JSONB columns                │              │
+│  │ - Returns only: id, version_number, version_name, etc.   │              │
+│  │ - Includes: applied_suggestions_count (computed)          │              │
+│  │ - Total data transferred: 10-20 KB for 20 versions       │              │
+│  │ - Page load time: 100-300 ms                             │              │
+│  │                                                           │              │
+│  │ Speed Improvement: 10-100x faster! ⚡                     │              │
+│  └──────────────────────────────────────────────────────────┘              │
+│                                                                              │
+│  When to Use Full Table:                                                    │
+│  - Viewing specific version details                                         │
+│  - Restoring from snapshot                                                  │
+│  - Comparing version differences                                            │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+SECURITY MODEL: Multi-Layered Defense
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                              │
+│  Layer 1: Network (HTTPS/TLS)                                               │
+│  ├─ Encrypted communication                                                 │
+│  └─ Certificate validation                                                  │
+│                    │                                                         │
+│                    ▼                                                         │
+│  Layer 2: Application Middleware                                            │
+│  ├─ requireMember: Check session authentication                             │
+│  ├─ CSRF Protection: Prevent cross-site attacks                             │
+│  └─ Joi Validation: Sanitize all inputs                                     │
+│                    │                                                         │
+│                    ▼                                                         │
+│  Layer 3: Business Logic (Service)                                          │
+│  ├─ validateProgression(): Check user role (admin/owner)                    │
+│  ├─ canApproveStage(): Check workflow permissions                           │
+│  └─ Prevent snapshot size > 10 MB                                           │
+│                    │                                                         │
+│                    ▼                                                         │
+│  Layer 4: Database RLS Policies                                             │
+│  ├─ Organization isolation (user_organizations check)                       │
+│  ├─ Role-based access (admin/owner for INSERT)                              │
+│  └─ Global admin bypass (is_global_admin())                                 │
+│                    │                                                         │
+│                    ▼                                                         │
+│  Layer 5: Database Functions (SECURITY DEFINER)                             │
+│  ├─ create_document_version(): Atomic operations                            │
+│  ├─ increment_version(): Safe version numbering                             │
+│  └─ Prevents SQL injection via prepared statements                          │
+│                                                                              │
+│  ✅ Result: Defense in depth - multiple checkpoints prevent unauthorized    │
+│     access even if one layer fails                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+END OF VISUAL ARCHITECTURE DIAGRAM
+================================================================================

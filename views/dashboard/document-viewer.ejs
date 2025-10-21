@@ -6,6 +6,7 @@
   <title><%= title %> - Document Viewer</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="/css/document-viewer-enhancements.css">
   <style>
     /* Change Tracking Styles */
     .diff-text {
@@ -164,6 +165,173 @@
       min-width: 300px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     }
+    /* Disabled section editing buttons */
+    .section-edit-actions button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      background-color: #e9ecef;
+      border-color: #dee2e6;
+    }
+    .section-edit-actions button:disabled:hover {
+      background-color: #e9ecef;
+      border-color: #dee2e6;
+    }
+
+    /* Table of Contents Styles */
+    .document-toc-container {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      margin-bottom: 24px;
+      overflow: hidden;
+    }
+    .toc-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      background: #fff;
+      border-bottom: 1px solid #dee2e6;
+      cursor: pointer;
+      user-select: none;
+    }
+    .toc-header:hover {
+      background: #f8f9fa;
+    }
+    .toc-header h3 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: #212529;
+    }
+    .toc-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .section-count {
+      font-size: 14px;
+      color: #6c757d;
+    }
+    .toc-toggle-btn {
+      background: none;
+      border: none;
+      padding: 4px 8px;
+      cursor: pointer;
+      color: #495057;
+      transition: all 0.2s;
+    }
+    .toc-toggle-btn i {
+      transition: transform 0.2s;
+    }
+    .toc-toggle-btn.collapsed i {
+      transform: rotate(180deg);
+    }
+    .toc-content {
+      padding: 12px 20px;
+      max-height: 400px;
+      overflow-y: auto;
+      transition: max-height 0.3s ease, padding 0.3s ease;
+    }
+    .toc-content.collapsed {
+      max-height: 0;
+      padding: 0 20px;
+      overflow: hidden;
+    }
+    .toc-item {
+      margin: 4px 0;
+    }
+    .toc-link {
+      display: flex;
+      align-items: center;
+      padding: 8px 12px;
+      text-decoration: none;
+      color: #212529;
+      border-radius: 4px;
+      transition: background-color 0.15s;
+    }
+    .toc-link:hover {
+      background-color: #e9ecef;
+      text-decoration: none;
+      color: #212529;
+    }
+    .toc-number {
+      font-family: monospace;
+      font-size: 13px;
+      color: #6c757d;
+      margin-right: 8px;
+      min-width: 35px;
+    }
+    .toc-citation {
+      flex: 1;
+      font-size: 14px;
+    }
+    .toc-meta {
+      font-size: 12px;
+      color: #868e96;
+      font-style: italic;
+    }
+    .toc-empty {
+      text-align: center;
+      color: #6c757d;
+      padding: 20px;
+      margin: 0;
+    }
+
+    /* Depth indentation in TOC */
+    .toc-item.depth-0 { padding-left: 0; }
+    .toc-item.depth-1 { padding-left: 15px; }
+    .toc-item.depth-2 { padding-left: 30px; }
+    .toc-item.depth-3 { padding-left: 45px; }
+    .toc-item.depth-4 { padding-left: 60px; }
+    .toc-item.depth-5 { padding-left: 75px; }
+    .toc-item.depth-6 { padding-left: 90px; }
+    .toc-item.depth-7 { padding-left: 105px; }
+    .toc-item.depth-8 { padding-left: 120px; }
+    .toc-item.depth-9 { padding-left: 135px; }
+
+    /* Section Number in Section Header */
+    .section-number-link {
+      font-family: monospace;
+      font-size: 14px;
+      color: #6c757d;
+      text-decoration: none;
+      margin-right: 8px;
+      padding: 2px 6px;
+      border-radius: 3px;
+      transition: background-color 0.15s;
+      display: inline-block;
+    }
+    .section-number-link:hover {
+      background-color: #e9ecef;
+      color: #495057;
+      text-decoration: none;
+    }
+
+    /* Section highlight on jump */
+    .section-highlight {
+      animation: highlightFade 2s ease;
+    }
+    @keyframes highlightFade {
+      0% { background-color: #fff3cd; }
+      100% { background-color: transparent; }
+    }
+
+    /* Mobile responsive */
+    @media (max-width: 768px) {
+      .toc-content {
+        max-height: 300px;
+      }
+      .toc-item.depth-1 { padding-left: 10px; }
+      .toc-item.depth-2 { padding-left: 20px; }
+      .toc-item.depth-3 { padding-left: 30px; }
+      .toc-item.depth-4 { padding-left: 40px; }
+      .toc-item.depth-5,
+      .toc-item.depth-6,
+      .toc-item.depth-7,
+      .toc-item.depth-8,
+      .toc-item.depth-9 { padding-left: 50px; }
+    }
   </style>
 </head>
 <body>
@@ -178,6 +346,11 @@
           </p>
         </div>
         <div>
+          <% if (req.session.isGlobalAdmin || userRole === 'admin' || userRole === 'owner') { %>
+          <a href="/admin/documents/<%= document.id %>/hierarchy-editor" class="btn btn-outline-light me-2" title="Configure 10-level numbering schema">
+            <i class="bi bi-diagram-3 me-1"></i>Configure Hierarchy
+          </a>
+          <% } %>
           <a href="/dashboard" class="btn btn-light">
             <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
           </a>
@@ -187,16 +360,75 @@
   </div>
 
   <div class="container mb-5">
-    <!-- Workflow Progress Bar -->
+    <!-- ============================================================================ -->
+    <!-- ENHANCED WORKFLOW PROGRESS INDICATOR (MVP TASK 2)                          -->
+    <!-- ============================================================================ -->
     <div class="workflow-progress">
       <h5 class="mb-3"><i class="bi bi-diagram-3 me-2"></i>Workflow Progress</h5>
       <div class="progress">
         <div class="progress-bar bg-success" role="progressbar" style="width: 0%" id="workflow-progress-bar">
-          <span id="workflow-progress-text">0 / <%= sections.length %> sections approved</span>
+          <span id="workflow-progress-text">0 / <%= sections.length %> sections approved (0%)</span>
         </div>
       </div>
-      <small class="text-muted" id="workflow-stage-text">Current Stage: Loading...</small>
+      <div class="d-flex justify-content-between align-items-center mt-2">
+        <small class="text-muted" id="workflow-stage-text">Current Stage: Loading...</small>
+        <small class="text-muted" id="unmodified-count-text">0 unmodified sections</small>
+      </div>
     </div>
+
+    <!-- ============================================================================ -->
+    <!-- WORKFLOW PROGRESSION ACTIONS (MVP TASK 2)                                   -->
+    <!-- ============================================================================ -->
+    <% if (userPermissions && (userPermissions.canApprove || userRole === 'admin' || userRole === 'owner')) { %>
+    <div class="workflow-progression-section bg-light p-4 rounded-3 mb-4">
+      <h4><i class="bi bi-arrow-repeat me-2"></i>Workflow Actions</h4>
+      <p class="mb-3">Manage document approval and create new versions with approved changes.</p>
+
+      <div class="d-flex gap-3 flex-wrap">
+        <!-- Approve All Unmodified Sections Button -->
+        <button
+          id="btn-approve-unmodified"
+          class="btn btn-outline-success"
+          onclick="approveAllUnmodified('<%= document.id %>')"
+          disabled
+          title="Approve all sections with no suggestions"
+        >
+          <i class="bi bi-check-circle me-1"></i>
+          <span id="approve-unmodified-text">Approve All Unmodified (0 sections)</span>
+        </button>
+
+        <!-- Progress to Next Stage Button -->
+        <button
+          id="btn-progress-workflow"
+          class="btn btn-primary"
+          onclick="progressWorkflow('<%= document.id %>')"
+          disabled
+          title="Create new version and progress to next workflow stage"
+        >
+          <i class="bi bi-arrow-right-circle me-1"></i>
+          <span id="progress-workflow-text">Progress to Next Stage (Not Ready)</span>
+        </button>
+
+        <!-- Refresh Progress Button -->
+        <button
+          class="btn btn-outline-secondary"
+          onclick="refreshWorkflowProgress('<%= document.id %>')"
+        >
+          <i class="bi bi-arrow-clockwise me-1"></i>
+          Refresh Progress
+        </button>
+      </div>
+
+      <!-- Progress Details -->
+      <div class="mt-3">
+        <small class="text-muted">
+          <i class="bi bi-info-circle me-1"></i>
+          <strong>Note:</strong> You must approve all sections before progressing.
+          Use "Approve All Unmodified" to quickly approve sections with no suggestions.
+        </small>
+      </div>
+    </div>
+    <% } %>
 
     <!-- Document Info -->
     <div class="row mb-4">
@@ -226,6 +458,45 @@
       </div>
     </div>
 
+    <!-- Table of Contents -->
+    <% if (flatTOC && flatTOC.length > 0) { %>
+    <div class="document-toc-container">
+      <div class="toc-header" onclick="toggleTOC()">
+        <h3>
+          <i class="bi bi-list me-2"></i>
+          Table of Contents
+        </h3>
+        <div class="toc-controls">
+          <span class="section-count"><%= sections.length %> sections</span>
+          <button class="toc-toggle-btn"
+                  onclick="event.stopPropagation(); toggleTOC()"
+                  aria-label="Toggle table of contents">
+            <i class="bi bi-chevron-up"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="toc-content" id="tocContent">
+        <nav aria-label="Document table of contents">
+          <% flatTOC.forEach(function(item) { %>
+            <div class="toc-item depth-<%= item.depth || 0 %>"
+                 data-section-number="<%= item.number %>">
+              <a href="#<%= item.anchorId %>"
+                 class="toc-link"
+                 onclick="scrollToSection(<%= item.number %>); return false;">
+                <span class="toc-number">#<%= item.number %></span>
+                <span class="toc-citation"><%= item.citation %></span>
+                <% if (item.isLocked) { %>
+                  <span class="toc-meta"><i class="bi bi-lock-fill"></i></span>
+                <% } %>
+              </a>
+            </div>
+          <% }); %>
+        </nav>
+      </div>
+    </div>
+    <% } %>
+
     <!-- Document Sections -->
     <div class="row">
       <div class="col-md-12">
@@ -238,10 +509,21 @@
 
         <% if (sections && sections.length > 0) { %>
           <% sections.forEach((section, index) => { %>
-            <div class="section-card" id="section-<%= section.id %>" onclick="toggleSection('<%= section.id %>')">
+            <div class="section-card"
+                 id="<%= section.anchorId %>"
+                 data-section-id="<%= section.id %>"
+                 data-section-number="<%= section.number %>"
+                 data-depth="<%= section.depth || 0 %>"
+                 onclick="toggleSection('<%= section.id %>')">
               <div class="d-flex justify-content-between align-items-start">
                 <div class="flex-grow-1">
                   <div class="d-flex align-items-center mb-2">
+                    <a href="#<%= section.anchorId %>"
+                       class="section-number-link"
+                       onclick="event.stopPropagation(); copyLinkToClipboard('<%= section.anchorId %>', event);"
+                       title="Link to this section (click to copy)">
+                      #<%= section.number %>
+                    </a>
                     <span class="section-number"><%= section.section_number || (index + 1) %></span>
                     <span class="ms-2 badge bg-secondary"><%= section.section_type || 'Section' %></span>
                     <span class="ms-2 badge bg-info" id="suggestion-count-<%= section.id %>">0 suggestions</span>
@@ -319,12 +601,20 @@
                   </div>
                 <% } %>
 
-                <!-- Suggestions Header -->
+                <!-- Suggestions Header with Rejection Toggle -->
                 <div class="d-flex justify-content-between align-items-center mb-3">
                   <h6 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Suggestions</h6>
-                  <button class="btn btn-sm btn-primary" onclick="showSuggestionForm('<%= section.id %>')">
-                    <i class="bi bi-plus-circle me-1"></i>Add Suggestion
-                  </button>
+                  <div class="d-flex gap-2">
+                    <button id="toggle-rejected-btn-<%= section.id %>"
+                            class="btn btn-sm btn-outline-secondary"
+                            onclick="toggleRejectedSuggestions('<%= section.id %>')"
+                            data-showing="false">
+                      <i class="bi bi-eye-slash"></i> Show Rejected (<span id="rejected-count-<%= section.id %>">0</span>)
+                    </button>
+                    <button class="btn btn-sm btn-primary" onclick="showSuggestionForm('<%= section.id %>')">
+                      <i class="bi bi-plus-circle me-1"></i>Add Suggestion
+                    </button>
+                  </div>
                 </div>
 
                 <!-- New Suggestion Form -->
@@ -365,13 +655,79 @@
                   </div>
                 </div>
 
-                <!-- Suggestions List -->
-                <div id="suggestions-list-<%= section.id %>">
+                <!-- Suggestions List (Lazy Loaded) -->
+                <div class="section-suggestions-container" id="suggestions-container-<%= section.id %>">
+                  <div class="section-suggestions-placeholder lazy-load-trigger">
+                    <i class="bi bi-box-arrow-down me-2"></i>
+                    Click to expand and load suggestions
+                  </div>
+                </div>
+                <div id="suggestions-list-<%= section.id %>" style="display:none;">
                   <div class="text-center text-muted py-3">
                     <i class="bi bi-inbox"></i>
                     <p class="mb-0">Click "Add Suggestion" to propose changes</p>
                   </div>
                 </div>
+
+                <!-- Section Editing Buttons (Admin Only) -->
+                <% if (req.session.isGlobalAdmin || userRole === 'admin' || userRole === 'owner') { %>
+                <div class="section-edit-actions mt-3 pt-3 border-top">
+                  <div class="d-flex gap-2 flex-wrap align-items-center">
+                    <small class="text-muted me-2"><strong>Edit Section:</strong></small>
+                    <button class="btn btn-sm btn-outline-primary" onclick="retitleSection('<%= section.id %>', event)" title="Edit title/number">
+                      <i class="bi bi-pencil"></i> Rename
+                    </button>
+                    <!-- Delete removed for admins - they can only edit content, not remove sections -->
+                    <div class="btn-group" role="group">
+                      <button class="btn btn-sm btn-outline-secondary" onclick="moveSection('<%= section.id %>', 'up', event)" title="Move up">
+                        <i class="bi bi-arrow-up"></i>
+                      </button>
+                      <button class="btn btn-sm btn-outline-secondary" onclick="moveSection('<%= section.id %>', 'down', event)" title="Move down">
+                        <i class="bi bi-arrow-down"></i>
+                      </button>
+                    </div>
+                    <div class="btn-group" role="group">
+                      <button class="btn btn-sm btn-outline-secondary" onclick="indentSection('<%= section.id %>', event)" title="Indent (make child of previous sibling)">
+                        <i class="bi bi-arrow-bar-right"></i> Indent
+                      </button>
+                      <button class="btn btn-sm btn-outline-secondary" onclick="dedentSection('<%= section.id %>', event)" title="Dedent (move to parent's level)">
+                        <i class="bi bi-arrow-bar-left"></i> Dedent
+                      </button>
+                    </div>
+                    <%
+                      // Check if section has active suggestions (non-rejected)
+                      const activeSuggestions = suggestions.filter(s =>
+                        s.section_id === section.id && !s.rejected_at
+                      );
+                      const hasSuggestions = activeSuggestions.length > 0;
+                    %>
+                    <button
+                      class="btn btn-sm btn-outline-info"
+                      onclick="splitSection('<%= section.id %>', event)"
+                      title="<%= hasSuggestions ? 'Cannot split section with active suggestions' : 'Split section into two' %>"
+                      <%= hasSuggestions ? 'disabled' : '' %>
+                      data-section-id="<%= section.id %>"
+                      data-has-suggestions="<%= hasSuggestions %>">
+                      <i class="bi bi-scissors"></i> Split
+                    </button>
+                    <button
+                      class="btn btn-sm btn-outline-success"
+                      onclick="showJoinModal('<%= section.id %>', event)"
+                      title="<%= hasSuggestions ? 'Cannot join sections with active suggestions' : 'Join with adjacent sections' %>"
+                      <%= hasSuggestions ? 'disabled' : '' %>
+                      data-section-id="<%= section.id %>"
+                      data-has-suggestions="<%= hasSuggestions %>">
+                      <i class="bi bi-union"></i> Join
+                    </button>
+                  </div>
+                  <% if (hasSuggestions) { %>
+                  <small class="text-warning d-block mt-2">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    Split/Join disabled: This section has <%= activeSuggestions.length %> active suggestion<%= activeSuggestions.length !== 1 ? 's' : '' %>. Resolve suggestions before splitting or joining.
+                  </small>
+                  <% } %>
+                </div>
+                <% } %>
 
                 <!-- Approval Action Panel (conditional based on permissions) -->
                 <div id="approval-actions-<%= section.id %>" style="display: none;">
@@ -461,25 +817,164 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/diff@5.1.0/dist/diff.min.js"></script>
   <script src="/js/workflow-actions.js"></script>
+  <script src="/js/document-viewer-enhancements.js"></script>
   <script>
     const documentId = '<%= document.id %>';
     const expandedSections = new Set();
 
+    // ============================================================
+    // TABLE OF CONTENTS FUNCTIONS
+    // ============================================================
+
+    /**
+     * Toggle TOC collapse/expand
+     */
+    function toggleTOC() {
+      const content = document.getElementById('tocContent');
+      const button = document.querySelector('.toc-toggle-btn');
+
+      if (content && button) {
+        content.classList.toggle('collapsed');
+        button.classList.toggle('collapsed');
+
+        // Update ARIA label for accessibility
+        const isCollapsed = content.classList.contains('collapsed');
+        button.setAttribute('aria-label', isCollapsed ? 'Expand table of contents' : 'Collapse table of contents');
+      }
+    }
+
+    /**
+     * Scroll to section smoothly with highlight effect
+     * @param {number} sectionNumber - Sequential section number (1, 2, 3...)
+     */
+    function scrollToSection(sectionNumber) {
+      const anchorId = `section-${sectionNumber}`;
+      const target = document.getElementById(anchorId);
+
+      if (!target) {
+        console.warn('[scrollToSection] Section not found with anchorId:', anchorId);
+        return;
+      }
+
+      // Smooth scroll to section
+      target.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+        inline: 'nearest'
+      });
+
+      // Add highlight animation
+      target.classList.add('section-highlight');
+      setTimeout(() => {
+        target.classList.remove('section-highlight');
+      }, 2000);
+
+      // Update URL hash without jumping
+      if (history.pushState) {
+        history.pushState(null, null, `#${anchorId}`);
+      } else {
+        window.location.hash = anchorId;
+      }
+
+      // Auto-expand section if collapsed
+      const sectionId = target.getAttribute('data-section-id');
+      if (sectionId && !expandedSections.has(sectionId)) {
+        // Small delay to ensure scroll completes
+        setTimeout(() => {
+          toggleSection(sectionId);
+        }, 300);
+      }
+    }
+
+    /**
+     * Copy section link to clipboard
+     * @param {string} anchorId - The anchor ID to copy
+     * @param {Event} event - Click event
+     */
+    function copyLinkToClipboard(anchorId, event) {
+      event.preventDefault();
+      event.stopPropagation();
+
+      const url = `${window.location.origin}${window.location.pathname}#${anchorId}`;
+
+      // Modern clipboard API
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url)
+          .then(() => {
+            showToast('Link copied to clipboard!', 'success');
+          })
+          .catch(err => {
+            console.error('Failed to copy link:', err);
+            fallbackCopyToClipboard(url);
+          });
+      } else {
+        fallbackCopyToClipboard(url);
+      }
+    }
+
+    /**
+     * Fallback clipboard copy for older browsers
+     */
+    function fallbackCopyToClipboard(text) {
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+
+      try {
+        document.execCommand('copy');
+        showToast('Link copied to clipboard!', 'success');
+      } catch (err) {
+        console.error('Fallback copy failed:', err);
+        showToast('Failed to copy link. Please copy manually from the address bar.', 'warning');
+      }
+
+      document.body.removeChild(textArea);
+    }
+
+    /**
+     * Handle URL hash on page load (deep linking)
+     */
+    // CONSOLIDATED: This DOMContentLoaded listener has been moved to the main
+    // initialization block at the end of the script to prevent duplicate listeners
+    // See line ~2589 for the consolidated initialization
+
     // Toggle section expand/collapse
-    async function toggleSection(sectionId) {
-      const card = document.getElementById('section-' + sectionId);
+    // Make it global so onclick attributes can access it
+    window.toggleSection = async function(sectionId) {
+      // Find the card by data-section-id attribute since the ID uses anchorId
+      const card = document.querySelector(`[data-section-id="${sectionId}"]`);
       const chevron = document.getElementById('chevron-' + sectionId);
+
+      // Add null checks to prevent errors
+      if (!card) {
+        console.error('[toggleSection] Section card not found for ID:', sectionId);
+        return;
+      }
+
+      if (!chevron) {
+        console.error('[toggleSection] Chevron not found for ID:', sectionId);
+        // Continue without chevron animation if it's missing
+      }
 
       if (expandedSections.has(sectionId)) {
         expandedSections.delete(sectionId);
         card.classList.remove('expanded');
-        chevron.classList.remove('bi-chevron-up');
-        chevron.classList.add('bi-chevron-down');
+        if (chevron) {
+          chevron.classList.remove('bi-chevron-up');
+          chevron.classList.add('bi-chevron-down');
+        }
       } else {
         expandedSections.add(sectionId);
         card.classList.add('expanded');
-        chevron.classList.remove('bi-chevron-down');
-        chevron.classList.add('bi-chevron-up');
+        if (chevron) {
+          chevron.classList.remove('bi-chevron-down');
+          chevron.classList.add('bi-chevron-up');
+        }
 
         // Load suggestions when expanding
         loadSuggestions(sectionId);
@@ -487,7 +982,7 @@
         // Load workflow state and show approval buttons
         await loadSectionWorkflowState(sectionId);
       }
-    }
+    }; // End of window.toggleSection
 
     // Load workflow state for a specific section and show buttons
     async function loadSectionWorkflowState(sectionId) {
@@ -580,17 +1075,20 @@
       }
     }
 
-    // Load suggestions for a section
+    // Load suggestions for a section (excludes rejected by default)
     async function loadSuggestions(sectionId) {
       try {
+        // By default, only load non-rejected suggestions (performance optimization)
         const response = await fetch(`/api/dashboard/suggestions?section_id=${sectionId}`);
         const data = await response.json();
 
         if (data.success) {
-          renderSuggestions(sectionId, data.suggestions);
+          // Filter out rejected suggestions on client side (backend should also filter)
+          const activeSuggestions = data.suggestions.filter(s => !s.rejected_at);
+          renderSuggestions(sectionId, activeSuggestions);
 
-          // Update count badge
-          const count = data.suggestions.length;
+          // Update count badge (only active suggestions)
+          const count = activeSuggestions.length;
           document.getElementById('suggestion-count-' + sectionId).textContent = count + ' suggestion' + (count !== 1 ? 's' : '');
         }
       } catch (error) {
@@ -697,26 +1195,50 @@
         const displayText = showChanges ?
           generateDiffHTML(originalText, suggestion.suggested_text) :
           escapeHtml(suggestion.suggested_text);
+        const isRejected = suggestion.rejected_at != null;
 
         html += `
-          <div class="suggestion-item">
+          <div class="suggestion-item ${isRejected ? 'rejected' : ''}" data-suggestion-id="${suggestion.id}" ${isRejected ? 'style="display: none;"' : ''}>
             <div class="d-flex justify-content-between align-items-start">
-              <div class="form-check me-3 mt-1">
-                <input class="form-check-input" type="radio"
-                       name="suggestion-select-${sectionId}"
-                       id="suggestion-${suggestion.id}"
-                       value="${suggestion.id}"
-                       onchange="updateLockButton('${sectionId}', '${suggestion.id}')">
-                <label class="form-check-label" for="suggestion-${suggestion.id}"></label>
-              </div>
-              <div class="flex-grow-1">
+              ${!isRejected ? `
+                <div class="form-check me-3 mt-1">
+                  <input class="form-check-input" type="radio"
+                         name="suggestion-select-${sectionId}"
+                         id="suggestion-${suggestion.id}"
+                         value="${suggestion.id}"
+                         onchange="updateLockButton('${sectionId}', '${suggestion.id}')">
+                  <label class="form-check-label" for="suggestion-${suggestion.id}"></label>
+                </div>
+              ` : ''}
+              <div class="flex-grow-1 ${isRejected ? 'ms-0' : ''}">
+                ${isRejected ? `
+                  <span class="badge bg-danger mb-2">
+                    <i class="bi bi-x-circle"></i> Rejected${suggestion.rejected_at_stage ? ` at ${suggestion.rejected_at_stage.stage_name} stage` : ''}
+                  </span>
+                  <div class="text-muted small mb-2">
+                    By ${suggestion.rejected_by_user?.name || suggestion.rejected_by_user?.email || 'Unknown'} on ${new Date(suggestion.rejected_at).toLocaleDateString()}
+                  </div>
+                ` : ''}
                 <div class="d-flex justify-content-between align-items-start mb-2">
                   <h6 class="mb-0">${escapeHtml(suggestion.author_name)}</h6>
-                  <button class="btn btn-sm btn-outline-secondary"
-                          onclick="event.stopPropagation(); toggleSuggestionTrackChanges('${suggestion.id}', '${sectionId}')">
-                    <i class="bi bi-eye${showChanges ? '-slash' : ''}"></i>
-                    ${showChanges ? 'Hide' : 'Show'} Changes
-                  </button>
+                  <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-secondary"
+                            onclick="event.stopPropagation(); toggleSuggestionTrackChanges('${suggestion.id}', '${sectionId}')">
+                      <i class="bi bi-eye${showChanges ? '-slash' : ''}"></i>
+                      ${showChanges ? 'Hide' : 'Show'} Changes
+                    </button>
+                    ${!isRejected ? `
+                      <button class="btn btn-sm btn-outline-danger"
+                              onclick="event.stopPropagation(); rejectSuggestion('${suggestion.id}', '${sectionId}')">
+                        <i class="bi bi-x-circle"></i> Reject
+                      </button>
+                    ` : `
+                      <button class="btn btn-sm btn-outline-success"
+                              onclick="event.stopPropagation(); unrejectSuggestion('${suggestion.id}', '${sectionId}')">
+                        <i class="bi bi-arrow-counterclockwise"></i> Unreject
+                      </button>
+                    `}
+                  </div>
                 </div>
                 <div class="text-muted small mb-2">
                   <i class="bi bi-calendar me-1"></i>${new Date(suggestion.created_at).toLocaleDateString()}
@@ -739,6 +1261,9 @@
       });
 
       container.innerHTML = html;
+
+      // Update rejected count badge
+      updateRejectedCount(sectionId);
     }
 
     // Escape HTML to prevent XSS
@@ -815,14 +1340,23 @@
         const data = await response.json();
 
         if (data.success) {
-          showToast('Suggestion locked successfully', 'success');
+          showToast('Section locked successfully', 'success');
+
+          // ============================================================
+          // PHASE 2: Automatically refresh the entire section
+          // ============================================================
+          if (typeof window.refreshSectionAfterLock === 'function') {
+            await window.refreshSectionAfterLock(sectionId, data);
+          } else {
+            // Fallback to old behavior if refresh function not available
+            await loadSectionWorkflowState(sectionId);
+            await loadSuggestions(sectionId);
+          }
 
           // Clear selection
           selectedSuggestions.delete(sectionId);
 
-          // Reload the section state
-          await loadSectionWorkflowState(sectionId);
-          await loadSuggestions(sectionId);
+          // Update overall workflow progress
           await updateWorkflowProgress();
         } else {
           showToast('Error: ' + (data.error || 'Failed to lock suggestion'), 'danger');
@@ -925,6 +1459,12 @@
         const textContainer = document.getElementById('section-text-' + sectionId);
         const diffContainer = document.getElementById('diff-view-' + sectionId);
 
+        if (!textContainer || !diffContainer) {
+          console.error('[showDiffView] Missing containers for section:', sectionId);
+          showToast('Could not display diff view', 'danger');
+          return;
+        }
+
         if (diffContainer.style.display === 'none') {
           // Show diff
           diffContainer.innerHTML = `<div class="diff-text">${diffHTML}</div>`;
@@ -957,12 +1497,224 @@
       }
     }
 
-    // Load counts when page loads
-    document.addEventListener('DOMContentLoaded', () => {
-      loadAllSuggestionCounts();
-      loadAllWorkflowStates();
-      updateWorkflowProgress();
-    });
+    /**
+     * Toggle showing/hiding rejected suggestions
+     */
+    async function toggleRejectedSuggestions(sectionId) {
+      const btn = document.getElementById('toggle-rejected-btn-' + sectionId);
+      const showing = btn.dataset.showing === 'true';
+
+      if (showing) {
+        // Hide rejected suggestions
+        document.querySelectorAll(`#suggestions-list-${sectionId} .suggestion-item.rejected`).forEach(card => {
+          card.style.display = 'none';
+        });
+        btn.dataset.showing = 'false';
+        btn.innerHTML = `<i class="bi bi-eye-slash"></i> Show Rejected (<span id="rejected-count-${sectionId}">0</span>)`;
+        updateRejectedCount(sectionId);
+      } else {
+        // Load and show rejected suggestions
+        btn.disabled = true;
+        btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Loading...';
+
+        try {
+          await loadRejectedSuggestions(sectionId);
+          btn.dataset.showing = 'true';
+          btn.innerHTML = `<i class="bi bi-eye"></i> Hide Rejected (<span id="rejected-count-${sectionId}">0</span>)`;
+          updateRejectedCount(sectionId);
+        } catch (error) {
+          console.error('Failed to load rejected suggestions:', error);
+          showToast('Failed to load rejected suggestions', 'danger');
+          btn.dataset.showing = 'false';
+          btn.innerHTML = `<i class="bi bi-eye-slash"></i> Show Rejected (<span id="rejected-count-${sectionId}">0</span>)`;
+          updateRejectedCount(sectionId);
+        } finally {
+          btn.disabled = false;
+        }
+      }
+    }
+
+    /**
+     * Load rejected suggestions via AJAX
+     */
+    async function loadRejectedSuggestions(sectionId) {
+      const response = await fetch(
+        `/api/dashboard/suggestions?section_id=${sectionId}&includeRejected=true&status=rejected`,
+        { method: 'GET', headers: { 'Content-Type': 'application/json' } }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Get original text for diff comparison
+        const originalText = await getSectionOriginalText(sectionId);
+
+        // Render each rejected suggestion
+        data.suggestions.forEach(suggestion => {
+          renderRejectedSuggestion(suggestion, sectionId, originalText);
+        });
+      } else {
+        throw new Error(data.error || 'Failed to load rejected suggestions');
+      }
+    }
+
+    /**
+     * Render a single rejected suggestion
+     */
+    function renderRejectedSuggestion(suggestion, sectionId, originalText) {
+      const container = document.getElementById('suggestions-list-' + sectionId);
+      if (!container) return;
+
+      const showChanges = suggestionTrackChanges.get(suggestion.id) || false;
+      const displayText = showChanges ?
+        generateDiffHTML(originalText, suggestion.suggested_text) :
+        escapeHtml(suggestion.suggested_text);
+
+      const html = `
+        <div class="suggestion-item rejected" data-suggestion-id="${suggestion.id}">
+          <div class="d-flex justify-content-between align-items-start">
+            <div class="flex-grow-1">
+              <span class="badge bg-danger mb-2">
+                <i class="bi bi-x-circle"></i> Rejected${suggestion.rejected_at_stage ? ` at ${suggestion.rejected_at_stage.stage_name} stage` : ''}
+              </span>
+              <div class="text-muted small mb-2">
+                By ${suggestion.rejected_by_user?.name || suggestion.rejected_by_user?.email || 'Unknown'} on ${new Date(suggestion.rejected_at).toLocaleDateString()}
+              </div>
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <h6 class="mb-0">${escapeHtml(suggestion.author_name)}</h6>
+                <div class="d-flex gap-2">
+                  <button class="btn btn-sm btn-outline-secondary"
+                          onclick="event.stopPropagation(); toggleSuggestionTrackChanges('${suggestion.id}', '${sectionId}')">
+                    <i class="bi bi-eye${showChanges ? '-slash' : ''}"></i>
+                    ${showChanges ? 'Hide' : 'Show'} Changes
+                  </button>
+                  <button class="btn btn-sm btn-outline-success"
+                          onclick="event.stopPropagation(); unrejectSuggestion('${suggestion.id}', '${sectionId}')">
+                    <i class="bi bi-arrow-counterclockwise"></i> Unreject
+                  </button>
+                </div>
+              </div>
+              <div class="text-muted small mb-2">
+                <i class="bi bi-calendar me-1"></i>${new Date(suggestion.created_at).toLocaleDateString()}
+                <span class="badge bg-${suggestion.status === 'open' ? 'warning' : 'success'} ms-2">${suggestion.status}</span>
+              </div>
+              <div class="mb-2 ${showChanges ? 'diff-text' : ''}"
+                   style="white-space: pre-wrap; padding: 0.5rem; background-color: ${showChanges ? '#f8f9fa' : 'transparent'}; border-radius: 4px;"
+                   id="suggestion-text-${suggestion.id}">
+                ${displayText}
+              </div>
+              ${suggestion.rationale ? `
+                <div class="text-muted small">
+                  <strong>Rationale:</strong> ${escapeHtml(suggestion.rationale)}
+                </div>
+              ` : ''}
+            </div>
+          </div>
+        </div>
+      `;
+
+      container.insertAdjacentHTML('beforeend', html);
+    }
+
+    /**
+     * Reject a suggestion
+     */
+    async function rejectSuggestion(suggestionId, sectionId) {
+      if (!confirm('Are you sure you want to reject this suggestion? This will hide it from the active list.')) {
+        return;
+      }
+
+      try {
+        const response = await fetch(
+          `/api/workflow/suggestions/${suggestionId}/reject`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sectionId })
+          }
+        );
+
+        const data = await response.json();
+
+        if (data.success) {
+          showToast('Suggestion rejected successfully', 'success');
+
+          // Remove suggestion card from active list (hide it)
+          const card = document.querySelector(`[data-suggestion-id="${suggestionId}"]`);
+          if (card) {
+            card.style.display = 'none';
+            card.classList.add('rejected');
+          }
+
+          updateRejectedCount(sectionId);
+        } else {
+          showToast(`Error: ${data.error}`, 'danger');
+        }
+      } catch (error) {
+        console.error('Reject suggestion error:', error);
+        showToast('Failed to reject suggestion', 'danger');
+      }
+    }
+
+    /**
+     * Unreject a suggestion
+     */
+    async function unrejectSuggestion(suggestionId, sectionId) {
+      if (!confirm('Restore this suggestion to active status?')) {
+        return;
+      }
+
+      try {
+        const response = await fetch(
+          `/api/workflow/suggestions/${suggestionId}/unreject`,
+          { method: 'POST', headers: { 'Content-Type': 'application/json' } }
+        );
+
+        const data = await response.json();
+
+        if (data.success) {
+          showToast('Suggestion restored successfully', 'success');
+
+          // Reload suggestions for this section to refresh the view
+          await loadSuggestions(sectionId);
+
+          updateRejectedCount(sectionId);
+        } else {
+          showToast(`Error: ${data.error}`, 'danger');
+        }
+      } catch (error) {
+        console.error('Unreject suggestion error:', error);
+        showToast('Failed to restore suggestion', 'danger');
+      }
+    }
+
+    /**
+     * Update rejected suggestions count badge
+     */
+    function updateRejectedCount(sectionId) {
+      const rejectedCards = document.querySelectorAll(`#suggestions-list-${sectionId} .suggestion-item.rejected`);
+      const count = rejectedCards.length;
+      const badge = document.getElementById('rejected-count-' + sectionId);
+      if (badge) {
+        badge.textContent = count;
+      }
+    }
+
+    /**
+     * Get current document ID helper
+     */
+    function getCurrentDocumentId() {
+      return documentId; // Already defined at top of script
+    }
+
+    // CONSOLIDATED: This DOMContentLoaded listener has been moved to the main
+    // initialization block at the end of the script to prevent duplicate listeners
+    // See line ~2589 for the consolidated initialization
 
     // Load workflow states for all sections
     async function loadAllWorkflowStates() {
@@ -1048,12 +1800,12 @@
 
       // Show approval actions if user has permission
       if (permissions.canApprove || permissions.canLock || permissions.canReject) {
-        showApprovalActions(sectionId, permissions, state, stage);
+        showApprovalActions(sectionId, permissions, state, stage, section);
       }
     }
 
     // Show approval action buttons based on permissions
-    function showApprovalActions(sectionId, permissions, state, stage) {
+    function showApprovalActions(sectionId, permissions, state, stage, section) {
       const actionsContainer = document.getElementById('approval-actions-' + sectionId);
       if (!actionsContainer) return;
 
@@ -1061,21 +1813,23 @@
 
       // Only show actions if section is expanded
       if (expandedSections.has(sectionId)) {
-        // Show approve/reject buttons if not locked
+        // Show approve button if not locked
         if (state.status !== 'locked') {
           if (permissions.canApprove && state.status === 'pending') {
+            const isLocked = section?.is_locked || false;
+
             actionsHTML += `
-              <button class="btn btn-success btn-sm" onclick="approveSection('${sectionId}')">
+              <button class="btn btn-success btn-sm"
+                      onclick="approveSection('${sectionId}')"
+                      ${!isLocked ? 'disabled title="Lock a suggestion before approving"' : ''}>
                 <i class="bi bi-check-circle me-1"></i>Approve
               </button>
-            `;
-          }
-
-          if (permissions.canReject && state.status !== 'rejected') {
-            actionsHTML += `
-              <button class="btn btn-danger btn-sm" onclick="rejectSection('${sectionId}')">
-                <i class="bi bi-x-circle me-1"></i>Reject
-              </button>
+              ${!isLocked ? `
+                <small class="text-warning d-block mt-1">
+                  <i class="bi bi-exclamation-triangle me-1"></i>
+                  Lock a suggestion or "Keep Original Text" before approving
+                </small>
+              ` : ''}
             `;
           }
 
@@ -1112,58 +1866,952 @@
       }
     }
 
-    // Update workflow progress bar
-    async function updateWorkflowProgress() {
-      try {
-        // TODO: Implement /api/workflow/documents/:id/progress endpoint
-        // For now, calculate progress from section states
-        const sectionIds = [
-          <% sections.forEach((section, index) => { %>
-            '<%= section.id %>'<%= index < sections.length - 1 ? ',' : '' %>
-          <% }); %>
-        ];
+    // REMOVED: Old updateWorkflowProgress function (replaced by refreshWorkflowProgress)
+    // This function was incomplete and didn't update workflow buttons.
+    // All functionality moved to refreshWorkflowProgress() which handles both
+    // progress bar updates AND workflow button state management.
 
-        if (sectionIds.length === 0) {
+    // =============================================================================
+    // SECTION EDITING FUNCTIONS (P6)
+    // =============================================================================
+
+    /**
+     * Retitle Section - Opens modal to edit title and section number
+     */
+    function retitleSection(sectionId, event) {
+      event.stopPropagation();
+
+      // Get current section data
+      const sections = <%- JSON.stringify(sections) %>;
+      const section = sections.find(s => s.id === sectionId);
+
+      if (!section) {
+        showToast('Section not found', 'danger');
+        return;
+      }
+
+      // Show modal with current values
+      const modal = new bootstrap.Modal(document.getElementById('retitleModal'));
+      document.getElementById('retitleSectionId').value = sectionId;
+      document.getElementById('retitleTitle').value = section.section_title || '';
+      document.getElementById('retitleNumber').value = section.section_number || '';
+      modal.show();
+    }
+
+    /**
+     * Submit retitle form
+     */
+    async function submitRetitle() {
+      const sectionId = document.getElementById('retitleSectionId').value;
+      const title = document.getElementById('retitleTitle').value.trim();
+      const sectionNumber = document.getElementById('retitleNumber').value.trim();
+
+      if (!title && !sectionNumber) {
+        showToast('Please enter at least a title or section number', 'warning');
+        return;
+      }
+
+      try {
+        const response = await fetch(`/admin/sections/${sectionId}/retitle`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title, sectionNumber })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          showToast('Section renamed successfully', 'success');
+          bootstrap.Modal.getInstance(document.getElementById('retitleModal')).hide();
+
+          // Reload page to show changes
+          setTimeout(() => location.reload(), 1000);
+        } else {
+          showToast('Error: ' + (data.error || 'Failed to rename section'), 'danger');
+        }
+      } catch (error) {
+        console.error('Retitle error:', error);
+        showToast('Failed to rename section', 'danger');
+      }
+    }
+
+    /**
+     * Delete Section - Shows confirmation modal
+     */
+    function deleteSection(sectionId, event) {
+      event.stopPropagation();
+
+      // Get section data to show title in confirmation
+      const sections = <%- JSON.stringify(sections) %>;
+      const section = sections.find(s => s.id === sectionId);
+
+      if (!section) {
+        showToast('Section not found', 'danger');
+        return;
+      }
+
+      // Show delete modal
+      const modal = new bootstrap.Modal(document.getElementById('deleteSectionModal'));
+      document.getElementById('deleteSectionId').value = sectionId;
+      document.getElementById('deleteSectionTitle').textContent =
+        `${section.section_number || ''} ${section.section_title || 'Untitled'}`.trim();
+      modal.show();
+    }
+
+    /**
+     * Confirm delete section
+     */
+    async function confirmDeleteSection() {
+      const sectionId = document.getElementById('deleteSectionId').value;
+      const cascade = document.getElementById('deleteCascade').checked;
+      const suggestions = document.getElementById('deleteSuggestions').value;
+
+      try {
+        const response = await fetch(
+          `/admin/sections/${sectionId}?cascade=${cascade}&suggestions=${suggestions}`,
+          { method: 'DELETE' }
+        );
+
+        const data = await response.json();
+
+        if (data.success) {
+          const count = data.deleted.sections.length;
+          showToast(`Successfully deleted ${count} section${count > 1 ? 's' : ''}`, 'success');
+          bootstrap.Modal.getInstance(document.getElementById('deleteSectionModal')).hide();
+
+          // Reload page
+          setTimeout(() => location.reload(), 1000);
+        } else {
+          showToast('Error: ' + (data.error || 'Failed to delete section'), 'danger');
+        }
+      } catch (error) {
+        console.error('Delete error:', error);
+        showToast('Failed to delete section', 'danger');
+      }
+    }
+
+    /**
+     * Move Section Up/Down
+     */
+    async function moveSection(sectionId, direction, event) {
+      event.stopPropagation();
+
+      try {
+        // Get current section's ordinal and parent
+        const sections = <%- JSON.stringify(sections) %>;
+        const section = sections.find(s => s.id === sectionId);
+
+        if (!section) {
+          showToast('Section not found', 'danger');
           return;
         }
 
-        // Count approved sections
-        let approvedCount = 0;
-        for (const sectionId of sectionIds) {
-          try {
-            const response = await fetch(`/api/workflow/sections/${sectionId}/state`);
-            const data = await response.json();
-            if (data.success && data.state && data.state.status === 'approved') {
-              approvedCount++;
-            }
-          } catch (err) {
-            console.error(`Error checking section ${sectionId}:`, err);
-          }
+        // Calculate new ordinal
+        const newOrdinal = direction === 'up' ? section.ordinal - 1 : section.ordinal + 1;
+
+        if (newOrdinal < 0) {
+          showToast('Section is already at the top', 'warning');
+          return;
         }
 
-        const totalSections = sectionIds.length;
-        const progressPercentage = Math.round((approvedCount / totalSections) * 100);
+        const response = await fetch(`/admin/sections/${sectionId}/move`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ newOrdinal })
+        });
 
-        const progressBar = document.getElementById('workflow-progress-bar');
-        const progressText = document.getElementById('workflow-progress-text');
-        const stageText = document.getElementById('workflow-stage-text');
+        const data = await response.json();
 
-        if (progressBar) {
-          progressBar.style.width = progressPercentage + '%';
-          progressBar.setAttribute('aria-valuenow', progressPercentage);
-        }
-
-        if (progressText) {
-          progressText.textContent = `${approvedCount} / ${totalSections} sections approved`;
-        }
-
-        if (stageText) {
-          stageText.textContent = `Progress: ${progressPercentage}% complete`;
+        if (data.success) {
+          showToast(`Section moved ${direction}`, 'success');
+          setTimeout(() => location.reload(), 500);
+        } else {
+          showToast('Error: ' + (data.error || 'Failed to move section'), 'danger');
         }
       } catch (error) {
-        console.error('Error updating workflow progress:', error);
+        console.error('Move error:', error);
+        showToast('Failed to move section', 'danger');
       }
     }
+
+    /**
+     * Indent Section (make it a child of previous sibling)
+     */
+    async function indentSection(sectionId, event) {
+      event.stopPropagation();
+
+      try {
+        // Find previous sibling to become new parent
+        const sections = <%- JSON.stringify(sections) %>;
+        const section = sections.find(s => s.id === sectionId);
+
+        if (!section) {
+          showToast('Section not found', 'danger');
+          return;
+        }
+
+        // Find previous sibling (same parent, ordinal = current - 1)
+        const previousSibling = sections.find(s =>
+          s.parent_section_id === section.parent_section_id &&
+          s.ordinal === section.ordinal - 1
+        );
+
+        if (!previousSibling) {
+          showToast('No previous sibling to indent under', 'warning');
+          return;
+        }
+
+        const response = await fetch(`/admin/sections/${sectionId}/move`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            newParentId: previousSibling.id,
+            newOrdinal: 0  // Insert as first child
+          })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          showToast('Section indented successfully', 'success');
+          setTimeout(() => location.reload(), 500);
+        } else {
+          showToast('Error: ' + (data.error || 'Failed to indent section'), 'danger');
+        }
+      } catch (error) {
+        console.error('Indent error:', error);
+        showToast('Failed to indent section', 'danger');
+      }
+    }
+
+    /**
+     * Dedent Section (move to parent's level)
+     */
+    async function dedentSection(sectionId, event) {
+      event.stopPropagation();
+
+      try {
+        const sections = <%- JSON.stringify(sections) %>;
+        const section = sections.find(s => s.id === sectionId);
+
+        if (!section) {
+          showToast('Section not found', 'danger');
+          return;
+        }
+
+        if (!section.parent_section_id) {
+          showToast('Section is already at root level', 'warning');
+          return;
+        }
+
+        // Find parent to get grandparent ID
+        const parent = sections.find(s => s.id === section.parent_section_id);
+
+        if (!parent) {
+          showToast('Parent section not found', 'danger');
+          return;
+        }
+
+        const response = await fetch(`/admin/sections/${sectionId}/move`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            newParentId: parent.parent_section_id || null,
+            newOrdinal: parent.ordinal + 1  // Insert right after current parent
+          })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          showToast('Section dedented successfully', 'success');
+          setTimeout(() => location.reload(), 500);
+        } else {
+          showToast('Error: ' + (data.error || 'Failed to dedent section'), 'danger');
+        }
+      } catch (error) {
+        console.error('Dedent error:', error);
+        showToast('Failed to dedent section', 'danger');
+      }
+    }
+
+    /**
+     * Split Section - Show modal with text preview and split position selector
+     */
+    async function splitSection(sectionId, event) {
+      event.stopPropagation();
+
+      const sections = <%- JSON.stringify(sections) %>;
+      const section = sections.find(s => s.id === sectionId);
+
+      if (!section) {
+        showToast('Section not found', 'danger');
+        return;
+      }
+
+      // Check if button is disabled (has suggestions)
+      const button = event.target.closest('button');
+      if (button && button.disabled) {
+        showToast('Cannot split section with active suggestions. Resolve suggestions first.', 'warning');
+        return;
+      }
+
+      // Double-check by fetching current suggestion count
+      try {
+        const response = await fetch(`/api/dashboard/suggestions?section_id=${sectionId}`);
+        const data = await response.json();
+        if (data.success) {
+          const activeSuggestions = data.suggestions.filter(s => !s.rejected_at);
+          if (activeSuggestions.length > 0) {
+            showToast(`Cannot split section: ${activeSuggestions.length} active suggestion(s) exist. Resolve suggestions before splitting.`, 'danger');
+            return;
+          }
+        }
+      } catch (error) {
+        console.error('Error checking suggestions:', error);
+      }
+
+      const text = section.current_text || section.original_text || '';
+      if (!text || text.length < 20) {
+        showToast('Section text is too short to split', 'warning');
+        return;
+      }
+
+      // Show split modal
+      const modal = new bootstrap.Modal(document.getElementById('splitSectionModal'));
+      document.getElementById('splitSectionId').value = sectionId;
+      document.getElementById('splitSectionTitle').textContent =
+        `${section.section_number || ''} ${section.section_title || 'Untitled'}`.trim();
+      document.getElementById('splitTextPreview').textContent = text;
+      document.getElementById('splitTextLength').textContent = text.length;
+
+      // Set default split position to middle
+      const defaultPosition = Math.floor(text.length / 2);
+      document.getElementById('splitPosition').value = defaultPosition;
+      document.getElementById('splitPosition').max = text.length - 1;
+
+      // Set default titles
+      document.getElementById('splitNewTitle').value = `${section.section_title || 'Section'} (Part 2)`;
+      document.getElementById('splitNewNumber').value = `${section.section_number || '1'}.2`;
+
+      // Update preview
+      updateSplitPreview();
+
+      modal.show();
+    }
+
+    /**
+     * Update split preview as slider moves
+     */
+    function updateSplitPreview() {
+      const position = parseInt(document.getElementById('splitPosition').value);
+      const text = document.getElementById('splitTextPreview').textContent;
+
+      const firstPart = text.substring(0, position);
+      const secondPart = text.substring(position);
+
+      document.getElementById('splitFirstPart').textContent = firstPart || '(empty)';
+      document.getElementById('splitSecondPart').textContent = secondPart || '(empty)';
+      document.getElementById('splitPositionValue').textContent = position;
+    }
+
+    /**
+     * Confirm split section
+     */
+    async function confirmSplitSection() {
+      const sectionId = document.getElementById('splitSectionId').value;
+      const splitPosition = parseInt(document.getElementById('splitPosition').value);
+      const newTitle = document.getElementById('splitNewTitle').value.trim();
+      const newNumber = document.getElementById('splitNewNumber').value.trim();
+
+      if (!newTitle || !newNumber) {
+        showToast('Please enter title and number for new section', 'warning');
+        return;
+      }
+
+      try {
+        const response = await fetch(`/admin/sections/${sectionId}/split`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            splitPosition,
+            newSectionTitle: newTitle,
+            newSectionNumber: newNumber
+          })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          showToast('Section split successfully', 'success');
+          bootstrap.Modal.getInstance(document.getElementById('splitSectionModal')).hide();
+          setTimeout(() => location.reload(), 1000);
+        } else {
+          showToast('Error: ' + (data.error || 'Failed to split section'), 'danger');
+        }
+      } catch (error) {
+        console.error('Split error:', error);
+        showToast('Failed to split section', 'danger');
+      }
+    }
+
+    /**
+     * Show Join Modal - Select adjacent sections to join
+     */
+    async function showJoinModal(sectionId, event) {
+      event.stopPropagation();
+
+      const sections = <%- JSON.stringify(sections) %>;
+      const currentSection = sections.find(s => s.id === sectionId);
+
+      if (!currentSection) {
+        showToast('Section not found', 'danger');
+        return;
+      }
+
+      // Check if button is disabled (has suggestions)
+      const button = event.target.closest('button');
+      if (button && button.disabled) {
+        showToast('Cannot join sections with active suggestions. Resolve suggestions first.', 'warning');
+        return;
+      }
+
+      // Double-check by fetching current suggestion count for this section
+      try {
+        const response = await fetch(`/api/dashboard/suggestions?section_id=${sectionId}`);
+        const data = await response.json();
+        if (data.success) {
+          const activeSuggestions = data.suggestions.filter(s => !s.rejected_at);
+          if (activeSuggestions.length > 0) {
+            showToast(`Cannot join sections: Current section has ${activeSuggestions.length} active suggestion(s). Resolve suggestions before joining.`, 'danger');
+            return;
+          }
+        }
+      } catch (error) {
+        console.error('Error checking suggestions:', error);
+      }
+
+      // Find adjacent siblings (same parent, consecutive ordinals)
+      const siblings = sections
+        .filter(s => s.parent_section_id === currentSection.parent_section_id)
+        .sort((a, b) => a.ordinal - b.ordinal);
+
+      const currentIndex = siblings.findIndex(s => s.id === sectionId);
+
+      // Get sections before and after
+      const sectionsToJoin = [];
+
+      // Add previous sections (up to 3)
+      for (let i = Math.max(0, currentIndex - 3); i < currentIndex; i++) {
+        sectionsToJoin.push(siblings[i]);
+      }
+
+      // Add current section
+      sectionsToJoin.push(currentSection);
+
+      // Add next sections (up to 3)
+      for (let i = currentIndex + 1; i < Math.min(siblings.length, currentIndex + 4); i++) {
+        sectionsToJoin.push(siblings[i]);
+      }
+
+      if (sectionsToJoin.length < 2) {
+        showToast('No adjacent sections found to join with', 'warning');
+        return;
+      }
+
+      // Populate modal
+      const checkboxContainer = document.getElementById('joinSectionsCheckboxes');
+      checkboxContainer.innerHTML = '';
+
+      sectionsToJoin.forEach(section => {
+        const isCurrent = section.id === sectionId;
+        const checkbox = document.createElement('div');
+        checkbox.className = 'form-check mb-2';
+        checkbox.innerHTML = `
+          <input class="form-check-input" type="checkbox" value="${section.id}"
+                 id="join-${section.id}" ${isCurrent ? 'checked' : ''}>
+          <label class="form-check-label" for="join-${section.id}">
+            <strong>${section.section_number || section.ordinal}</strong> ${section.section_title || 'Untitled'}
+            ${isCurrent ? '<span class="badge bg-primary ms-2">Current</span>' : ''}
+            <br>
+            <small class="text-muted">${(section.current_text || '').substring(0, 100)}...</small>
+          </label>
+        `;
+        checkboxContainer.appendChild(checkbox);
+      });
+
+      document.getElementById('joinTargetSection').value = sectionId;
+
+      const modal = new bootstrap.Modal(document.getElementById('joinSectionsModal'));
+      modal.show();
+    }
+
+    /**
+     * Confirm join sections
+     */
+    async function confirmJoinSections() {
+      const targetSectionId = document.getElementById('joinTargetSection').value;
+      const separator = document.getElementById('joinSeparator').value;
+
+      // Get selected section IDs
+      const checkboxes = document.querySelectorAll('#joinSectionsCheckboxes input[type="checkbox"]:checked');
+      const sectionIds = Array.from(checkboxes).map(cb => cb.value);
+
+      if (sectionIds.length < 2) {
+        showToast('Please select at least 2 sections to join', 'warning');
+        return;
+      }
+
+      try {
+        const response = await fetch('/admin/sections/join', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sectionIds,
+            targetSectionId,
+            separator
+          })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          showToast(`Successfully joined ${sectionIds.length} sections`, 'success');
+          bootstrap.Modal.getInstance(document.getElementById('joinSectionsModal')).hide();
+          setTimeout(() => location.reload(), 1000);
+        } else {
+          showToast('Error: ' + (data.error || 'Failed to join sections'), 'danger');
+        }
+      } catch (error) {
+        console.error('Join error:', error);
+        showToast('Failed to join sections', 'danger');
+      }
+    }
+
+    // ============================================================================
+    // WORKFLOW PROGRESSION FUNCTIONS (MVP TASK 2)
+    // ============================================================================
+
+    /**
+     * Refresh workflow progress status and update UI
+     */
+    async function refreshWorkflowProgress(documentId) {
+      try {
+        const response = await fetch(`/api/workflow/documents/${documentId}/progress-status`);
+        const data = await response.json();
+
+        if (data.success) {
+          const stats = data.stats;
+
+          // Update progress bar
+          const percentage = stats.percentage || 0;
+          const progressBar = document.getElementById('workflow-progress-bar');
+          progressBar.style.width = `${percentage}%`;
+          progressBar.setAttribute('aria-valuenow', percentage);
+
+          // Update progress text
+          document.getElementById('workflow-progress-text').textContent =
+            `${stats.approvedSections} / ${stats.totalSections} sections approved (${percentage}%)`;
+
+          // Update unmodified count
+          document.getElementById('unmodified-count-text').textContent =
+            `${stats.unmodifiedSections} unmodified sections`;
+
+          // Update "Approve All Unmodified" button (only if user has permission to see it)
+          const btnApproveUnmodified = document.getElementById('btn-approve-unmodified');
+          const approveUnmodifiedText = document.getElementById('approve-unmodified-text');
+
+          if (btnApproveUnmodified && approveUnmodifiedText) {
+            if (stats.unmodifiedSections > 0) {
+              btnApproveUnmodified.disabled = false;
+              approveUnmodifiedText.textContent = `Approve All Unmodified (${stats.unmodifiedSections} sections)`;
+              btnApproveUnmodified.title = `Approve ${stats.unmodifiedSections} sections with no suggestions`;
+            } else {
+              btnApproveUnmodified.disabled = true;
+              approveUnmodifiedText.textContent = 'Approve All Unmodified (0 sections)';
+              btnApproveUnmodified.title = 'No unmodified sections to approve';
+            }
+          }
+
+          // Update "Progress to Next Stage" button (only if user has permission to see it)
+          const btnProgressWorkflow = document.getElementById('btn-progress-workflow');
+          const progressWorkflowText = document.getElementById('progress-workflow-text');
+
+          if (btnProgressWorkflow && progressWorkflowText) {
+            if (data.canProgress) {
+              btnProgressWorkflow.disabled = false;
+              btnProgressWorkflow.classList.remove('btn-secondary');
+              btnProgressWorkflow.classList.add('btn-primary');
+              progressWorkflowText.textContent = 'Progress to Next Stage (Ready!)';
+              btnProgressWorkflow.title = 'Create new version with all approved changes';
+            } else {
+              btnProgressWorkflow.disabled = true;
+              btnProgressWorkflow.classList.remove('btn-primary');
+              btnProgressWorkflow.classList.add('btn-secondary');
+              progressWorkflowText.textContent = `Progress to Next Stage (${stats.totalSections - stats.approvedSections} pending)`;
+              btnProgressWorkflow.title = data.reason || 'Not all sections are approved';
+            }
+          }
+
+          // Change progress bar color based on completion
+          progressBar.className = 'progress-bar';
+          if (percentage === 100) {
+            progressBar.classList.add('bg-success');
+          } else if (percentage >= 75) {
+            progressBar.classList.add('bg-info');
+          } else if (percentage >= 50) {
+            progressBar.classList.add('bg-warning');
+          } else {
+            progressBar.classList.add('bg-danger');
+          }
+
+          console.log('Workflow progress refreshed:', data);
+        } else {
+          console.error('Error refreshing progress:', data.error);
+        }
+      } catch (error) {
+        console.error('Error refreshing workflow progress:', error);
+      }
+    }
+
+    /**
+     * Approve all sections that have no suggestions (unmodified)
+     */
+    async function approveAllUnmodified(documentId) {
+      const btn = document.getElementById('btn-approve-unmodified');
+      const originalHTML = btn.innerHTML;
+
+      // Confirm action
+      if (!confirm('Approve all unmodified sections?\n\nThis will approve all sections that have no suggestions.')) {
+        return;
+      }
+
+      try {
+        // Show loading state
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Approving...';
+
+        const response = await fetch(`/api/workflow/documents/${documentId}/approve-unmodified`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          showToast(data.message, 'success');
+
+          // Refresh progress
+          await refreshWorkflowProgress(documentId);
+
+          // Reload page to show updated section states
+          setTimeout(() => location.reload(), 1500);
+        } else {
+          showToast('Error: ' + data.error, 'danger');
+          btn.disabled = false;
+          btn.innerHTML = originalHTML;
+        }
+      } catch (error) {
+        console.error('Error approving unmodified sections:', error);
+        showToast('Failed to approve sections', 'danger');
+        btn.disabled = false;
+        btn.innerHTML = originalHTML;
+      }
+    }
+
+    /**
+     * Progress document to next workflow stage (create new version)
+     */
+    async function progressWorkflow(documentId) {
+      const btn = document.getElementById('btn-progress-workflow');
+      const originalHTML = btn.innerHTML;
+
+      // Confirm action
+      const notes = prompt(
+        'Progress to Next Workflow Stage\n\n' +
+        'This will create a new document version with all approved changes.\n' +
+        'The original document will be preserved in version history.\n\n' +
+        'Optional notes (leave blank to skip):'
+      );
+
+      // User clicked cancel
+      if (notes === null) {
+        return;
+      }
+
+      try {
+        // Show loading state
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Creating Version...';
+
+        const response = await fetch(`/api/workflow/documents/${documentId}/progress`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ notes })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          showToast(
+            `${data.message}\n` +
+            `Version: ${data.version.version_number}\n` +
+            `Sections: ${data.stats.sectionsProcessed}\n` +
+            `Suggestions Applied: ${data.stats.suggestionsApplied}`,
+            'success'
+          );
+
+          // Redirect to document list or reload
+          setTimeout(() => {
+            window.location.href = '/dashboard';
+          }, 2000);
+        } else {
+          showToast('Error: ' + data.error, 'danger');
+          btn.disabled = false;
+          btn.innerHTML = originalHTML;
+        }
+      } catch (error) {
+        console.error('Error progressing workflow:', error);
+        showToast('Failed to progress workflow', 'danger');
+        btn.disabled = false;
+        btn.innerHTML = originalHTML;
+      }
+    }
+
+    // ============================================================================
+    // CONSOLIDATED INITIALIZATION - All DOMContentLoaded logic combined here
+    // ============================================================================
+    document.addEventListener('DOMContentLoaded', async function() {
+      console.log('🎯 [DOCUMENT VIEWER] Document viewer initialized');
+      console.log('📄 [DOCUMENT VIEWER] Document ID:', documentId);
+      console.log('👤 [DOCUMENT VIEWER] User permissions:', {
+        canView: <%= userPermissions?.canView || false %>,
+        canSuggest: <%= userPermissions?.canSuggest || false %>,
+        canApprove: <%= userPermissions?.canApprove || false %>,
+        canLock: <%= userPermissions?.canLock || false %>
+      });
+
+      // Initialize lazy loading enhancements (if available)
+      if (typeof DocumentViewerEnhancements !== 'undefined') {
+        DocumentViewerEnhancements.init();
+      }
+
+      // Load all data in parallel for better performance
+      await Promise.all([
+        loadAllSuggestionCounts(),
+        loadAllWorkflowStates(),
+        refreshWorkflowProgress(documentId)
+      ]);
+
+      // Handle hash-based section navigation (deep linking)
+      const hash = window.location.hash;
+      if (hash && hash.startsWith('#section-')) {
+        const sectionNum = hash.replace('#section-', '');
+        setTimeout(() => {
+          scrollToSection(parseInt(sectionNum));
+        }, 500); // Delay for page render
+      } else {
+        // Pre-expand first section for better UX (only if no hash navigation)
+        <% if (sections && sections.length > 0) { %>
+          const firstSectionId = '<%= sections[0].id %>';
+          console.log('🔓 [DOCUMENT VIEWER] Pre-expanding first section:', firstSectionId);
+          setTimeout(() => {
+            toggleSection(firstSectionId);
+          }, 100);
+        <% } %>
+      }
+
+      console.log('✅ [DOCUMENT VIEWER] Initialization complete');
+
+      // Optional: Refresh workflow progress every 30 seconds
+      // setInterval(() => refreshWorkflowProgress(documentId), 30000);
+    });
   </script>
+
+  <!-- Retitle Modal -->
+  <div class="modal fade" id="retitleModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-pencil me-2"></i>Rename Section</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="retitleSectionId">
+          <div class="mb-3">
+            <label for="retitleNumber" class="form-label">Section Number</label>
+            <input type="text" class="form-control" id="retitleNumber" placeholder="e.g., 3.1, Article IV">
+          </div>
+          <div class="mb-3">
+            <label for="retitleTitle" class="form-label">Section Title</label>
+            <input type="text" class="form-control" id="retitleTitle" placeholder="Enter section title">
+          </div>
+          <small class="text-muted">At least one field is required.</small>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" onclick="submitRetitle()">
+            <i class="bi bi-check-circle me-1"></i>Save Changes
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div class="modal fade" id="deleteSectionModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header bg-danger text-white">
+          <h5 class="modal-title"><i class="bi bi-exclamation-triangle me-2"></i>Delete Section</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="deleteSectionId">
+          <p class="mb-3">Are you sure you want to delete this section?</p>
+          <p class="fw-bold" id="deleteSectionTitle"></p>
+
+          <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            <strong>Warning:</strong> This action cannot be undone.
+          </div>
+
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" id="deleteCascade">
+            <label class="form-check-label" for="deleteCascade">
+              <strong>Delete all child sections</strong> (cascade delete)
+            </label>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">What should happen to suggestions?</label>
+            <select class="form-select" id="deleteSuggestions">
+              <option value="delete">Delete suggestions</option>
+              <option value="orphan">Keep suggestions (orphan them)</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-danger" onclick="confirmDeleteSection()">
+            <i class="bi bi-trash me-1"></i>Delete Section
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Split Section Modal -->
+  <div class="modal fade" id="splitSectionModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-scissors me-2"></i>Split Section</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="splitSectionId">
+          <p class="mb-3">Split this section into two parts:</p>
+          <p class="fw-bold" id="splitSectionTitle"></p>
+
+          <!-- Hidden text storage -->
+          <div style="display: none;" id="splitTextPreview"></div>
+
+          <!-- Split position slider -->
+          <div class="mb-4">
+            <label class="form-label">
+              Split Position: <span id="splitPositionValue">0</span> / <span id="splitTextLength">0</span> characters
+            </label>
+            <input type="range" class="form-range" id="splitPosition" min="10" max="1000" step="1" oninput="updateSplitPreview()">
+            <small class="text-muted">Drag to choose where to split the text</small>
+          </div>
+
+          <!-- Preview of split parts -->
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="form-label fw-bold">First Part (Keep Original)</label>
+              <div class="border rounded p-2" style="max-height: 150px; overflow-y: auto; background: #f8f9fa;">
+                <small id="splitFirstPart" style="white-space: pre-wrap;"></small>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Second Part (New Section)</label>
+              <div class="border rounded p-2" style="max-height: 150px; overflow-y: auto; background: #e8f5e9;">
+                <small id="splitSecondPart" style="white-space: pre-wrap;"></small>
+              </div>
+            </div>
+          </div>
+
+          <!-- New section details -->
+          <div class="border-top pt-3">
+            <h6 class="mb-3">New Section Details</h6>
+            <div class="mb-3">
+              <label for="splitNewNumber" class="form-label">Section Number</label>
+              <input type="text" class="form-control" id="splitNewNumber" placeholder="e.g., 3.2">
+            </div>
+            <div class="mb-3">
+              <label for="splitNewTitle" class="form-label">Section Title</label>
+              <input type="text" class="form-control" id="splitNewTitle" placeholder="Enter title for new section">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-info" onclick="confirmSplitSection()">
+            <i class="bi bi-scissors me-1"></i>Split Section
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Join Sections Modal -->
+  <div class="modal fade" id="joinSectionsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-union me-2"></i>Join Sections</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="joinTargetSection">
+          <p class="mb-3">Select adjacent sections to join together:</p>
+
+          <div class="alert alert-info">
+            <i class="bi bi-info-circle me-2"></i>
+            Only adjacent sections (same parent, consecutive order) can be joined.
+          </div>
+
+          <!-- Section checkboxes -->
+          <div id="joinSectionsCheckboxes" class="mb-3">
+            <!-- Populated dynamically -->
+          </div>
+
+          <!-- Separator options -->
+          <div class="mb-3">
+            <label class="form-label">Text Separator</label>
+            <select class="form-select" id="joinSeparator">
+              <option value="\n\n">Double line break (paragraph)</option>
+              <option value="\n">Single line break</option>
+              <option value=" ">Single space</option>
+              <option value="">No separator (concatenate directly)</option>
+            </select>
+          </div>
+
+          <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            <strong>Warning:</strong> All selected sections except the first will be deleted after joining.
+            Their suggestions will be moved to the combined section.
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-success" onclick="confirmJoinSections()">
+            <i class="bi bi-union me-1"></i>Join Selected Sections
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 </body>
 </html>

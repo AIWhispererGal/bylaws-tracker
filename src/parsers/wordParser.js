@@ -6,13 +6,47 @@
 const mammoth = require('mammoth');
 const fs = require('fs').promises;
 const hierarchyDetector = require('./hierarchyDetector');
+const { createClient } = require('@supabase/supabase-js');
 
 class WordParser {
   /**
    * Parse a Word document
+   * @param {string} filePath - Path to the .docx file
+   * @param {Object} organizationConfig - Organization configuration object
+   * @param {string} documentId - Optional document ID for hierarchy override lookup
    */
-  async parseDocument(filePath, organizationConfig) {
+  async parseDocument(filePath, organizationConfig, documentId = null) {
     try {
+      // Check for document-specific hierarchy override
+      if (documentId) {
+        try {
+          const supabase = createClient(
+            process.env.SUPABASE_URL,
+            process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
+          );
+
+          const { data: doc, error: docError } = await supabase
+            .from('documents')
+            .select('hierarchy_override')
+            .eq('id', documentId)
+            .single();
+
+          if (docError && docError.code !== 'PGRST116') { // PGRST116 = not found
+            console.warn('[WordParser] Error fetching document hierarchy override:', docError.message);
+          } else if (doc?.hierarchy_override) {
+            // Use document-specific hierarchy config
+            console.log('[WordParser] Using document-specific hierarchy override for document:', documentId);
+            organizationConfig = {
+              ...organizationConfig,
+              hierarchy: doc.hierarchy_override
+            };
+          }
+        } catch (error) {
+          console.warn('[WordParser] Failed to check for hierarchy override:', error.message);
+          // Continue with organization default config
+        }
+      }
+
       // Read the .docx file
       const buffer = await fs.readFile(filePath);
 
@@ -96,6 +130,10 @@ class WordParser {
 
     // Only consider it a TOC if we found 3+ matching lines
     if (tocLines.size >= 3) {
+      // Also mark the TOC header line if found
+      if (tocHeaderIndex !== -1) {
+        tocLines.add(tocHeaderIndex);
+      }
       console.log(`[WordParser] Detected TOC: lines ${firstTocLine}-${lastTocLine} (${tocLines.size} lines matched pattern)`);
     } else {
       // Not enough matches - clear the set
@@ -341,7 +379,7 @@ class WordParser {
   /**
    * Remove duplicate sections that appear multiple times in the document
    * Common when documents contain table of contents + body or multiple copies
-   * Keeps the section with the most content when duplicates are found
+   * Merges duplicate content to preserve all occurrences
    */
   deduplicateSections(sections) {
     const seen = new Map(); // citation -> best occurrence
@@ -359,26 +397,31 @@ class WordParser {
         seen.set(key, section);
         unique.push(section);
       } else {
-        // Found duplicate - compare content length
+        // Found duplicate - merge content instead of replacing
         const original = seen.get(key);
         const originalLength = (original.text || '').length;
         const currentLength = (section.text || '').length;
 
-        // Keep the one with more content
-        if (currentLength > originalLength) {
-          // Replace original with this better version
-          const index = unique.indexOf(original);
-          unique[index] = section;
-          seen.set(key, section);
-          duplicates.push(original);
+        // Merge texts if both have content
+        if (currentLength > 0 && originalLength > 0) {
+          // Merge: append new content if it's different
+          const originalText = original.text || '';
+          const currentText = section.text || '';
 
-          console.log(`[WordParser] Replacing duplicate ${section.citation} (${originalLength} → ${currentLength} chars)`);
-        } else {
-          // Keep original, discard this duplicate
-          duplicates.push(section);
-
-          console.log(`[WordParser] Skipping duplicate ${section.citation} (keeping original with ${originalLength} chars)`);
+          // Only merge if content is actually different
+          if (originalText !== currentText) {
+            original.text = originalText + '\n\n' + currentText;
+            console.log(`[WordParser] Merged duplicate ${section.citation} (${originalLength} + ${currentLength} = ${original.text.length} chars)`);
+          } else {
+            console.log(`[WordParser] Skipping identical duplicate ${section.citation}`);
+          }
+        } else if (currentLength > originalLength) {
+          // Current has content but original doesn't - replace
+          original.text = section.text;
+          console.log(`[WordParser] Replacing empty duplicate ${section.citation} with content (${currentLength} chars)`);
         }
+
+        duplicates.push(section);
       }
     }
 
@@ -579,25 +622,44 @@ class WordParser {
    * Enrich sections with hierarchy information
    */
   enrichSections(sections, organizationConfig) {
-    const levels = organizationConfig.hierarchy?.levels || [];
-    let articleNumber = null;
-    let sectionNumber = 0;
+    console.log('\n[WordParser] Starting section enrichment...');
+    console.log('[WordParser] Total sections to enrich:', sections.length);
 
-    return sections.map((section, index) => {
+    // ✅ FIX: Add defensive validation for hierarchy config with fallback
+    const hierarchy = organizationConfig?.hierarchy || {};
+    let levels = hierarchy.levels;
+
+    // Handle undefined, null, or non-array levels gracefully
+    if (!levels || !Array.isArray(levels)) {
+      console.warn('[WordParser] Missing or invalid hierarchy.levels, using empty array as fallback');
+      levels = [];
+    } else {
+      console.log('[WordParser] Configured hierarchy levels:', levels.map(l => `${l.type}(depth=${l.depth})`).join(', '));
+    }
+
+    // First pass: basic enrichment with initial properties
+    const basicEnriched = sections.map((section, index) => {
       // Find matching level definition
       const levelDef = levels.find(l => l.type === section.type);
 
       // Track article and section numbers for the old schema compatibility
+      let articleNumber = null;
+      let sectionNumber = 0;
+
       if (section.type === 'article') {
         articleNumber = hierarchyDetector.parseNumber(section.number, levelDef?.numbering);
-        sectionNumber = 0;
       } else if (section.type === 'section') {
         sectionNumber = hierarchyDetector.parseNumber(section.number, levelDef?.numbering);
       }
 
+      // Log what we're processing
+      if (index < 5 || index % 10 === 0) {
+        console.log(`[WordParser]   [${index}] ${section.citation} (${section.type}) - levelDef depth: ${levelDef?.depth || 'undefined'}`);
+      }
+
       return {
         ...section,
-        depth: levelDef?.depth || 0,
+        depth: levelDef?.depth || 0, // Will be recalculated contextually
         ordinal: index + 1,
         article_number: articleNumber,
         section_number: sectionNumber,
@@ -606,6 +668,178 @@ class WordParser {
         original_text: section.text || '(No content)'
       };
     });
+
+    console.log('[WordParser] Basic enrichment complete, proceeding to context-aware depth calculation...');
+
+    // Second pass: context-aware depth calculation
+    return this.enrichSectionsWithContext(basicEnriched, levels);
+  }
+
+  /**
+   * Calculate contextual depth based on document structure
+   * "Everything between ARTICLE I and ARTICLE II belongs to ARTICLE I"
+   * FIX-4: Enhanced to support full 10-level depth hierarchy
+   */
+  enrichSectionsWithContext(sections, levels) {
+    if (sections.length === 0) return sections;
+
+    console.log('\n[CONTEXT-DEPTH] ============ Starting Context-Aware Depth Calculation ============');
+    console.log('[CONTEXT-DEPTH] Total sections to process:', sections.length);
+    console.log('[CONTEXT-DEPTH] Configured hierarchy levels:', levels?.length || 0);
+
+    // Build hierarchy stack to track parent-child relationships
+    const hierarchyStack = [];
+    const enrichedSections = [];
+
+    // FIX-4: Expanded type priority map to support 10 levels (depth 0-9)
+    // Higher priority = higher in hierarchy
+    const typePriority = {
+      'article': 100,      // Depth 0
+      'section': 90,       // Depth 1
+      'subsection': 80,    // Depth 2
+      'paragraph': 70,     // Depth 3
+      'subparagraph': 60,  // Depth 4
+      'clause': 50,        // Depth 5
+      'subclause': 40,     // Depth 6
+      'item': 30,          // Depth 7
+      'subitem': 20,       // Depth 8
+      'point': 10,         // Depth 9
+      'subpoint': 5,       // Depth 9+ (overflow)
+      'unnumbered': 0,     // Special
+      'preamble': 0        // Special
+    };
+
+    console.log('[CONTEXT-DEPTH] Type priority map:', typePriority);
+
+    for (let i = 0; i < sections.length; i++) {
+      const section = sections[i];
+      const currentPriority = typePriority[section.type] || 0;
+
+      console.log(`\n[CONTEXT-DEPTH] Processing [${i}]: ${section.citation} (${section.type}, priority=${currentPriority})`);
+      console.log(`[CONTEXT-DEPTH]   Title: "${section.title}"`);
+      console.log(`[CONTEXT-DEPTH]   Current stack depth: ${hierarchyStack.length}`);
+      if (hierarchyStack.length > 0) {
+        console.log(`[CONTEXT-DEPTH]   Stack top: ${hierarchyStack[hierarchyStack.length - 1].citation} (${hierarchyStack[hierarchyStack.length - 1].type})`);
+      }
+
+      // Pop from stack until we find an appropriate parent
+      let popsCount = 0;
+      while (hierarchyStack.length > 0) {
+        const stackTop = hierarchyStack[hierarchyStack.length - 1];
+        const stackPriority = typePriority[stackTop.type] || 0;
+
+        // If current section has higher or equal priority than stack top,
+        // pop the stack (we're at same level or moving up the hierarchy)
+        if (currentPriority >= stackPriority) {
+          hierarchyStack.pop();
+          popsCount++;
+          console.log(`[CONTEXT-DEPTH]   Popped: ${stackTop.citation} (priority ${stackPriority} <= ${currentPriority})`);
+        } else {
+          // Found our parent
+          console.log(`[CONTEXT-DEPTH]   Found parent: ${stackTop.citation} (priority ${stackPriority} > ${currentPriority})`);
+          break;
+        }
+      }
+
+      if (popsCount > 0) {
+        console.log(`[CONTEXT-DEPTH]   Total pops: ${popsCount}, new stack depth: ${hierarchyStack.length}`);
+      }
+
+      // Calculate contextual depth based on stack
+      let contextualDepth = hierarchyStack.length;
+      let depthReason = 'stack-based';
+
+      // Special handling for articles (always depth 0)
+      if (section.type === 'article') {
+        contextualDepth = 0;
+        depthReason = 'article-override';
+        console.log('[CONTEXT-DEPTH]   Article detected - forcing depth to 0');
+      }
+
+      // Log the parent relationship
+      const parent = hierarchyStack.length > 0 ? hierarchyStack[hierarchyStack.length - 1] : null;
+      if (parent) {
+        console.log(`[CONTEXT-DEPTH]   Parent: ${parent.citation} at depth ${parent.depth}`);
+        console.log(`[CONTEXT-DEPTH]   This section will be child at depth ${contextualDepth}`);
+      } else {
+        console.log('[CONTEXT-DEPTH]   No parent - this is a root-level section');
+      }
+
+      // Create enriched section with contextual depth
+      const enrichedSection = {
+        ...section,
+        depth: contextualDepth,
+        contextualDepth: contextualDepth,
+        parentPath: hierarchyStack.map(s => s.citation).join(' > '),
+        depthCalculationMethod: depthReason
+      };
+
+      console.log(`[CONTEXT-DEPTH]   ✓ Assigned depth: ${contextualDepth} (${depthReason})`);
+      console.log(`[CONTEXT-DEPTH]   Parent path: "${enrichedSection.parentPath || '(root)'}"}`);
+
+      enrichedSections.push(enrichedSection);
+
+      // Push current section to stack for future children
+      hierarchyStack.push(enrichedSection);
+      console.log(`[CONTEXT-DEPTH]   Pushed to stack for future children`);
+    }
+
+    // FIX-4: Validate depths are within bounds (0-9 for 10 levels)
+    // Ensure we support the full 10-level hierarchy as configured
+    const maxDepth = Math.max(
+      (levels.length > 0) ? levels.length - 1 : 9,
+      9 // Always support at least 10 levels (0-9)
+    );
+
+    let depthWarnings = 0;
+    for (const section of enrichedSections) {
+      if (section.depth > maxDepth) {
+        console.warn(`[CONTEXT-DEPTH] ⚠️ Section ${section.citation} has depth ${section.depth} exceeding max ${maxDepth}, capping to ${maxDepth}`);
+        section.depth = maxDepth;
+        section.contextualDepth = maxDepth;
+        depthWarnings++;
+      }
+    }
+
+    // FIX-4: Log warning if no deep hierarchy was found but config supports it
+    const actualMaxDepth = Math.max(...enrichedSections.map(s => s.depth || 0));
+    if (actualMaxDepth < 3 && levels.length > 4) {
+      console.log(`[CONTEXT-DEPTH] ℹ️ Document only uses ${actualMaxDepth + 1} levels, but config supports ${levels.length} levels`);
+      console.log('[CONTEXT-DEPTH] This is normal for simple documents. Deeper levels are available if needed.');
+    }
+
+    // Generate comprehensive summary
+    const depthDistribution = this.getDepthDistribution(enrichedSections);
+    console.log('\n[CONTEXT-DEPTH] ============ Depth Calculation Complete ============');
+    console.log('[CONTEXT-DEPTH] Summary:');
+    console.log('  - Total sections processed:', enrichedSections.length);
+    console.log('  - Depth warnings:', depthWarnings);
+    console.log('  - Depth distribution:', depthDistribution);
+    console.log('  - Max depth used:', Math.max(...Object.keys(depthDistribution).map(Number)));
+    console.log('  - Articles (depth 0):', enrichedSections.filter(s => s.type === 'article').length);
+    console.log('  - Sections (depth 1+):', enrichedSections.filter(s => s.depth > 0).length);
+
+    // Show sample hierarchy
+    console.log('\n[CONTEXT-DEPTH] Sample hierarchy (first 10 sections):');
+    enrichedSections.slice(0, 10).forEach(section => {
+      const indent = '  '.repeat(section.depth);
+      console.log(`  ${indent}[${section.depth}] ${section.citation}: ${section.title.substring(0, 40)}...`);
+    });
+    console.log('[CONTEXT-DEPTH] ============================================\n');
+
+    return enrichedSections;
+  }
+
+  /**
+   * Get distribution of sections by depth for debugging
+   */
+  getDepthDistribution(sections) {
+    const distribution = {};
+    for (const section of sections) {
+      const depth = section.depth;
+      distribution[depth] = (distribution[depth] || 0) + 1;
+    }
+    return distribution;
   }
 
   /**

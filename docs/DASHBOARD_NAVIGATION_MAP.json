@@ -1,0 +1,606 @@
+{
+  "metadata": {
+    "generated": "2025-10-15",
+    "description": "Comprehensive navigation map of all dashboard views including links, buttons, and API endpoints",
+    "files_analyzed": [
+      "views/dashboard/dashboard.ejs",
+      "views/dashboard/document-viewer.ejs",
+      "views/admin/dashboard.ejs",
+      "public/js/dashboard.js",
+      "public/js/workflow-actions.js"
+    ]
+  },
+  "navigation_elements": {
+    "regular_dashboard": {
+      "file": "views/dashboard/dashboard.ejs",
+      "sidebar_links": [
+        {
+          "label": "Dashboard",
+          "path": "/dashboard",
+          "method": "GET",
+          "line": 445,
+          "active": true,
+          "icon": "bi-speedometer2"
+        },
+        {
+          "label": "Documents",
+          "path": "/bylaws",
+          "method": "GET",
+          "line": 449,
+          "icon": "bi-file-earmark-text"
+        },
+        {
+          "label": "Suggestions",
+          "path": "/dashboard?tab=suggestions",
+          "method": "GET",
+          "line": 457,
+          "icon": "bi-lightbulb"
+        },
+        {
+          "label": "Approvals",
+          "path": "/dashboard?tab=approvals",
+          "method": "GET",
+          "line": 461,
+          "icon": "bi-clipboard-check"
+        },
+        {
+          "label": "Organization",
+          "path": "/admin/organization",
+          "method": "GET",
+          "line": 469,
+          "icon": "bi-gear"
+        },
+        {
+          "label": "Users",
+          "path": "/admin/users",
+          "method": "GET",
+          "line": 474,
+          "icon": "bi-people",
+          "condition": "Admin role only"
+        }
+      ],
+      "topbar_dropdown": [
+        {
+          "label": "Profile",
+          "path": "/auth/profile",
+          "method": "GET",
+          "line": 555,
+          "icon": "bi-person"
+        },
+        {
+          "label": "Manage Users",
+          "path": "/admin/users",
+          "method": "GET",
+          "line": 557,
+          "icon": "bi-people",
+          "condition": "Admin/Owner/Global Admin only"
+        },
+        {
+          "label": "Switch Organization",
+          "path": "/auth/select-organization",
+          "method": "GET",
+          "line": 560,
+          "icon": "bi-building"
+        },
+        {
+          "label": "Logout",
+          "path": "/auth/logout",
+          "method": "GET",
+          "line": 562,
+          "icon": "bi-box-arrow-right",
+          "class": "text-danger"
+        }
+      ],
+      "action_buttons": [
+        {
+          "label": "Export",
+          "path": null,
+          "method": "GET",
+          "line": 522,
+          "icon": "bi-download",
+          "disabled_for": "viewer role"
+        },
+        {
+          "label": "New Document",
+          "path": null,
+          "method": "POST",
+          "line": 532,
+          "icon": "bi-plus-lg",
+          "disabled_for": "viewer role"
+        }
+      ],
+      "my_tasks_section": [
+        {
+          "label": "View All Tasks",
+          "path": "/tasks/all",
+          "method": "GET",
+          "line": 599,
+          "condition": "More than 10 tasks"
+        },
+        {
+          "label": "Task Item (dynamic)",
+          "path": "task.url (variable)",
+          "method": "GET",
+          "line": 615,
+          "description": "Each task links to its specific URL"
+        }
+      ],
+      "documents_section": [
+        {
+          "label": "View All",
+          "path": "/bylaws",
+          "method": "GET",
+          "line": 685
+        }
+      ]
+    },
+    "document_viewer": {
+      "file": "views/dashboard/document-viewer.ejs",
+      "header_actions": [
+        {
+          "label": "Back to Dashboard",
+          "path": "/dashboard",
+          "method": "GET",
+          "line": 181,
+          "icon": "bi-arrow-left"
+        }
+      ],
+      "section_actions": [
+        {
+          "label": "Add Section",
+          "path": null,
+          "method": "POST",
+          "line": 234,
+          "icon": "bi-plus-circle",
+          "disabled": true,
+          "note": "Not yet implemented"
+        },
+        {
+          "label": "Add Suggestion",
+          "path": null,
+          "method": "POST",
+          "line": 280,
+          "icon": "bi-plus-circle",
+          "onclick": "showSuggestionForm(sectionId)"
+        },
+        {
+          "label": "Submit Suggestion",
+          "path": "/api/dashboard/suggestions",
+          "method": "POST",
+          "line": 480,
+          "icon": "bi-check-circle",
+          "onclick": "submitSuggestion(sectionId)"
+        },
+        {
+          "label": "Show/Hide Changes",
+          "path": null,
+          "method": "GET",
+          "line": 612,
+          "icon": "bi-eye",
+          "onclick": "toggleSuggestionTrackChanges(suggestionId, sectionId)"
+        }
+      ],
+      "workflow_actions": [
+        {
+          "label": "Approve",
+          "path": "/api/workflow/sections/{sectionId}/approve",
+          "method": "POST",
+          "line": 782,
+          "icon": "bi-check-circle",
+          "onclick": "approveSection(sectionId)",
+          "condition": "canApprove permission and status=pending"
+        },
+        {
+          "label": "Reject",
+          "path": "/api/workflow/sections/{sectionId}/reject",
+          "method": "POST",
+          "line": 789,
+          "icon": "bi-x-circle",
+          "onclick": "rejectSection(sectionId)",
+          "condition": "canReject permission"
+        },
+        {
+          "label": "Lock Section",
+          "path": "/api/workflow/sections/{sectionId}/lock",
+          "method": "POST",
+          "line": 797,
+          "icon": "bi-lock",
+          "onclick": "lockSection(sectionId)",
+          "condition": "canLock permission and status=approved"
+        },
+        {
+          "label": "View approval history",
+          "path": "/api/workflow/sections/{sectionId}/approval-history",
+          "method": "GET",
+          "line": 757,
+          "icon": "bi-clock-history",
+          "onclick": "viewApprovalHistory(sectionId)"
+        }
+      ],
+      "pending_suggestions_section": [
+        {
+          "label": "View All Suggestions",
+          "path": null,
+          "method": "GET",
+          "line": 378,
+          "disabled": true,
+          "note": "Not yet implemented"
+        }
+      ]
+    },
+    "admin_dashboard": {
+      "file": "views/admin/dashboard.ejs",
+      "header_actions": [
+        {
+          "label": "Back to Selection",
+          "path": "/auth/select",
+          "method": "GET",
+          "line": 128,
+          "icon": "bi-arrow-left"
+        },
+        {
+          "label": "Exit Admin Mode",
+          "path": "/auth/admin",
+          "method": "GET",
+          "line": 131,
+          "icon": "bi-box-arrow-right"
+        }
+      ],
+      "quick_actions": [
+        {
+          "label": "Manage Workflows",
+          "path": "/admin/workflows",
+          "method": "GET",
+          "line": 147,
+          "icon": "bi-diagram-3"
+        },
+        {
+          "label": "Manage Users",
+          "path": "/admin/users",
+          "method": "GET",
+          "line": 150,
+          "icon": "bi-people"
+        },
+        {
+          "label": "Add Organization",
+          "path": "/setup",
+          "method": "GET",
+          "line": 153,
+          "icon": "bi-plus-circle"
+        }
+      ],
+      "organization_actions": [
+        {
+          "label": "Add New Organization",
+          "path": "/setup",
+          "method": "GET",
+          "line": 205,
+          "icon": "bi-plus-circle"
+        },
+        {
+          "label": "Access Dashboard",
+          "path": "/auth/switch/{orgId}",
+          "method": "GET",
+          "line": 245,
+          "icon": "bi-box-arrow-in-right"
+        },
+        {
+          "label": "View Details",
+          "path": "/admin/organization/{orgId}",
+          "method": "GET",
+          "line": 248,
+          "icon": "bi-eye"
+        },
+        {
+          "label": "Delete",
+          "path": "/admin/organization/{orgId}/delete",
+          "method": "POST",
+          "line": 363,
+          "icon": "bi-trash",
+          "onclick": "deleteOrganization(orgId, orgName)",
+          "requires_confirmation": true
+        }
+      ]
+    },
+    "api_endpoints": {
+      "dashboard_api": {
+        "file": "public/js/dashboard.js",
+        "endpoints": [
+          {
+            "path": "/api/dashboard/overview",
+            "method": "GET",
+            "line": 27,
+            "description": "Get dashboard statistics overview",
+            "response": "{ success, stats: { totalDocuments, activeSections, pendingSuggestions, approvalProgress } }"
+          },
+          {
+            "path": "/api/dashboard/documents",
+            "method": "GET",
+            "line": 46,
+            "description": "Get recent documents list",
+            "response": "{ success, documents: [...] }"
+          },
+          {
+            "path": "/api/dashboard/activity",
+            "method": "GET",
+            "line": 117,
+            "params": "?limit=10",
+            "description": "Get recent activity feed",
+            "response": "{ success, activity: [...] }"
+          },
+          {
+            "path": "/bylaws/api/export",
+            "method": "GET",
+            "line": 165,
+            "params": "?doc={documentId}",
+            "description": "Export document"
+          },
+          {
+            "path": "/dashboard/document/{documentId}",
+            "method": "GET",
+            "line": 88,
+            "description": "View document details"
+          }
+        ]
+      },
+      "suggestions_api": {
+        "file": "views/dashboard/document-viewer.ejs",
+        "endpoints": [
+          {
+            "path": "/api/dashboard/suggestions",
+            "method": "POST",
+            "line": 480,
+            "description": "Create new suggestion",
+            "body": "{ document_id, section_id, suggested_text, rationale, author_name, author_email, status }",
+            "response": "{ success, error? }"
+          },
+          {
+            "path": "/api/dashboard/suggestions",
+            "method": "GET",
+            "line": 519,
+            "params": "?section_id={sectionId}",
+            "description": "Get suggestions for a section",
+            "response": "{ success, suggestions: [...] }"
+          },
+          {
+            "path": "/api/dashboard/sections/{sectionId}",
+            "method": "GET",
+            "line": 570,
+            "description": "Get section details",
+            "response": "{ success, section: { current_text, ... } }"
+          }
+        ]
+      },
+      "workflow_api": {
+        "file": "public/js/workflow-actions.js",
+        "endpoints": [
+          {
+            "path": "/api/workflow/sections/{sectionId}/approve",
+            "method": "POST",
+            "line": 58,
+            "description": "Approve section",
+            "body": "{ notes }",
+            "response": "{ success, error? }"
+          },
+          {
+            "path": "/api/workflow/sections/{sectionId}/reject",
+            "method": "POST",
+            "line": 106,
+            "description": "Reject section",
+            "body": "{ reason }",
+            "response": "{ success, error? }"
+          },
+          {
+            "path": "/api/workflow/sections/{sectionId}/lock",
+            "method": "POST",
+            "line": 154,
+            "description": "Lock section",
+            "body": "{ suggestionId, notes }",
+            "response": "{ success, error? }"
+          },
+          {
+            "path": "/api/workflow/sections/{sectionId}/workflow-state",
+            "method": "GET",
+            "line": 189,
+            "description": "Get section workflow state",
+            "response": "{ success, state, stage, permissions }"
+          },
+          {
+            "path": "/api/workflow/sections/{sectionId}/approval-history",
+            "method": "GET",
+            "line": 203,
+            "description": "Get approval history for section",
+            "response": "{ success, history: [...] }"
+          },
+          {
+            "path": "/api/workflow/documents/{documentId}/progress",
+            "method": "GET",
+            "line": 816,
+            "description": "Get workflow progress for document",
+            "response": "{ success, progress: { approvedCount, totalSections, currentStage, progressPercentage } }"
+          }
+        ]
+      },
+      "admin_api": {
+        "file": "views/admin/dashboard.ejs",
+        "endpoints": [
+          {
+            "path": "/admin/organization/{orgId}/delete",
+            "method": "POST",
+            "line": 363,
+            "description": "Delete organization",
+            "body": "{ confirm: 'DELETE' }",
+            "response": "{ success, error? }"
+          }
+        ]
+      }
+    },
+    "navigation_patterns": {
+      "authentication_flow": [
+        "/auth/login",
+        "/auth/register",
+        "/auth/profile",
+        "/auth/select-organization",
+        "/auth/switch/{orgId}",
+        "/auth/logout",
+        "/auth/select",
+        "/auth/admin"
+      ],
+      "dashboard_flow": [
+        "/dashboard",
+        "/dashboard?tab=suggestions",
+        "/dashboard?tab=approvals",
+        "/dashboard/document/{documentId}"
+      ],
+      "admin_flow": [
+        "/admin/dashboard",
+        "/admin/organization",
+        "/admin/organization/{orgId}",
+        "/admin/organization/{orgId}/delete",
+        "/admin/users",
+        "/admin/workflows"
+      ],
+      "document_flow": [
+        "/bylaws",
+        "/bylaws/api/export?doc={documentId}",
+        "/dashboard/document/{documentId}"
+      ],
+      "setup_flow": [
+        "/setup"
+      ],
+      "tasks_flow": [
+        "/tasks/all"
+      ]
+    },
+    "permission_gated_links": {
+      "admin_only": [
+        "/admin/users (sidebar)",
+        "/admin/users (dropdown)",
+        "/admin/workflows",
+        "/admin/organization/{orgId}",
+        "/admin/organization/{orgId}/delete"
+      ],
+      "viewer_disabled": [
+        "Export button",
+        "New Document button",
+        "Add Suggestion",
+        "Submit Suggestion"
+      ],
+      "global_admin_only": [
+        "/admin/dashboard",
+        "/auth/admin",
+        "/auth/select"
+      ],
+      "workflow_permissions": [
+        "Approve (requires canApprove)",
+        "Reject (requires canReject)",
+        "Lock Section (requires canLock)"
+      ]
+    },
+    "dynamic_links": {
+      "task_urls": {
+        "description": "Each task in myTasks array has a dynamically generated URL",
+        "location": "views/dashboard/dashboard.ejs:615",
+        "format": "task.url (varies by task type)"
+      },
+      "document_viewer": {
+        "description": "Link to view specific document",
+        "location": "public/js/dashboard.js:88",
+        "format": "/dashboard/document/{documentId}"
+      },
+      "organization_actions": {
+        "description": "Organization-specific actions use dynamic IDs",
+        "location": "views/admin/dashboard.ejs:245-251",
+        "format": "/auth/switch/{orgId}, /admin/organization/{orgId}"
+      }
+    },
+    "javascript_navigation": {
+      "onclick_handlers": [
+        {
+          "function": "toggleSection(sectionId)",
+          "file": "views/dashboard/document-viewer.ejs:241",
+          "description": "Expand/collapse section card"
+        },
+        {
+          "function": "showSuggestionForm(sectionId)",
+          "file": "views/dashboard/document-viewer.ejs:280",
+          "description": "Show suggestion input form"
+        },
+        {
+          "function": "submitSuggestion(sectionId)",
+          "file": "views/dashboard/document-viewer.ejs:313",
+          "description": "Submit new suggestion via API"
+        },
+        {
+          "function": "toggleSuggestionTrackChanges(suggestionId, sectionId)",
+          "file": "views/dashboard/document-viewer.ejs:612",
+          "description": "Toggle diff view for suggestion"
+        },
+        {
+          "function": "approveSection(sectionId)",
+          "file": "public/js/workflow-actions.js:39",
+          "description": "Approve section with confirmation"
+        },
+        {
+          "function": "rejectSection(sectionId)",
+          "file": "public/js/workflow-actions.js:80",
+          "description": "Reject section with reason"
+        },
+        {
+          "function": "lockSection(sectionId)",
+          "file": "public/js/workflow-actions.js:128",
+          "description": "Lock section with selected suggestion"
+        },
+        {
+          "function": "viewApprovalHistory(sectionId)",
+          "file": "public/js/workflow-actions.js:201",
+          "description": "Show approval history modal"
+        },
+        {
+          "function": "deleteOrganization(orgId, orgName)",
+          "file": "views/admin/dashboard.ejs:321",
+          "description": "Delete organization with confirmation"
+        },
+        {
+          "function": "Dashboard.exportDocument(documentId)",
+          "file": "public/js/dashboard.js:163",
+          "description": "Export document"
+        }
+      ],
+      "auto_refresh": [
+        {
+          "function": "Dashboard.loadOverview()",
+          "interval": "30 seconds",
+          "file": "public/js/dashboard.js:16"
+        },
+        {
+          "function": "Dashboard.loadActivity()",
+          "interval": "30 seconds",
+          "file": "public/js/dashboard.js:18"
+        }
+      ],
+      "on_page_load": [
+        {
+          "function": "Dashboard.init()",
+          "file": "public/js/dashboard.js:265",
+          "description": "Initialize dashboard data loading"
+        },
+        {
+          "function": "loadAllSuggestionCounts()",
+          "file": "views/dashboard/document-viewer.ejs:682",
+          "description": "Load suggestion counts for all sections"
+        },
+        {
+          "function": "loadAllWorkflowStates()",
+          "file": "views/dashboard/document-viewer.ejs:683",
+          "description": "Load workflow states for all sections"
+        },
+        {
+          "function": "updateWorkflowProgress()",
+          "file": "views/dashboard/document-viewer.ejs:684",
+          "description": "Update workflow progress bar"
+        }
+      ]
+    }
+  }
+}

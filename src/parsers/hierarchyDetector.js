@@ -45,6 +45,12 @@ class HierarchyDetector {
   buildDetectionPatterns(level) {
     const patterns = [];
 
+    // Handle missing prefix gracefully
+    if (!level.prefix) {
+      console.warn(`[HierarchyDetector] Level ${level.type} has no prefix defined, skipping...`);
+      return patterns;
+    }
+
     // Remove trailing whitespace from prefix and escape
     const trimmedPrefix = level.prefix.trimEnd();
     const escapedPrefix = this.escapeRegex(trimmedPrefix);

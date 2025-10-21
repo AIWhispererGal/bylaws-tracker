@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %> - Admin Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+  <style>
+    body {
+      background: #f5f7fa;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .admin-header {
+      background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+      color: white;
+      padding: 2rem 0;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      margin-bottom: 2rem;
+    }
+
+    .content-card {
+      background: white;
+      border-radius: 15px;
+      padding: 2rem;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      margin-bottom: 2rem;
+    }
+
+    .org-item {
+      padding: 1.5rem;
+      border: 2px solid #e9ecef;
+      border-radius: 10px;
+      margin-bottom: 1rem;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+
+    .org-item:hover {
+      border-color: #667eea;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+      transform: translateY(-2px);
+    }
+
+    .org-item.selected {
+      background: #e8f4fd;
+      border-color: #0066cc;
+    }
+
+    .section-title {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+      color: #333;
+      border-bottom: 2px solid #e9ecef;
+      padding-bottom: 0.5rem;
+    }
+
+    .org-stats {
+      display: flex;
+      gap: 2rem;
+      flex-wrap: wrap;
+      margin-top: 1rem;
+    }
+
+    .org-stat {
+      flex: 1;
+      min-width: 150px;
+    }
+
+    .org-stat-label {
+      font-size: 0.85rem;
+      color: #6c757d;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .org-stat-value {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <div class="admin-header">
+    <div class="container">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <h1 class="mb-0">
+            <i class="bi bi-building"></i> Organization Settings
+          </h1>
+          <p class="mb-0 mt-2">Manage global organization configurations</p>
+        </div>
+        <div>
+          <a href="/admin/dashboard" class="btn btn-light">
+            <i class="bi bi-arrow-left"></i> Back to Dashboard
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="row">
+      <div class="col-md-12">
+        <div class="content-card">
+          <h3 class="section-title">All Organizations</h3>
+
+          <% if (organizations && organizations.length > 0) { %>
+            <div class="row">
+              <% organizations.forEach(org => { %>
+                <div class="col-md-6">
+                  <div class="org-item <%= currentOrgId === org.id ? 'selected' : '' %>"
+                       onclick="window.location.href='/admin/organization/<%= org.id %>'">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                      <div>
+                        <h5 class="mb-1"><%= org.name %></h5>
+                        <small class="text-muted">
+                          <i class="bi bi-calendar"></i>
+                          Created <%= new Date(org.created_at).toLocaleDateString() %>
+                        </small>
+                      </div>
+                      <% if (currentOrgId === org.id) { %>
+                        <span class="badge bg-primary">Current</span>
+                      <% } %>
+                    </div>
+
+                    <div class="org-stats">
+                      <% if (org.hierarchy_config) { %>
+                        <div class="org-stat">
+                          <div class="org-stat-label">Hierarchy Levels</div>
+                          <div class="org-stat-value">
+                            <%= org.hierarchy_config.levels?.length || 0 %>
+                          </div>
+                        </div>
+                      <% } %>
+
+                      <% if (org.workflow_template) { %>
+                        <div class="org-stat">
+                          <div class="org-stat-label">Workflow Stages</div>
+                          <div class="org-stat-value">
+                            <%= org.workflow_template.stages?.length || 0 %>
+                          </div>
+                        </div>
+                      <% } %>
+                    </div>
+
+                    <div class="mt-3">
+                      <a href="/admin/organization/<%= org.id %>"
+                         class="btn btn-sm btn-outline-primary me-2"
+                         onclick="event.stopPropagation()">
+                        <i class="bi bi-eye"></i> View Details
+                      </a>
+                      <a href="/auth/switch/<%= org.id %>"
+                         class="btn btn-sm btn-outline-secondary"
+                         onclick="event.stopPropagation()">
+                        <i class="bi bi-box-arrow-in-right"></i> Access Dashboard
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              <% }); %>
+            </div>
+          <% } else { %>
+            <div class="text-center py-5">
+              <i class="bi bi-inbox" style="font-size: 3rem; opacity: 0.3;"></i>
+              <p class="text-muted mt-3">No organizations found</p>
+            </div>
+          <% } %>
+        </div>
+
+        <div class="content-card">
+          <h3 class="section-title">Global Settings</h3>
+
+          <div class="alert alert-info">
+            <i class="bi bi-info-circle me-2"></i>
+            <strong>Info:</strong> Global organization settings will be available in a future update.
+            For now, use this page to view and access different organizations.
+          </div>
+
+          <div class="row">
+            <div class="col-md-4">
+              <div class="card">
+                <div class="card-body">
+                  <h6 class="card-title">
+                    <i class="bi bi-shield-check text-success"></i> Security
+                  </h6>
+                  <p class="card-text small text-muted">
+                    Configure authentication and access control settings
+                  </p>
+                  <button class="btn btn-sm btn-outline-secondary" disabled>
+                    Configure
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-4">
+              <div class="card">
+                <div class="card-body">
+                  <h6 class="card-title">
+                    <i class="bi bi-envelope text-primary"></i> Notifications
+                  </h6>
+                  <p class="card-text small text-muted">
+                    Set up email notifications and alerts
+                  </p>
+                  <button class="btn btn-sm btn-outline-secondary" disabled>
+                    Configure
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-4">
+              <div class="card">
+                <div class="card-body">
+                  <h6 class="card-title">
+                    <i class="bi bi-gear text-warning"></i> System
+                  </h6>
+                  <p class="card-text small text-muted">
+                    System-wide configuration and maintenance
+                  </p>
+                  <button class="btn btn-sm btn-outline-secondary" disabled>
+                    Configure
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

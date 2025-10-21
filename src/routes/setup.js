@@ -74,7 +74,7 @@ router.get('/organization', (req, res) => {
 });
 
 /**
- * POST /setup/organization - Save organization info
+ * POST /setup/organization - Save organization info and create admin user
  */
 router.post('/organization', upload.single('logo'), async (req, res) => {
     try {
@@ -87,6 +87,12 @@ router.post('/organization', upload.single('logo'), async (req, res) => {
             logo_path: req.file ? req.file.path : null
         };
 
+        const adminData = {
+            admin_email: req.body.admin_email,
+            admin_password: req.body.admin_password,
+            admin_password_confirm: req.body.admin_password_confirm
+        };
+
         // Validate required fields
         if (!organizationData.organization_name || !organizationData.organization_type) {
             return res.status(400).json({
@@ -95,10 +101,145 @@ router.post('/organization', upload.single('logo'), async (req, res) => {
             });
         }
 
+        // Validate admin credentials
+        if (!adminData.admin_email || !adminData.admin_password) {
+            return res.status(400).json({
+                success: false,
+                error: 'Admin email and password are required'
+            });
+        }
+
+        if (adminData.admin_password !== adminData.admin_password_confirm) {
+            return res.status(400).json({
+                success: false,
+                error: 'Passwords do not match'
+            });
+        }
+
+        if (adminData.admin_password.length < 8) {
+            return res.status(400).json({
+                success: false,
+                error: 'Password must be at least 8 characters'
+            });
+        }
+
+        // Check if this is the first organization (for superuser detection)
+        const { data: existingOrgs, error: checkError } = await req.supabaseService
+            .from('organizations')
+            .select('id')
+            .limit(1);
+
+        if (checkError) {
+            console.error('Error checking existing organizations:', checkError);
+            return res.status(500).json({
+                success: false,
+                error: 'Failed to check setup status'
+            });
+        }
+
+        const isFirstOrganization = !existingOrgs || existingOrgs.length === 0;
+
+        // Check if user already exists (support for multi-org)
+        console.log('[SETUP-AUTH] Checking for existing user:', adminData.admin_email);
+        const { data: existingUsers, error: getUserError } = await req.supabaseService.auth.admin.listUsers();
+
+        let authUser;
+        const existingAuthUser = existingUsers?.users?.find(u => u.email === adminData.admin_email);
+
+        if (existingAuthUser) {
+            // User exists - verify password and link to new organization
+            console.log('[SETUP-AUTH] User already exists, verifying password for:', existingAuthUser.id);
+
+            // Verify password is correct
+            const { data: signInData, error: signInError } = await req.supabaseService.auth.signInWithPassword({
+                email: adminData.admin_email,
+                password: adminData.admin_password
+            });
+
+            if (signInError) {
+                console.error('[SETUP-AUTH] Password verification failed:', signInError);
+                return res.status(400).json({
+                    success: false,
+                    error: 'This email is already registered. Please enter your correct password to create a new organization.'
+                });
+            }
+
+            authUser = { user: existingAuthUser };
+            console.log('[SETUP-AUTH] Existing user authenticated successfully');
+        } else {
+            // New user - create auth account
+            console.log('[SETUP-AUTH] Creating new Supabase Auth user for:', adminData.admin_email);
+            const { data: newAuthUser, error: authError } = await req.supabaseService.auth.admin.createUser({
+                email: adminData.admin_email,
+                password: adminData.admin_password,
+                email_confirm: true, // Auto-confirm email for setup
+                user_metadata: {
+                    setup_user: true,
+                    created_via: 'setup_wizard'
+                }
+            });
+
+            if (authError) {
+                console.error('[SETUP-AUTH] Error creating auth user:', authError);
+                return res.status(400).json({
+                    success: false,
+                    error: authError.message || 'Failed to create admin account'
+                });
+            }
+
+            authUser = newAuthUser;
+            console.log('[SETUP-AUTH] New auth user created successfully:', authUser.user.id);
+
+            // ✅ FIX: Create corresponding users table record with user_type_id
+            console.log('[SETUP-AUTH] Creating users table record...');
+            const { data: regularUserType, error: typeError } = await req.supabaseService
+                .from('user_types')
+                .select('id')
+                .eq('type_code', 'regular_user')
+                .single();
+
+            if (typeError) {
+                console.error('[SETUP-AUTH] Failed to get user type:', typeError);
+                return res.status(500).json({
+                    success: false,
+                    error: 'Failed to initialize user account - could not get user type'
+                });
+            }
+
+            const { error: userRecordError } = await req.supabaseService
+                .from('users')
+                .insert({
+                    id: authUser.user.id,
+                    email: authUser.user.email,
+                    name: adminData.admin_name || adminData.admin_email,
+                    user_type_id: regularUserType.id,
+                    auth_provider: 'supabase',
+                    last_login: new Date().toISOString()
+                });
+
+            if (userRecordError) {
+                console.error('[SETUP-AUTH] Failed to create user record:', userRecordError);
+                return res.status(500).json({
+                    success: false,
+                    error: 'Failed to initialize user account - could not create user record'
+                });
+            }
+
+            console.log('[SETUP-AUTH] Users table record created successfully');
+        }
+
         // Store in session
         req.session.setupData = req.session.setupData || {};
         req.session.setupData.organization = organizationData;
+        req.session.setupData.adminUser = {
+            user_id: authUser.user.id,
+            email: adminData.admin_email,
+            is_first_org: isFirstOrganization
+        };
         req.session.setupData.completedSteps = ['organization'];
+
+        // Store password temporarily for auto-login later (will be cleared after setup)
+        req.session.adminPassword = adminData.admin_password;
 
         // Return JSON response with redirect URL
         res.json({ success: true, redirectUrl: '/setup/document-type' });
@@ -287,7 +428,7 @@ router.post('/import', upload.single('document'), async (req, res) => {
         console.log('[SETUP-DEBUG] 📊 Current session setupData:', JSON.stringify(req.session.setupData, null, 2));
         setImmediate(() => {
             console.log('[SETUP-DEBUG] 🏃 setImmediate callback executing...');
-            processSetupData(req.session.setupData, req.supabase)
+            processSetupData(req.session.setupData, req.supabaseService)
                 .then(() => {
                     console.log('[SETUP-DEBUG] ✅ processSetupData completed successfully');
                     req.session.setupData.status = 'complete';
@@ -384,40 +525,104 @@ router.get('/status', (req, res) => {
 });
 
 /**
- * GET /setup/success - Success screen
+ * GET /setup/success - Success screen (redirects to dashboard)
  */
-router.get('/success', (req, res) => {
+router.get('/success', async (req, res) => {
     const setupData = req.session.setupData || {};
 
-    res.render('setup/success', {
-        layout: 'setup/layout',
-        title: 'Setup Complete',
-        currentStep: 6,
-        csrfToken: '', // CSRF disabled for setup routes
-        organization: setupData.organization || {},
-        documentStructure: formatDocumentStructure(setupData.documentType),
-        workflowStages: setupData.workflow?.stages?.length || 0,
-        sectionsImported: setupData.sectionsCount || 0
-    });
+    try {
+        // Auto-login the user who just completed setup by creating a proper session with JWT
+        if (setupData.adminUser && setupData.adminUser.email) {
+            console.log('[SETUP-AUTH] Auto-logging in user:', setupData.adminUser.email);
+
+            // Get the password from session (stored temporarily during organization step)
+            const password = req.session.adminPassword;
+
+            if (password) {
+                // Sign in the user to get JWT tokens
+                const { data: authData, error: signInError } = await req.supabaseService.auth.signInWithPassword({
+                    email: setupData.adminUser.email,
+                    password: password
+                });
+
+                if (signInError) {
+                    console.error('[SETUP-AUTH] Error signing in user:', signInError);
+                    // Fall back to session without JWT (user can log in manually later)
+                } else if (authData && authData.session) {
+                    // Store JWT tokens in session for authenticated Supabase client
+                    req.session.supabaseJWT = authData.session.access_token;
+                    req.session.supabaseRefreshToken = authData.session.refresh_token;
+                    req.session.supabaseUser = authData.user;
+                    console.log('[SETUP-AUTH] Successfully stored JWT tokens in session for:', authData.user.email);
+                }
+
+                // Clear the temporary password from session
+                delete req.session.adminPassword;
+            } else {
+                console.warn('[SETUP-AUTH] No password available for auto-login');
+            }
+
+            // Store user info in session
+            req.session.userId = setupData.adminUser.user_id;
+            req.session.userEmail = setupData.adminUser.email;
+            req.session.isAuthenticated = true;
+        }
+
+        // Store organization_id for dashboard access
+        if (setupData.organizationId) {
+            req.session.organizationId = setupData.organizationId;
+        }
+
+        // Clear setup data and mark as configured
+        delete req.session.setupData;
+        req.session.isConfigured = true;
+
+        // Save session and redirect to dashboard
+        req.session.save((err) => {
+            if (err) {
+                console.error('Session save error:', err);
+            }
+            res.redirect('/dashboard');
+        });
+    } catch (error) {
+        console.error('[SETUP-AUTH] Error during auto-login:', error);
+        // Continue to dashboard anyway
+        req.session.organizationId = setupData.organizationId;
+        delete req.session.setupData;
+        req.session.isConfigured = true;
+        res.redirect('/dashboard');
+    }
 });
 
 /**
  * POST /setup/clear-session - Clear setup session data
  */
 router.post('/clear-session', (req, res) => {
+    // Store organization_id before clearing setup data
+    const organizationId = req.session.setupData?.organizationId;
+
     // Clear setup data
     delete req.session.setupData;
 
     // CRITICAL: Mark as configured so /bylaws doesn't redirect back to setup
     req.session.isConfigured = true;
 
+    // Store organization_id for dashboard access
+    if (organizationId) {
+        req.session.organizationId = organizationId;
+    }
+
     res.json({ success: true });
 });
 
 /**
  * Helper: Process setup data and create database entries in Supabase
+ * @param {Object} setupData - Setup wizard data
+ * @param {Object} supabaseService - Service role Supabase client (bypasses RLS)
  */
-async function processSetupData(setupData, supabase) {
+async function processSetupData(setupData, supabaseService) {
+    // Use service role client to bypass RLS policies
+    const supabase = supabaseService;
     console.log('[SETUP-DEBUG] 🚀 START processSetupData()');
     console.log('[SETUP-DEBUG] 📊 Initial setupData:', JSON.stringify(setupData, null, 2));
     console.log('[SETUP-DEBUG] 📊 Initial completedSteps:', setupData.completedSteps);
@@ -450,7 +655,9 @@ async function processSetupData(setupData, supabase) {
                     console.log('[SETUP-DEBUG] 🏢 Processing organization step');
                     // Create organization record in Supabase
                     const orgData = setupData.organization;
+                    const adminUser = setupData.adminUser;
                     console.log('[SETUP-DEBUG] 📋 orgData:', JSON.stringify(orgData, null, 2));
+                    console.log('[SETUP-DEBUG] 👤 adminUser:', adminUser ? `user_id: ${adminUser.user_id}` : 'not set');
 
                     // IDEMPOTENCY CHECK: Skip if organization already created
                     if (setupData.organizationId) {
@@ -458,7 +665,7 @@ async function processSetupData(setupData, supabase) {
                         break;
                     }
 
-                    if (orgData) {
+                    if (orgData && adminUser) {
                         console.log('[SETUP-DEBUG] ✅ orgData exists, creating organization...');
                         // Generate slug from organization name with timestamp for uniqueness
                         const baseSlug = orgData.organization_name
@@ -471,6 +678,50 @@ async function processSetupData(setupData, supabase) {
                         console.log('[SETUP-DEBUG] 🔗 Generated slug:', slug);
 
                         console.log('[SETUP-DEBUG] 💾 Inserting into Supabase organizations table...');
+
+                        // ✅ FIX: Build complete 10-level hierarchy from user choices
+                        // Import organization config to get default 10-level schema
+                        const organizationConfig = require('../config/organizationConfig');
+
+                        // Build hierarchy_config in correct 10-level format
+                        const hierarchyConfig = (() => {
+                            // Get user's choices from setup wizard (or use defaults)
+                            const level1Name = setupData.documentType?.level1_name || 'Article';
+                            const level2Name = setupData.documentType?.level2_name || 'Section';
+                            const numberingStyle = setupData.documentType?.numbering_style || 'roman';
+
+                            // Get default 10-level hierarchy structure
+                            const defaultHierarchy = organizationConfig.getDefaultConfig().hierarchy;
+
+                            // Build complete hierarchy: customize first 2 levels, use defaults for remaining 8
+                            return {
+                                levels: [
+                                    // Level 0: Customize with user's choice for level 1
+                                    {
+                                        name: level1Name,
+                                        type: 'article',
+                                        numbering: numberingStyle,
+                                        prefix: `${level1Name} `,
+                                        depth: 0
+                                    },
+                                    // Level 1: Customize with user's choice for level 2
+                                    {
+                                        name: level2Name,
+                                        type: 'section',
+                                        numbering: 'numeric',
+                                        prefix: `${level2Name} `,
+                                        depth: 1
+                                    },
+                                    // Levels 2-9: Use defaults from organizationConfig
+                                    ...defaultHierarchy.levels.slice(2)
+                                ],
+                                maxDepth: 10,
+                                allowNesting: true
+                            };
+                        })();
+
+                        console.log('[SETUP-DEBUG] 📋 hierarchy_config to save:', JSON.stringify(hierarchyConfig, null, 2));
+
                         const { data, error } = await supabase
                             .from('organizations')
                             .insert({
@@ -481,6 +732,7 @@ async function processSetupData(setupData, supabase) {
                                 country: orgData.country,
                                 contact_email: orgData.contact_email,
                                 logo_url: orgData.logo_path,
+                                hierarchy_config: hierarchyConfig,
                                 is_configured: true
                             })
                             .select()
@@ -492,8 +744,138 @@ async function processSetupData(setupData, supabase) {
                         }
                         console.log('[SETUP-DEBUG] ✅ Organization created with ID:', data.id);
                         setupData.organizationId = data.id;
+
+                        // Get the user_types ID for first org (global_admin) or regular (regular_user)
+                        const userTypeCode = adminUser.is_first_org ? 'global_admin' : 'regular_user';
+                        const { data: userType, error: userTypeError } = await supabase
+                            .from('user_types')
+                            .select('id')
+                            .eq('type_code', userTypeCode)
+                            .single();
+
+                        if (userTypeError) {
+                            console.error('[SETUP-DEBUG] ❌ Error getting user type:', userTypeError);
+                            throw new Error(`Failed to get ${userTypeCode} user type`);
+                        }
+
+                        // Update user's user_type_id in users table
+                        console.log('[SETUP-DEBUG] 👤 Setting user_type_id to:', userTypeCode, '(', userType.id, ')');
+                        const { error: userUpdateError } = await supabase
+                            .from('users')
+                            .update({ user_type_id: userType.id })
+                            .eq('id', adminUser.user_id);
+
+                        if (userUpdateError) {
+                            console.error('[SETUP-DEBUG] ❌ Error updating user type:', userUpdateError);
+                            // Non-fatal: Continue with setup
+                        } else {
+                            console.log('[SETUP-DEBUG] ✅ User type updated successfully');
+                        }
+
+                        // Link user to organization via user_organizations table
+                        console.log('[SETUP-DEBUG] 🔗 Linking user to organization...');
+                        // Person creating organization should always be owner
+                        const userRole = 'owner';
+                        console.log('[SETUP-DEBUG] 👤 Assigning role:', userRole);
+
+                        // Get the organization_roles ID for 'owner' (person creating org should be owner)
+                        const { data: ownerRole, error: roleError } = await supabase
+                            .from('organization_roles')
+                            .select('id')
+                            .eq('role_code', 'owner')
+                            .single();
+
+                        if (roleError) {
+                            console.error('[SETUP-DEBUG] ❌ Error getting owner role:', roleError);
+                            throw new Error('Failed to get owner role for organization creator');
+                        }
+
+                        const { error: linkError } = await supabase
+                            .from('user_organizations')
+                            .insert({
+                                user_id: adminUser.user_id,
+                                organization_id: data.id,
+                                role: userRole, // Keep old column for backwards compatibility
+                                org_role_id: ownerRole.id, // NEW: Use new permissions system
+                                created_at: new Date().toISOString()
+                            });
+
+                        if (linkError) {
+                            console.log('[SETUP-DEBUG] ❌ Error linking user to organization:', linkError);
+                            // Don't throw - organization is created, just log the error
+                            console.error('[SETUP-DEBUG] ⚠️  User-organization link failed but continuing setup');
+                        } else {
+                            console.log('[SETUP-DEBUG] ✅ User linked to organization with role:', userRole);
+                        }
+
+                        // Create default workflow template for new organization
+                        console.log('[SETUP-DEBUG] 🔄 Creating default workflow template...');
+                        try {
+                            const { data: workflowTemplate, error: workflowError } = await supabase
+                                .from('workflow_templates')
+                                .insert({
+                                    organization_id: data.id,
+                                    name: 'Default Approval Workflow',
+                                    description: 'Standard two-stage approval workflow for document sections',
+                                    is_default: true,
+                                    is_active: true
+                                })
+                                .select()
+                                .single();
+
+                            if (workflowError) {
+                                console.error('[SETUP-DEBUG] ❌ Failed to create default workflow:', workflowError);
+                                // Non-fatal: Continue setup even if workflow creation fails
+                            } else {
+                                console.log('[SETUP-DEBUG] ✅ Default workflow template created:', workflowTemplate.id);
+
+                                // Create workflow stages
+                                const { error: stagesError } = await supabase
+                                    .from('workflow_stages')
+                                    .insert([
+                                        {
+                                            workflow_template_id: workflowTemplate.id,
+                                            stage_name: 'Committee Review',
+                                            stage_order: 1,
+                                            can_lock: true,
+                                            can_edit: true,
+                                            can_approve: true,
+                                            requires_approval: true,
+                                            required_roles: ['admin', 'owner'],
+                                            display_color: '#FFD700',
+                                            icon: 'clipboard-check',
+                                            description: 'Initial review by committee members'
+                                        },
+                                        {
+                                            workflow_template_id: workflowTemplate.id,
+                                            stage_name: 'Board Approval',
+                                            stage_order: 2,
+                                            can_lock: false,
+                                            can_edit: false,
+                                            can_approve: true,
+                                            requires_approval: true,
+                                            required_roles: ['owner'],
+                                            display_color: '#90EE90',
+                                            icon: 'check-circle',
+                                            description: 'Final approval by board members'
+                                        }
+                                    ]);
+
+                                if (stagesError) {
+                                    console.error('[SETUP-DEBUG] ❌ Failed to create workflow stages:', stagesError);
+                                    // Non-fatal: Continue setup even if stage creation fails
+                                } else {
+                                    setupData.workflowTemplateId = workflowTemplate.id;
+                                    console.log('[SETUP-DEBUG] ✅ Created default workflow for organization', data.id);
+                                    console.log('[SETUP-DEBUG] ✅ Workflow stages: Committee Review → Board Approval');
+                                }
+                            }
+                        } catch (workflowErr) {
+                            console.error('[SETUP-DEBUG] ❌ Error creating default workflow:', workflowErr);
+                            // Non-fatal: Continue setup even if workflow creation fails
+                        }
                     } else {
-                        console.log('[SETUP-DEBUG] ⚠️  No orgData found');
+                        console.log('[SETUP-DEBUG] ⚠️  Missing orgData or adminUser');
                     }
                     break;
 

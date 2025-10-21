@@ -1,0 +1,330 @@
+═══════════════════════════════════════════════════════════════════════════════
+  DEPTH VALIDATION ERROR - VISUAL DIAGNOSIS
+═══════════════════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          THE PROBLEM AT A GLANCE                            │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Document Structure:               Parser Assigns:        Validator Expects:
+───────────────────               ───────────────        ──────────────────
+
+ARTICLE I                         depth: 0               ✅ OK (first section)
+  Section 1                       depth: 1               ✅ OK (0→1, jump +1)
+  Section 2                       depth: 1               ✅ OK (1→1, same)
+ARTICLE II                        depth: 0               ✅ OK (1→0, decrease)
+  (a) Eligibility                 depth: 3  ⚠️          ❌ ERROR! (0→3, jump +3)
+                                  ▲                              ▲
+                          Template says                  Validation says
+                          "paragraph = depth 3"          "can only jump +1"
+
+ERROR MESSAGE:
+"Depth jumped from 0 to 3, skipping level(s)"
+
+
+═══════════════════════════════════════════════════════════════════════════════
+  ARCHITECTURE FLOW - WHERE THE MISMATCH OCCURS
+═══════════════════════════════════════════════════════════════════════════════
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ STEP 1: HIERARCHY DETECTION                                              │
+│ File: hierarchyDetector.js - detectHierarchy()                           │
+└──────────────────────────────────────────────────────────────────────────┘
+
+  Input: Raw text + Hierarchy Template
+     │
+     ├─> Scans for patterns: "Article I", "Section 1", "(a)"
+     │
+     └─> Output: [{type: 'article', number: 'I'},
+                  {type: 'section', number: '1'},
+                  {type: 'paragraph', number: 'a'}]  ⚠️ NO DEPTH YET
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ STEP 2: SECTION ENRICHMENT - DEPTH ASSIGNMENT HAPPENS HERE               │
+│ File: wordParser.js - enrichSections() [LINE 651]                        │
+└──────────────────────────────────────────────────────────────────────────┘
+
+  Input: sections[] with types
+     │
+     ├─> For each section:
+     │     const levelDef = levels.find(l => l.type === section.type)
+     │     depth: levelDef?.depth || 0  ⚠️ STATIC TEMPLATE LOOKUP
+     │
+     └─> Output: sections[] with depths from template
+
+  TEMPLATE DEPTHS (hierarchyTemplates.js):
+  ┌─────────────────────────────────────────┐
+  │ Article    → depth: 0                   │
+  │ Section    → depth: 1                   │
+  │ Subsection → depth: 2                   │
+  │ Paragraph  → depth: 3  ⚠️ ALWAYS 3!   │
+  │ ...                                     │
+  └─────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ STEP 3: VALIDATION - ERROR THROWN HERE                                   │
+│ File: hierarchyDetector.js - validateHierarchy() [LINES 268-272]         │
+└──────────────────────────────────────────────────────────────────────────┘
+
+  Input: sections[] with assigned depths
+     │
+     ├─> Iterate through sections:
+     │     prevDepth = -1
+     │     For section in sections:
+     │       if (section.depth > prevDepth + 1 && prevDepth >= 0)
+     │         ❌ ERROR: "Depth jumped from X to Y"
+     │
+     └─> Output: validation.errors[]
+
+  VALIDATION LOGIC:
+  ┌───────────────────────────────────────────────────────┐
+  │ Allowed Transitions:                                  │
+  │   ✅ depth 0 → 1  (jump +1)                          │
+  │   ✅ depth 1 → 1  (same)                             │
+  │   ✅ depth 1 → 0  (decrease)                         │
+  │   ❌ depth 0 → 3  (jump +3)  ⚠️ BLOCKS THIS!        │
+  └───────────────────────────────────────────────────────┘
+
+
+═══════════════════════════════════════════════════════════════════════════════
+  THE MISMATCH VISUALIZED
+═══════════════════════════════════════════════════════════════════════════════
+
+PARSER'S PERSPECTIVE:                 VALIDATOR'S PERSPECTIVE:
+────────────────────                  ────────────────────────
+
+"I see '(a)' in the text"             "I see depth progression:"
+     ↓                                      ↓
+"Template says Paragraph"             [Article: depth 0]
+     ↓                                      ↓
+"Paragraph = depth 3"                 [Paragraph: depth 3] ⚠️
+     ↓                                      ↓
+Assigns depth: 3                      3 > 0 + 1 → ERROR!
+                                      "Where's depth 1 and 2?"
+
+
+WHAT SHOULD HAPPEN (Context-Aware Depth):
+─────────────────────────────────────────
+
+Article I (depth 0)
+  └─> Section 1 (depth 1)  ✓ Child of Article
+  └─> (a) should be (depth 1)  ✓ Child of Article, sibling of Section
+      NOT depth 3!
+
+OR if truly nested:
+
+Article I (depth 0)
+  └─> Section 1 (depth 1)
+      └─> (a) should be (depth 2)  ✓ Child of Section
+          NOT depth 3!
+
+
+═══════════════════════════════════════════════════════════════════════════════
+  CODE SNIPPETS - EXACT LINES CAUSING ISSUE
+═══════════════════════════════════════════════════════════════════════════════
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ ❌ PROBLEM #1: Static Depth Assignment                                   │
+│ File: src/parsers/wordParser.js                                          │
+│ Line: 651                                                                 │
+└──────────────────────────────────────────────────────────────────────────┘
+
+  return {
+    ...section,
+    depth: levelDef?.depth || 0,  ⚠️ USES TEMPLATE DEPTH, NOT CONTEXT
+    ordinal: index + 1,
+    article_number: articleNumber,
+    section_number: sectionNumber,
+  };
+
+  PROBLEM: A "paragraph" type ALWAYS gets depth 3, regardless of where
+           it appears in the document structure.
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ ❌ PROBLEM #2: Overly Strict Validation                                  │
+│ File: src/parsers/hierarchyDetector.js                                   │
+│ Lines: 268-272                                                            │
+└──────────────────────────────────────────────────────────────────────────┘
+
+  // Check for skipped levels (depth jumps by more than 1)
+  if (section.depth > prevDepth + 1 && prevDepth >= 0) {
+    errors.push({
+      section: section.citation || `Section ${i + 1}`,
+      error: `Depth jumped from ${prevDepth} to ${section.depth}, skipping level(s)`
+    });
+  }
+
+  PROBLEM: Validation assumes SEQUENTIAL depth progression (0→1→2→3)
+           but real documents often skip levels (Article→(a) directly).
+
+
+═══════════════════════════════════════════════════════════════════════════════
+  SOLUTION OPTIONS - VISUAL COMPARISON
+═══════════════════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│ OPTION 1: DYNAMIC DEPTH CALCULATION (RECOMMENDED)                       │
+│ Complexity: MEDIUM | Impact: HIGH | Risk: LOW                           │
+└─────────────────────────────────────────────────────────────────────────┘
+
+  BEFORE (current):                  AFTER (fixed):
+  ─────────────────                  ──────────────
+
+  Article I                          Article I
+    depth: 0 (from template)           depth: 0 (root)
+  (a)                                (a)
+    depth: 3 (from template) ❌       depth: 1 (child of Article) ✅
+
+  APPROACH:
+  • Track parent-child relationships during parsing
+  • Calculate depth = parent.depth + 1
+  • Use template depth only as type hint
+
+  PSEUDOCODE:
+  ┌──────────────────────────────────────────────────────┐
+  │ let depthStack = []                                  │
+  │ for each section:                                    │
+  │   while (stack.top.templateDepth >= section.template)│
+  │     stack.pop()                                      │
+  │   section.depth = stack.length  ✅ CONTEXTUAL       │
+  │   stack.push(section)                                │
+  └──────────────────────────────────────────────────────┘
+
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│ OPTION 2: RELAX VALIDATION (QUICK FIX)                                  │
+│ Complexity: LOW | Impact: MEDIUM | Risk: MEDIUM                         │
+└─────────────────────────────────────────────────────────────────────────┘
+
+  BEFORE:                            AFTER:
+  ───────                            ──────
+
+  if (depth > prevDepth + 1)         if (depth > prevDepth + 1)
+    ❌ ERROR                           ⚠️  WARNING (not error)
+
+  APPROACH:
+  • Change validation from ERROR to WARNING
+  • Allow depth jumps, just notify user
+
+  PROS: ✅ Quick fix, immediate unblock
+  CONS: ⚠️  Doesn't fix root cause
+        ⚠️  May allow truly invalid documents
+
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│ OPTION 3: HYBRID APPROACH (BALANCED)                                    │
+│ Complexity: MEDIUM | Impact: HIGH | Risk: LOW                           │
+└─────────────────────────────────────────────────────────────────────────┘
+
+  APPROACH:
+  • Calculate relative depth during parsing
+  • Validate based on parent relationships, not absolute depth
+  • Use template as guide, not strict rule
+
+  VALIDATION CHANGES:
+  ┌─────────────────────────────────────────────────────┐
+  │ OLD: if (depth > prevDepth + 1) ERROR               │
+  │ NEW: if (depth > parentDepth + 1) ERROR             │
+  │                                                      │
+  │ This allows:                                        │
+  │   Article (0) → (a) as child (1) ✅                │
+  │   But blocks:                                       │
+  │   Article (0) → Sub-sub-item (3) without parent ❌ │
+  └─────────────────────────────────────────────────────┘
+
+
+═══════════════════════════════════════════════════════════════════════════════
+  TESTING SCENARIOS - EXPECTED BEHAVIOR
+═══════════════════════════════════════════════════════════════════════════════
+
+┌────────────────────────────────────────────────────────────────────────┐
+│ SCENARIO 1: Depth Jump (Currently Fails, Should Pass)                  │
+└────────────────────────────────────────────────────────────────────────┘
+
+  ARTICLE I - NAME           ← depth 0
+  (a) The name shall be...   ← depth 1 (child of Article, not depth 3)
+  (b) The acronym...         ← depth 1 (sibling)
+
+  CURRENT:  ❌ "Depth jumped from 0 to 3"
+  EXPECTED: ✅ PASS (depth 0→1)
+
+
+┌────────────────────────────────────────────────────────────────────────┐
+│ SCENARIO 2: Complex Nesting (Should Pass)                              │
+└────────────────────────────────────────────────────────────────────────┘
+
+  ARTICLE I                  ← depth 0
+    Section 1                ← depth 1
+      (a) Item               ← depth 2
+        (1) Sub-item         ← depth 3
+      (b) Item               ← depth 2
+  ARTICLE II                 ← depth 0
+
+  CURRENT:  ✅ PASS (sequential progression)
+  EXPECTED: ✅ PASS (no change)
+
+
+┌────────────────────────────────────────────────────────────────────────┐
+│ SCENARIO 3: Non-Sequential Siblings (Currently Fails, Should Pass)     │
+└────────────────────────────────────────────────────────────────────────┘
+
+  ARTICLE I                  ← depth 0
+    Section 1                ← depth 1
+    (a) Special provision    ← depth 1 (sibling of Section, not depth 3)
+    Section 2                ← depth 1
+
+  CURRENT:  ❌ "Depth jumped from 1 to 3"
+  EXPECTED: ✅ PASS (all depth 1, siblings under Article)
+
+
+═══════════════════════════════════════════════════════════════════════════════
+  IMPLEMENTATION ROADMAP
+═══════════════════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│ PHASE 1: QUICK FIX (Option 2) - 30 minutes                              │
+└─────────────────────────────────────────────────────────────────────────┘
+
+  ✓ Change validation error → warning in hierarchyDetector.js
+  ✓ Deploy to unblock users
+  ✓ Add TODO comment for proper fix
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│ PHASE 2: PROPER FIX (Option 1) - 4-6 hours                              │
+└─────────────────────────────────────────────────────────────────────────┘
+
+  ✓ Implement context-aware depth calculation in enrichSections()
+  ✓ Update validation to use parent relationships
+  ✓ Add unit tests for depth edge cases
+  ✓ Test with real bylaws documents
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│ PHASE 3: VALIDATION (Option 1) - 2-3 hours                              │
+└─────────────────────────────────────────────────────────────────────────┘
+
+  ✓ Integration tests with complex documents
+  ✓ Regression tests for all hierarchy templates
+  ✓ Update documentation with new depth calculation logic
+
+═══════════════════════════════════════════════════════════════════════════════
+  KEY TAKEAWAYS
+═══════════════════════════════════════════════════════════════════════════════
+
+1️⃣  ROOT CAUSE:
+   Parser assigns depth from STATIC TEMPLATE, validator expects SEQUENTIAL FLOW
+
+2️⃣  SPECIFIC ERROR LOCATION:
+   • hierarchyDetector.js:268-272 (validation check)
+   • wordParser.js:651 (depth assignment)
+
+3️⃣  RECOMMENDED FIX:
+   Calculate depth from document CONTEXT, not template lookup
+
+4️⃣  QUICK WORKAROUND:
+   Change validation to WARNING instead of ERROR
+
+5️⃣  IMPACT:
+   Blocks valid documents from upload - HIGH PRIORITY FIX
+
+═══════════════════════════════════════════════════════════════════════════════

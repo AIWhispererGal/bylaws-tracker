@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Management - <%= organizationName %></title>
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+
+  <style>
+    :root {
+      --sidebar-width: 260px;
+      --header-height: 64px;
+      --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background-color: #f8f9fa;
+    }
+
+    /* Sidebar - reusing from dashboard */
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      width: var(--sidebar-width);
+      background: linear-gradient(180deg, #2c3e50 0%, #34495e 100%);
+      color: white;
+      overflow-y: auto;
+      z-index: 1000;
+      box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+    }
+
+    .sidebar-header {
+      padding: 1.5rem 1rem;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .nav-section {
+      padding: 1rem 0;
+    }
+
+    .nav-section-title {
+      padding: 0.5rem 1rem;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.5);
+      font-weight: 600;
+    }
+
+    .nav-link {
+      color: rgba(255,255,255,0.85);
+      padding: 0.75rem 1rem;
+      display: flex;
+      align-items: center;
+      transition: all 0.2s;
+      border-left: 3px solid transparent;
+    }
+
+    .nav-link:hover {
+      background-color: rgba(255,255,255,0.1);
+      color: white;
+      border-left-color: #3498db;
+    }
+
+    .nav-link.active {
+      background-color: rgba(52, 152, 219, 0.2);
+      color: white;
+      border-left-color: #3498db;
+    }
+
+    .nav-link i {
+      width: 24px;
+      margin-right: 0.75rem;
+      font-size: 1.1rem;
+    }
+
+    /* Main content */
+    .main-content {
+      margin-left: var(--sidebar-width);
+      min-height: 100vh;
+    }
+
+    .topbar {
+      height: var(--header-height);
+      background: white;
+      border-bottom: 1px solid #dee2e6;
+      padding: 0 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+    }
+
+    .user-menu {
+      position: relative;
+    }
+
+    .user-dropdown {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .user-dropdown:hover {
+      background: #f8f9fa;
+    }
+
+    .user-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--primary-gradient);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 0.875rem;
+    }
+
+    .content-wrapper {
+      padding: 2rem;
+    }
+
+    /* Users section */
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+    }
+
+    .usage-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      background: #f8f9fa;
+      border-radius: 8px;
+      font-size: 0.875rem;
+    }
+
+    .usage-indicator.at-limit {
+      background: #fff3cd;
+      color: #856404;
+    }
+
+    .user-card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      border: 1px solid #e9ecef;
+      margin-bottom: 1rem;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .user-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    }
+
+    .user-card-body {
+      padding: 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex: 1;
+    }
+
+    .user-avatar-large {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: var(--primary-gradient);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 1.25rem;
+      flex-shrink: 0;
+    }
+
+    .user-details {
+      flex: 1;
+    }
+
+    .user-name {
+      font-weight: 600;
+      color: #2c3e50;
+      margin: 0;
+      font-size: 1rem;
+    }
+
+    .user-email {
+      color: #6c757d;
+      font-size: 0.875rem;
+      margin: 0.25rem 0 0 0;
+    }
+
+    .user-meta {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-top: 0.5rem;
+    }
+
+    .meta-item {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      font-size: 0.875rem;
+      color: #6c757d;
+    }
+
+    .role-badge {
+      padding: 0.35rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Fix for global_admin/superuser visibility */
+    .role-badge.role-global_admin,
+    .role-badge.role-superuser {
+      background-color: #dc3545 !important; /* Red background */
+      color: white !important; /* White text */
+      font-weight: 600;
+      border: 2px solid #c82333;
+    }
+
+    .role-badge.role-owner {
+      background-color: #6f42c1 !important; /* Purple */
+      color: white !important;
+    }
+
+    .role-badge.role-admin {
+      background-color: #667eea !important; /* Blue-purple */
+      color: white !important;
+    }
+
+    .role-badge.role-member,
+    .role-badge.role-editor {
+      background-color: #28a745 !important; /* Green */
+      color: white !important;
+    }
+
+    .role-badge.role-viewer {
+      background-color: #6c757d !important; /* Gray */
+      color: white !important;
+    }
+
+    .status-badge {
+      padding: 0.35rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .status-active {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .status-pending {
+      background: #fff3cd;
+      color: #856404;
+    }
+
+    .user-actions {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
+      color: #6c757d;
+    }
+
+    .empty-state i {
+      font-size: 4rem;
+      margin-bottom: 1.5rem;
+      opacity: 0.5;
+    }
+
+    /* Modal styling */
+    .modal-content {
+      border-radius: 12px;
+      border: none;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+
+    .modal-header {
+      border-bottom: 1px solid #e9ecef;
+      padding: 1.5rem;
+    }
+
+    .modal-body {
+      padding: 1.5rem;
+    }
+
+    .modal-footer {
+      border-top: 1px solid #e9ecef;
+      padding: 1rem 1.5rem;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .sidebar {
+        transform: translateX(-100%);
+      }
+
+      .main-content {
+        margin-left: 0;
+      }
+
+      .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+      }
+
+      .user-card-body {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+      }
+
+      .user-actions {
+        width: 100%;
+        justify-content: flex-end;
+      }
+    }
+
+    /* Accessibility */
+    *:focus-visible {
+      outline: 2px solid #667eea;
+      outline-offset: 2px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-header">
+      <h4><i class="bi bi-file-text"></i> Bylaws Tracker</h4>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">Main</div>
+      <a href="/dashboard" class="nav-link">
+        <i class="bi bi-speedometer2"></i>
+        <span>Dashboard</span>
+      </a>
+      <a href="/dashboard/documents" class="nav-link">
+        <i class="bi bi-file-earmark-text"></i>
+        <span>Documents</span>
+      </a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">Settings</div>
+      <a href="/admin/organization" class="nav-link">
+        <i class="bi bi-gear"></i>
+        <span>Organization</span>
+      </a>
+      <a href="/admin/users" class="nav-link active">
+        <i class="bi bi-people"></i>
+        <span>Manage Members</span>
+      </a>
+      <a href="/admin/workflows" class="nav-link">
+        <i class="bi bi-diagram-3"></i>
+        <span>Workflows</span>
+      </a>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <!-- Top Bar -->
+    <div class="topbar">
+      <h1 class="h4 mb-0">User Management</h1>
+      <div class="d-flex align-items-center gap-3">
+        <!-- Role Badge -->
+        <% if (typeof currentUser !== 'undefined' && currentUser) { %>
+          <% if (currentUser.is_global_admin) { %>
+            <span class="badge bg-danger" data-bs-toggle="tooltip" title="Full system access across all organizations">
+              <i class="bi bi-shield-fill-check"></i> Global Admin
+            </span>
+          <% } else if (currentUser.role === 'owner') { %>
+            <span class="badge bg-warning text-dark" data-bs-toggle="tooltip" title="Organization Owner - full organization access">
+              <i class="bi bi-star-fill"></i> Owner
+            </span>
+          <% } else if (currentUser.role === 'admin') { %>
+            <span class="badge bg-warning text-dark" data-bs-toggle="tooltip" title="Administrator - full organization access">
+              <i class="bi bi-star-fill"></i> Admin
+            </span>
+          <% } %>
+        <% } %>
+
+        <!-- User Menu -->
+        <div class="user-menu">
+          <div class="dropdown">
+            <div class="user-dropdown" data-bs-toggle="dropdown" aria-expanded="false">
+              <div class="user-avatar">
+                <%= currentUser.email.charAt(0).toUpperCase() %>
+              </div>
+              <span><%= currentUser.email %></span>
+              <i class="bi bi-chevron-down"></i>
+            </div>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li><a class="dropdown-item" href="/auth/profile"><i class="bi bi-person me-2"></i>Profile</a></li>
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item" href="/auth/logout"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="content-wrapper">
+      <div class="page-header">
+        <div>
+          <h2 class="mb-2"><%= organizationName %> Users</h2>
+          <div class="usage-indicator <%= userCount >= maxUsers ? 'at-limit' : '' %>">
+            <i class="bi <%= userCount >= maxUsers ? 'bi-exclamation-triangle' : 'bi-people' %>"></i>
+            <span><strong><%= userCount %></strong> of <strong><%= maxUsers %></strong> users</span>
+          </div>
+        </div>
+        <% if (isAdmin && userCount < maxUsers) { %>
+          <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#inviteUserModal">
+            <i class="bi bi-plus-lg me-2"></i>Invite User
+          </button>
+        <% } %>
+      </div>
+
+      <!-- Users List -->
+      <div class="users-list">
+        <% if (users && users.length > 0) { %>
+          <% users.forEach(user => { %>
+            <div class="user-card">
+              <div class="user-card-body">
+                <div class="user-info">
+                  <div class="user-avatar-large">
+                    <%= user.email.charAt(0).toUpperCase() %>
+                  </div>
+                  <div class="user-details">
+                    <h5 class="user-name">
+                      <%= user.full_name || user.email %>
+                      <% if (user.id === currentUser.id) { %>
+                        <span class="badge bg-secondary ms-2">You</span>
+                      <% } %>
+                    </h5>
+                    <p class="user-email"><%= user.email %></p>
+                    <div class="user-meta">
+                      <div class="meta-item">
+                        <span class="role-badge role-<%= user.role %>"><%= user.role === 'global_admin' ? 'SUPERUSER' : user.role.toUpperCase() %></span>
+                      </div>
+                      <div class="meta-item">
+                        <span class="status-badge status-<%= user.status %>"><%= user.status %></span>
+                      </div>
+                      <div class="meta-item">
+                        <i class="bi bi-calendar-check"></i>
+                        Joined <%= new Date(user.created_at).toLocaleDateString() %>
+                      </div>
+                      <div class="meta-item">
+                        <i class="bi bi-clock-history"></i>
+                        Last active: <%= user.last_active ? new Date(user.last_active).toLocaleDateString() : 'Not tracked' %>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <% if (isAdmin && user.id !== currentUser.id) { %>
+                  <div class="user-actions">
+                    <button class="btn btn-sm btn-outline-primary"
+                            onclick="editUser('<%= user.id %>', '<%= user.role %>')">
+                      <i class="bi bi-pencil"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger"
+                            onclick="removeUser('<%= user.id %>', '<%= user.email %>')">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </div>
+                <% } %>
+              </div>
+            </div>
+          <% }); %>
+        <% } else { %>
+          <div class="empty-state">
+            <i class="bi bi-people"></i>
+            <h3>No Users Yet</h3>
+            <p>Invite team members to collaborate on bylaws management</p>
+            <% if (isAdmin) { %>
+              <button class="btn btn-primary mt-3" data-bs-toggle="modal" data-bs-target="#inviteUserModal">
+                <i class="bi bi-plus-circle me-2"></i>Invite First User
+              </button>
+            <% } %>
+          </div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Invite User Modal -->
+  <div class="modal fade" id="inviteUserModal" tabindex="-1" aria-labelledby="inviteUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="inviteUserModalLabel">
+            <i class="bi bi-person-plus me-2"></i>Invite User
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <form id="inviteUserForm">
+          <div class="modal-body">
+            <div class="mb-3">
+              <label for="inviteEmail" class="form-label">Email Address</label>
+              <input type="email" class="form-control" id="inviteEmail" required
+                     placeholder="user@example.com">
+            </div>
+            <div class="mb-3">
+              <label for="inviteRole" class="form-label">Role</label>
+              <select class="form-select" id="inviteRole" required>
+                <option value="viewer">Viewer - Can view documents</option>
+                <option value="editor">Editor - Can edit and suggest changes</option>
+                <option value="admin">Admin - Full organization access</option>
+              </select>
+            </div>
+            <div class="alert alert-info">
+              <i class="bi bi-info-circle me-2"></i>
+              An invitation email will be sent to the user with instructions to join.
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-send me-2"></i>Send Invitation
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Invite user form handler
+    document.getElementById('inviteUserForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const email = document.getElementById('inviteEmail').value;
+      const role = document.getElementById('inviteRole').value;
+
+      try {
+        const response = await fetch('/admin/users/invite', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, role })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          window.location.reload();
+        } else {
+          alert('Error: ' + data.error);
+        }
+      } catch (error) {
+        console.error('Error inviting user:', error);
+        alert('Failed to send invitation. Please try again.');
+      }
+    });
+
+    // Edit user role
+    function editUser(userId, currentRole) {
+      const newRole = prompt(`Change role for this user:\n\nCurrent: ${currentRole}\n\nEnter new role (admin/editor/viewer):`, currentRole);
+
+      if (newRole && ['admin', 'editor', 'viewer'].includes(newRole.toLowerCase())) {
+        fetch(`/admin/users/${userId}/role`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ role: newRole.toLowerCase() })
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            window.location.reload();
+          } else {
+            alert('Error: ' + data.error);
+          }
+        })
+        .catch(err => alert('Failed to update role'));
+      }
+    }
+
+    // Remove user
+    function removeUser(userId, userEmail) {
+      if (confirm(`Are you sure you want to remove ${userEmail} from this organization?`)) {
+        fetch(`/admin/users/${userId}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' }
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            window.location.reload();
+          } else {
+            alert('Error: ' + data.error);
+          }
+        })
+        .catch(err => alert('Failed to remove user'));
+      }
+    }
+  </script>
+</body>
+</html>

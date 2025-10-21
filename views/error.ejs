@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title || 'Error' %> - Bylaws Amendment Tracker</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        .error-container {
+            max-width: 600px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 3rem;
+            text-align: center;
+        }
+        .error-code {
+            font-size: 6rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0;
+        }
+        .error-title {
+            font-size: 2rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 1rem;
+        }
+        .error-message {
+            font-size: 1.1rem;
+            color: #666;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+        .btn-home {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            padding: 12px 40px;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 50px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .btn-home:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+        .error-details {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: #f8f9fa;
+            border-radius: 10px;
+            text-align: left;
+        }
+        .error-details pre {
+            margin: 0;
+            color: #721c24;
+            font-size: 0.9rem;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <div class="error-code"><%= (locals.status) || (locals.error && locals.error.status) || 500 %></div>
+        <h1 class="error-title"><%= locals.title || 'Error' %></h1>
+        <p class="error-message">
+            <%= locals.message || 'An unexpected error occurred. Please try again or contact support if the problem persists.' %>
+        </p>
+
+        <a href="/" class="btn btn-primary btn-home">
+            <i class="bi bi-house-door"></i> Go to Home
+        </a>
+
+        <% if (locals.backUrl) { %>
+            <a href="<%= backUrl %>" class="btn btn-outline-secondary mt-2">
+                <i class="bi bi-arrow-left"></i> Go Back
+            </a>
+        <% } %>
+
+        <% if (locals.error && process.env.NODE_ENV !== 'production') { %>
+            <div class="error-details">
+                <strong>Debug Information:</strong>
+                <pre><%= error.stack || error %></pre>
+            </div>
+        <% } %>
+
+        <% if (locals.suggestions && suggestions.length > 0) { %>
+            <div class="mt-4">
+                <h5>Possible Solutions:</h5>
+                <ul class="text-start">
+                    <% suggestions.forEach(function(suggestion) { %>
+                        <li><%= suggestion %></li>
+                    <% }); %>
+                </ul>
+            </div>
+        <% } %>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

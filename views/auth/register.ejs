@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register - Bylaws Amendment Tracker</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+  <style>
+    :root {
+      --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      --border-radius: 12px;
+    }
+
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      padding: 2rem 0;
+    }
+
+    .auth-container {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      padding: 3rem;
+      max-width: 520px;
+      width: 100%;
+      margin: 2rem;
+    }
+
+    .auth-header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .auth-icon {
+      font-size: 3.5rem;
+      background: var(--primary-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 1rem;
+    }
+
+    .auth-header h1 {
+      color: #2d3748;
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .auth-header p {
+      color: #6c757d;
+      font-size: 1rem;
+    }
+
+    .form-label {
+      font-weight: 600;
+      color: #2d3748;
+      margin-bottom: 0.5rem;
+    }
+
+    .form-label.required::after {
+      content: " *";
+      color: #ef4444;
+    }
+
+    .form-control {
+      border: 2px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 0.75rem 1rem;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+    }
+
+    .form-control:focus {
+      border-color: #667eea;
+      box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.25);
+    }
+
+    .form-control.is-invalid {
+      border-color: #ef4444;
+    }
+
+    .form-control.is-valid {
+      border-color: #10b981;
+    }
+
+    .input-group {
+      position: relative;
+    }
+
+    .input-group-text {
+      background: transparent;
+      border: 2px solid #e5e7eb;
+      border-right: none;
+      border-radius: 10px 0 0 10px;
+      color: #6c757d;
+    }
+
+    .input-group .form-control {
+      border-left: none;
+      border-radius: 0 10px 10px 0;
+    }
+
+    .input-group:focus-within .input-group-text {
+      border-color: #667eea;
+    }
+
+    .password-strength {
+      margin-top: 0.5rem;
+      font-size: 0.875rem;
+    }
+
+    .strength-bar {
+      height: 4px;
+      border-radius: 2px;
+      background: #e5e7eb;
+      margin-bottom: 0.25rem;
+      overflow: hidden;
+    }
+
+    .strength-bar-fill {
+      height: 100%;
+      transition: all 0.3s ease;
+      border-radius: 2px;
+    }
+
+    .strength-weak { background: #ef4444; width: 33%; }
+    .strength-medium { background: #f59e0b; width: 66%; }
+    .strength-strong { background: #10b981; width: 100%; }
+
+    .btn-register {
+      background: var(--primary-gradient);
+      border: none;
+      color: white;
+      font-weight: 600;
+      padding: 0.875rem;
+      border-radius: 10px;
+      width: 100%;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+      margin-top: 1rem;
+    }
+
+    .btn-register:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+    }
+
+    .btn-register:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .auth-divider {
+      display: flex;
+      align-items: center;
+      text-align: center;
+      margin: 1.5rem 0;
+    }
+
+    .auth-divider::before,
+    .auth-divider::after {
+      content: '';
+      flex: 1;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .auth-divider span {
+      padding: 0 1rem;
+      color: #6c757d;
+      font-size: 0.875rem;
+    }
+
+    .auth-links {
+      text-align: center;
+      margin-top: 1.5rem;
+    }
+
+    .auth-links a {
+      color: #667eea;
+      text-decoration: none;
+      font-weight: 600;
+      transition: color 0.3s ease;
+    }
+
+    .auth-links a:hover {
+      color: #764ba2;
+      text-decoration: underline;
+    }
+
+    .alert {
+      border-radius: 10px;
+      margin-bottom: 1.5rem;
+      border: none;
+    }
+
+    .alert-danger {
+      background-color: #fee2e2;
+      color: #991b1b;
+    }
+
+    .alert-success {
+      background-color: #d1fae5;
+      color: #065f46;
+    }
+
+    .form-text {
+      color: #6c757d;
+      font-size: 0.875rem;
+      margin-top: 0.25rem;
+    }
+
+    .invalid-feedback,
+    .valid-feedback {
+      display: none;
+      font-size: 0.875rem;
+      margin-top: 0.25rem;
+    }
+
+    .invalid-feedback {
+      color: #ef4444;
+    }
+
+    .valid-feedback {
+      color: #10b981;
+    }
+
+    .form-control.is-invalid ~ .invalid-feedback,
+    .form-control.is-valid ~ .valid-feedback {
+      display: block;
+    }
+
+    /* Loading spinner */
+    .spinner-border-sm {
+      width: 1rem;
+      height: 1rem;
+      border-width: 0.15em;
+    }
+
+    /* Mobile responsiveness */
+    @media (max-width: 576px) {
+      .auth-container {
+        padding: 2rem 1.5rem;
+        margin: 1rem;
+      }
+
+      .auth-header h1 {
+        font-size: 1.5rem;
+      }
+    }
+
+    /* Accessibility */
+    *:focus-visible {
+      outline: 2px solid #667eea;
+      outline-offset: 2px;
+    }
+  </style>
+</head>
+<body>
+  <div class="auth-container">
+    <div class="auth-header">
+      <div class="auth-icon">
+        <i class="bi bi-person-plus"></i>
+      </div>
+      <h1>Create Account</h1>
+      <p>Join us to manage your bylaws effectively</p>
+    </div>
+
+    <% if (typeof error !== 'undefined' && error) { %>
+      <div class="alert alert-danger" role="alert" aria-live="polite">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        <%= error %>
+      </div>
+    <% } %>
+
+    <% if (typeof success !== 'undefined' && success) { %>
+      <div class="alert alert-success" role="alert" aria-live="polite">
+        <i class="bi bi-check-circle me-2"></i>
+        <%= success %>
+      </div>
+    <% } %>
+
+    <form id="registerForm" action="/auth/register" method="POST" novalidate>
+      <div class="mb-3">
+        <label for="fullName" class="form-label required">
+          Full Name
+        </label>
+        <div class="input-group">
+          <span class="input-group-text">
+            <i class="bi bi-person"></i>
+          </span>
+          <input
+            type="text"
+            class="form-control"
+            id="fullName"
+            name="fullName"
+            placeholder="John Doe"
+            required
+            autocomplete="name"
+            aria-required="true"
+            value="<%= typeof fullName !== 'undefined' ? fullName : '' %>"
+          >
+        </div>
+        <div class="invalid-feedback">Please enter your full name</div>
+      </div>
+
+      <div class="mb-3">
+        <label for="email" class="form-label required">
+          Email Address
+        </label>
+        <div class="input-group">
+          <span class="input-group-text">
+            <i class="bi bi-envelope"></i>
+          </span>
+          <input
+            type="email"
+            class="form-control"
+            id="email"
+            name="email"
+            placeholder="you@example.com"
+            required
+            autocomplete="email"
+            aria-required="true"
+            value="<%= typeof email !== 'undefined' ? email : '' %>"
+          >
+        </div>
+        <div class="invalid-feedback">Please enter a valid email address</div>
+        <div class="form-text">We'll send a verification link to this email</div>
+      </div>
+
+      <div class="mb-3">
+        <label for="password" class="form-label required">
+          Password
+        </label>
+        <div class="input-group">
+          <span class="input-group-text">
+            <i class="bi bi-lock"></i>
+          </span>
+          <input
+            type="password"
+            class="form-control"
+            id="password"
+            name="password"
+            placeholder="Create a strong password"
+            required
+            autocomplete="new-password"
+            aria-required="true"
+            aria-describedby="passwordHelp"
+          >
+        </div>
+        <div class="password-strength" id="passwordStrength" style="display: none;">
+          <div class="strength-bar">
+            <div class="strength-bar-fill" id="strengthBar"></div>
+          </div>
+          <span id="strengthText"></span>
+        </div>
+        <div class="form-text" id="passwordHelp">
+          Minimum 8 characters, include uppercase, lowercase, and numbers
+        </div>
+        <div class="invalid-feedback"></div>
+      </div>
+
+      <div class="mb-3">
+        <label for="confirmPassword" class="form-label required">
+          Confirm Password
+        </label>
+        <div class="input-group">
+          <span class="input-group-text">
+            <i class="bi bi-lock-fill"></i>
+          </span>
+          <input
+            type="password"
+            class="form-control"
+            id="confirmPassword"
+            name="confirmPassword"
+            placeholder="Re-enter your password"
+            required
+            autocomplete="new-password"
+            aria-required="true"
+          >
+        </div>
+        <div class="invalid-feedback">Passwords do not match</div>
+        <div class="valid-feedback">Passwords match</div>
+      </div>
+
+      <div class="mb-3">
+        <label for="organizationCode" class="form-label">
+          Organization Code (Optional)
+        </label>
+        <div class="input-group">
+          <span class="input-group-text">
+            <i class="bi bi-building"></i>
+          </span>
+          <input
+            type="text"
+            class="form-control"
+            id="organizationCode"
+            name="organizationCode"
+            placeholder="Enter invitation code"
+            autocomplete="off"
+            value="<%= typeof organizationCode !== 'undefined' ? organizationCode : '' %>"
+          >
+        </div>
+        <div class="form-text">Have an invitation code? Enter it to join an organization</div>
+      </div>
+
+      <button
+        type="submit"
+        class="btn btn-register"
+        id="registerButton"
+        aria-label="Create your account"
+      >
+        <span id="buttonText">Create Account</span>
+        <span id="buttonSpinner" class="d-none">
+          <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+          Creating account...
+        </span>
+      </button>
+    </form>
+
+    <div class="auth-divider">
+      <span>or</span>
+    </div>
+
+    <div class="auth-links">
+      <p class="mb-0">
+        Already have an account?
+        <a href="/auth/login">Sign in</a>
+      </p>
+    </div>
+
+    <div class="auth-links mt-3">
+      <a href="/setup" class="d-block">
+        <i class="bi bi-arrow-left me-1"></i>
+        Back to Setup Wizard
+      </a>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/js/auth.js"></script>
+</body>
+</html>

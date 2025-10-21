@@ -94,10 +94,19 @@
           </h1>
           <p class="mb-0 mt-2">Organization Details & Management</p>
         </div>
-        <div>
-          <a href="/admin/dashboard" class="btn btn-light">
-            <i class="bi bi-arrow-left"></i> Back to Admin
-          </a>
+        <div class="d-flex align-items-center gap-3">
+          <!-- Role Badge -->
+          <% if (typeof user !== 'undefined' && user && user.is_global_admin) { %>
+            <span class="badge bg-light text-danger border border-danger" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
+              <i class="bi bi-shield-fill-check"></i> Global Admin
+            </span>
+          <% } %>
+
+          <div>
+            <a href="/admin/dashboard" class="btn btn-light">
+              <i class="bi bi-arrow-left"></i> Back to Admin
+            </a>
+          </div>
         </div>
       </div>
     </div>
@@ -252,15 +261,24 @@
           <% documents.forEach(doc => { %>
             <div class="col-md-6">
               <div class="document-item">
-                <h5><%= doc.title %></h5>
-                <div class="text-muted small">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                  <h5 class="mb-0"><%= doc.title %></h5>
+                </div>
+                <div class="text-muted small mb-2">
                   <i class="bi bi-file-earmark"></i> <%= doc.document_type || 'Document' %>
                   <span class="ms-3">
                     <i class="bi bi-calendar"></i> <%= new Date(doc.created_at).toLocaleDateString() %>
                   </span>
                 </div>
                 <% if (doc.status) { %>
-                  <span class="badge bg-info mt-2"><%= doc.status %></span>
+                  <span class="badge bg-info"><%= doc.status %></span>
+                <% } %>
+                <% if (typeof user !== 'undefined' && user && (user.is_global_admin || user.role === 'admin' || user.role === 'owner')) { %>
+                  <div class="mt-2">
+                    <a href="/admin/documents/<%= doc.id %>/hierarchy-editor" class="btn btn-outline-primary btn-sm">
+                      <i class="bi bi-diagram-3"></i> Configure Hierarchy
+                    </a>
+                  </div>
                 <% } %>
               </div>
             </div>

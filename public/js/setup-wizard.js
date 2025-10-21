@@ -17,6 +17,9 @@ const SetupWizard = {
         // Logo upload functionality
         this.initLogoUpload();
 
+        // Password confirmation validation
+        this.initPasswordValidation();
+
         // Real-time validation
         const inputs = form.querySelectorAll('input, select');
         inputs.forEach(input => {
@@ -33,7 +36,35 @@ const SetupWizard = {
     },
 
     /**
+     * Initialize Password Validation
+     */
+    initPasswordValidation() {
+        const password = document.getElementById('adminPassword');
+        const confirmPassword = document.getElementById('adminPasswordConfirm');
+
+        if (!password || !confirmPassword) return;
+
+        const validatePasswordMatch = () => {
+            if (confirmPassword.value && password.value !== confirmPassword.value) {
+                confirmPassword.setCustomValidity('Passwords do not match');
+                confirmPassword.classList.add('is-invalid');
+                confirmPassword.classList.remove('is-valid');
+            } else {
+                confirmPassword.setCustomValidity('');
+                if (confirmPassword.value) {
+                    confirmPassword.classList.remove('is-invalid');
+                    confirmPassword.classList.add('is-valid');
+                }
+            }
+        };
+
+        password.addEventListener('input', validatePasswordMatch);
+        confirmPassword.addEventListener('input', validatePasswordMatch);
+    },
+
+    /**
      * Initialize Logo Upload
+     * FIX-2: Prevent double popup by using single event listener
      */
     initLogoUpload() {
         const uploadArea = document.getElementById('logoUploadArea');
@@ -45,13 +76,18 @@ const SetupWizard = {
 
         if (!uploadArea) return;
 
-        // Click to upload
-        uploadPrompt.addEventListener('click', () => fileInput.click());
-        document.getElementById('browseBtn')?.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation(); // Prevent event bubbling to uploadPrompt
-            fileInput.click();
-        });
+        // FIX-2: Single unified click handler to prevent double-triggering
+        const browseBtn = document.getElementById('browseBtn');
+        if (browseBtn) {
+            browseBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                fileInput.click();
+            });
+        }
+
+        // Remove the uploadPrompt click listener to prevent double-popup
+        // Users can only click the browse button now
 
         // File selection
         fileInput.addEventListener('change', (e) => {
@@ -540,6 +576,7 @@ const SetupWizard = {
 
     /**
      * Initialize File Upload
+     * FIX-2: Prevent double popup by using single event listener
      */
     initFileUpload() {
         const uploadZone = document.getElementById('uploadZone');
@@ -549,13 +586,17 @@ const SetupWizard = {
 
         if (!uploadZone) return;
 
-        // Click to browse
-        uploadZone.addEventListener('click', () => fileInput.click());
-        browseBtn?.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation(); // Prevent event bubbling to uploadZone
-            fileInput.click();
-        });
+        // FIX-2: Single unified click handler to prevent double-triggering
+        if (browseBtn) {
+            browseBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                fileInput.click();
+            });
+        }
+
+        // Remove the uploadZone click listener to prevent double-popup
+        // Users can only click the browse button or drag-and-drop now
 
         // File selection
         fileInput.addEventListener('change', (e) => {

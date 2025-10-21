@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Assign Workflow - <%= document.title %></title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+</head>
+<body>
+  <div class="container mt-5">
+    <div class="card">
+      <div class="card-header bg-primary text-white">
+        <h3><i class="bi bi-diagram-3 me-2"></i>Assign Workflow Template</h3>
+      </div>
+      <div class="card-body">
+        <div class="mb-4">
+          <h5>Document: <%= document.title %></h5>
+          <p class="text-muted">
+            <span class="badge bg-secondary"><%= document.document_type %></span>
+            <span class="ms-2"><%= sections.length %> sections</span>
+          </p>
+        </div>
+
+        <% if (hasWorkflow) { %>
+          <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            <strong>Workflow Already Assigned</strong>
+            <p class="mb-0">This document already has a workflow assigned. To assign a different workflow, you must first remove the existing one.</p>
+          </div>
+        <% } else { %>
+          <form id="assignWorkflowForm">
+            <div class="mb-3">
+              <label for="templateSelect" class="form-label">
+                <strong>Select Workflow Template</strong>
+                <span class="text-danger">*</span>
+              </label>
+              <select class="form-select" id="templateSelect" required>
+                <option value="">-- Choose a template --</option>
+                <% templates.forEach(template => { %>
+                  <option value="<%= template.id %>" data-stages="<%= template.workflow_stages?.length || 0 %>">
+                    <%= template.name %>
+                    (<%= template.workflow_stages?.length || 0 %> stages)
+                    <%= template.is_default ? '⭐ Default' : '' %>
+                  </option>
+                <% }); %>
+              </select>
+              <small class="text-muted">Choose the approval workflow for this document</small>
+            </div>
+
+            <div id="templatePreview" class="mb-3" style="display: none;">
+              <h6>Workflow Stages:</h6>
+              <div id="stagesList"></div>
+            </div>
+
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn btn-success" id="assignBtn">
+                <i class="bi bi-check-circle me-2"></i>Assign Workflow
+              </button>
+              <a href="/dashboard" class="btn btn-secondary">
+                <i class="bi bi-x-circle me-2"></i>Cancel
+              </a>
+            </div>
+          </form>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const documentId = '<%= document.id %>';
+    const templates = <%- JSON.stringify(templates) %>;
+
+    document.getElementById('templateSelect')?.addEventListener('change', async (e) => {
+      const templateId = e.target.value;
+      const preview = document.getElementById('templatePreview');
+      const stagesList = document.getElementById('stagesList');
+
+      if (!templateId) {
+        preview.style.display = 'none';
+        return;
+      }
+
+      const template = templates.find(t => t.id === templateId);
+      if (template && template.workflow_stages) {
+        let html = '<ol class="list-group list-group-numbered">';
+        template.workflow_stages
+          .sort((a, b) => a.stage_order - b.stage_order)
+          .forEach(stage => {
+            html += `
+              <li class="list-group-item d-flex justify-content-between align-items-start">
+                <div>
+                  <strong>${stage.stage_name}</strong>
+                  <div class="small text-muted">
+                    ${stage.can_approve ? '✓ Can approve' : ''}
+                    ${stage.can_lock ? '✓ Can lock' : ''}
+                  </div>
+                </div>
+                <span class="badge" style="background-color: ${stage.display_color}">&nbsp;&nbsp;&nbsp;</span>
+              </li>
+            `;
+          });
+        html += '</ol>';
+        stagesList.innerHTML = html;
+        preview.style.display = 'block';
+      }
+    });
+
+    document.getElementById('assignWorkflowForm')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const templateId = document.getElementById('templateSelect').value;
+      const btn = document.getElementById('assignBtn');
+
+      if (!templateId) {
+        alert('Please select a workflow template');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Assigning...';
+
+      try {
+        const response = await fetch(`/api/workflow/documents/${documentId}/assign`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ templateId })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          alert(`Success! ${data.message}\n\n${data.data.sectionsInitialized} sections initialized at stage "${data.data.initialStage}"`);
+          window.location.href = `/dashboard/documents/${documentId}`;
+        } else {
+          alert('Error: ' + data.error);
+          btn.disabled = false;
+          btn.innerHTML = '<i class="bi bi-check-circle me-2"></i>Assign Workflow';
+        }
+      } catch (error) {
+        console.error('Assignment error:', error);
+        alert('An error occurred while assigning the workflow');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-check-circle me-2"></i>Assign Workflow';
+      }
+    });
+  </script>
+</body>
+</html>

@@ -85,12 +85,18 @@ const reorderStagesSchema = Joi.object({
  * Ensure user is authenticated
  */
 function requireAuth(req, res, next) {
+  console.log('[requireAuth] Checking auth for:', req.method, req.path);
+  console.log('[requireAuth] Session userId:', req.session?.userId);
+
   if (!req.session.userId) {
+    console.log('[requireAuth] No userId in session - returning 401');
     return res.status(401).json({
       success: false,
       error: 'Authentication required'
     });
   }
+
+  console.log('[requireAuth] Auth passed, calling next()');
   next();
 }
 
@@ -1389,6 +1395,30 @@ router.post('/sections/:sectionId/approve', requireAuth, async (req, res) => {
       });
     }
 
+    // Check if section is locked before approving
+    const { data: section, error: sectionError } = await supabaseService
+      .from('document_sections')
+      .select('is_locked')
+      .eq('id', sectionId)
+      .single();
+
+    if (sectionError) {
+      console.error('Error fetching section:', sectionError);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to check section lock status'
+      });
+    }
+
+    if (!section.is_locked) {
+      return res.status(400).json({
+        success: false,
+        error: 'Section must be locked before approval. Please select a suggestion and lock it first.',
+        code: 'SECTION_NOT_LOCKED',
+        requiresLock: true
+      });
+    }
+
     // Update workflow state to approved
     const { data: updatedState, error: updateError } = await supabaseService
       .from('section_workflow_states')
@@ -1651,9 +1681,207 @@ router.get('/sections/:sectionId/history', requireAuth, async (req, res) => {
   }
 });
 
+// ============================================================================
+// SUGGESTION REJECTION ENDPOINTS (Phase 2)
+// ============================================================================
+
+/**
+ * POST /api/workflow/suggestions/:suggestionId/reject
+ * Reject a suggestion at current workflow stage
+ * Requires admin permissions (owner, admin, or global admin)
+ */
+router.post('/suggestions/:suggestionId/reject', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { suggestionId } = req.params;
+    const { sectionId, notes } = req.body;
+    const { supabaseService } = req;
+    const userId = req.session.userId;
+
+    // Fetch current workflow stage for the section
+    const { data: workflowState } = await supabaseService
+      .from('section_workflow_states')
+      .select(`
+        workflow_stage_id,
+        workflow_stage:workflow_stages(stage_name)
+      `)
+      .eq('section_id', sectionId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const currentStageId = workflowState?.workflow_stage_id;
+    const stageName = workflowState?.workflow_stage?.stage_name || 'Unknown';
+
+    // Update suggestion with rejection info
+    const { data: suggestion, error } = await supabaseService
+      .from('suggestions')
+      .update({
+        status: 'rejected',
+        rejected_at: new Date().toISOString(),
+        rejected_by: userId,
+        rejected_at_stage_id: currentStageId,
+        rejection_notes: notes || `Rejected at ${stageName} stage`,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', suggestionId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error rejecting suggestion:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to reject suggestion'
+      });
+    }
+
+    res.json({
+      success: true,
+      suggestion,
+      message: `Suggestion rejected at ${stageName} stage`
+    });
+  } catch (error) {
+    console.error('Reject suggestion error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * POST /api/workflow/suggestions/:suggestionId/unreject
+ * Reverse rejection (admin only)
+ */
+router.post('/suggestions/:suggestionId/unreject', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { suggestionId } = req.params;
+    const { supabaseService } = req;
+
+    // Update suggestion to reopen
+    const { data: suggestion, error } = await supabaseService
+      .from('suggestions')
+      .update({
+        status: 'open',
+        rejected_at: null,
+        rejected_by: null,
+        rejected_at_stage_id: null,
+        rejection_notes: null,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', suggestionId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error unrejecting suggestion:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to unreject suggestion'
+      });
+    }
+
+    res.json({
+      success: true,
+      suggestion,
+      message: 'Suggestion reopened successfully'
+    });
+  } catch (error) {
+    console.error('Unreject suggestion error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/workflow/documents/:docId/suggestions
+ * Fetch suggestions with optional status filter
+ * NOTE: Rejected suggestions are NOT loaded by default (requires includeRejected=true)
+ */
+router.get('/documents/:docId/suggestions', requireAuth, async (req, res) => {
+  try {
+    const { docId } = req.params;
+    const { status, includeRejected } = req.query;
+    const { supabaseService } = req;
+
+    // DEFENSIVE CHECK - Critical for debugging
+    if (!supabaseService) {
+      console.error('[SUGGESTIONS API] CRITICAL: supabaseService is undefined!');
+      console.error('[SUGGESTIONS API] req.supabaseService:', req.supabaseService);
+      console.error('[SUGGESTIONS API] This indicates middleware failure');
+      return res.status(500).json({
+        success: false,
+        error: 'Database client not initialized',
+        details: 'Server configuration error - contact administrator'
+      });
+    }
+
+    console.log('[SUGGESTIONS API] Request params:', { docId, status, includeRejected });
+
+    let query = supabaseService
+      .from('suggestions')
+      .select('*')
+      .eq('document_id', docId);
+
+    console.log('[SUGGESTIONS API] Base query created');
+
+    // Filter by status if provided
+    if (status && status !== 'all') {
+      console.log('[SUGGESTIONS API] Adding status filter:', status);
+      query = query.eq('status', status);
+    }
+
+    // IMPORTANT: Exclude rejected unless explicitly requested
+    // This supports the "Show Rejected" toggle button
+    if (includeRejected !== 'true' && status !== 'rejected') {
+      console.log('[SUGGESTIONS API] Excluding rejected suggestions');
+      query = query.neq('status', 'rejected');
+    }
+
+    query = query.order('created_at', { ascending: false });
+
+    console.log('[SUGGESTIONS API] Executing query...');
+    const { data: suggestions, error } = await query;
+    console.log('[SUGGESTIONS API] Query completed. Error:', !!error, 'Count:', suggestions?.length || 0);
+
+    if (error) {
+      console.error('Error fetching suggestions:', error);
+      console.error('Query params:', { docId, status, includeRejected });
+      console.error('Error details:', JSON.stringify(error, null, 2));
+      return res.status(500).json({
+        success: false,
+        error: error.message || 'Failed to fetch suggestions',
+        details: error.hint || error.details || 'Check server logs'
+      });
+    }
+
+    res.json({
+      success: true,
+      suggestions: suggestions || [],
+      count: (suggestions || []).length,
+      includesRejected: includeRejected === 'true'
+    });
+  } catch (error) {
+    console.error('Fetch suggestions error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// ============================================================================
+// SECTION WORKFLOW ENDPOINTS (Enhanced Lock Endpoint)
+// ============================================================================
+
 /**
  * POST /api/workflow/sections/:sectionId/lock
  * Lock section with approved suggestion
+ *
+ * ENHANCED (Phase 2): Returns complete section data, updated workflow state,
+ * and updated suggestions list to enable client-side refresh without additional API calls
  */
 router.post('/sections/:sectionId/lock', requireAuth, async (req, res) => {
   try {
@@ -1770,13 +1998,465 @@ router.post('/sections/:sectionId/lock', requireAuth, async (req, res) => {
         .eq('id', currentState.id);
     }
 
+    // ============================================================================
+    // PHASE 2 ENHANCEMENT: Return comprehensive data for client-side refresh
+    // ============================================================================
+
+    // Get updated workflow state with permissions
+    const updatedState = await getCurrentWorkflowStage(supabaseService, sectionId);
+
+    // Check user permissions for this stage
+    const canApproveNow = await userCanApproveStage(
+      supabaseService,
+      userId,
+      updatedState?.workflow_stage_id,
+      organizationId
+    );
+
+    // Get updated suggestions list for this section
+    // First get suggestion IDs from suggestion_sections junction table
+    const { data: sectionSuggestions } = await supabaseService
+      .from('suggestion_sections')
+      .select('suggestion_id')
+      .eq('section_id', sectionId);
+
+    const suggestionIds = (sectionSuggestions || []).map(ss => ss.suggestion_id);
+
+    let updatedSuggestions = [];
+    if (suggestionIds.length > 0) {
+      const { data } = await supabaseService
+        .from('suggestions')
+        .select('*')
+        .in('id', suggestionIds)
+        .neq('status', 'rejected') // Exclude rejected by default
+        .order('created_at', { ascending: false });
+
+      updatedSuggestions = data || [];
+    }
+
     res.json({
       success: true,
       message: 'Section locked successfully',
-      section
+      // Complete section data
+      section: {
+        id: section.id,
+        is_locked: section.is_locked,
+        locked_at: section.locked_at,
+        locked_by: section.locked_by,
+        locked_text: section.locked_text,
+        current_text: section.current_text,
+        original_text: section.original_text,
+        selected_suggestion_id: section.selected_suggestion_id
+      },
+      // Updated workflow state
+      workflow: {
+        status: 'locked',
+        stage: updatedState?.workflow_stage,
+        canApprove: canApproveNow && updatedState?.workflow_stage?.can_approve,
+        canLock: false, // Disabled after locking
+        canEdit: updatedState?.workflow_stage?.can_edit && !section.is_locked
+      },
+      // Updated suggestions list
+      suggestions: updatedSuggestions || []
     });
   } catch (error) {
     console.error('Lock section error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// ============================================================================
+// DOCUMENT-LEVEL WORKFLOW PROGRESSION ENDPOINTS (MVP TASK 2)
+// ============================================================================
+
+/**
+ * POST /api/workflow/documents/:documentId/approve-unmodified
+ * Bulk approve all sections that have no suggestions (unmodified)
+ * Admin/Owner only
+ */
+router.post('/documents/:documentId/approve-unmodified', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { documentId } = req.params;
+    const { supabaseService } = req;
+    const userId = req.session.userId;
+    const organizationId = req.session.organizationId;
+
+    // Get all sections for this document
+    const { data: sections, error: sectionsError } = await supabaseService
+      .from('document_sections')
+      .select('id')
+      .eq('document_id', documentId);
+
+    if (sectionsError) {
+      console.error('Error fetching sections:', sectionsError);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to fetch document sections'
+      });
+    }
+
+    if (!sections || sections.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Document has no sections'
+      });
+    }
+
+    const sectionIds = sections.map(s => s.id);
+
+    // Get sections that have suggestions
+    const { data: suggestedSections } = await supabaseService
+      .from('suggestion_sections')
+      .select('section_id')
+      .in('section_id', sectionIds);
+
+    const sectionsWithSuggestions = new Set(
+      (suggestedSections || []).map(ss => ss.section_id)
+    );
+
+    // Find unmodified sections (no suggestions)
+    const unmodifiedSections = sections.filter(s => !sectionsWithSuggestions.has(s.id));
+
+    if (unmodifiedSections.length === 0) {
+      return res.json({
+        success: true,
+        message: 'No unmodified sections to approve',
+        approvedCount: 0
+      });
+    }
+
+    // Get current workflow states for unmodified sections
+    const { data: workflowStates } = await supabaseService
+      .from('section_workflow_states')
+      .select('section_id, workflow_stage_id, status')
+      .in('section_id', unmodifiedSections.map(s => s.id))
+      .order('created_at', { ascending: false });
+
+    // Build map of current states
+    const stateMap = new Map();
+    (workflowStates || []).forEach(state => {
+      if (!stateMap.has(state.section_id)) {
+        stateMap.set(state.section_id, state);
+      }
+    });
+
+    // Approve each unmodified section
+    let approvedCount = 0;
+    for (const section of unmodifiedSections) {
+      const currentState = stateMap.get(section.id);
+
+      if (!currentState || currentState.status === 'approved') {
+        continue; // Skip if no workflow or already approved
+      }
+
+      // Update to approved
+      const { error: updateError } = await supabaseService
+        .from('section_workflow_states')
+        .update({
+          status: 'approved',
+          actioned_by: userId,
+          actioned_at: new Date().toISOString(),
+          approval_metadata: {
+            action: 'auto-approved',
+            reason: 'No modifications suggested',
+            timestamp: new Date().toISOString()
+          }
+        })
+        .eq('section_id', section.id)
+        .eq('workflow_stage_id', currentState.workflow_stage_id);
+
+      if (!updateError) {
+        approvedCount++;
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Approved ${approvedCount} unmodified section(s)`,
+      approvedCount,
+      totalSections: sections.length
+    });
+  } catch (error) {
+    console.error('Approve unmodified sections error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * POST /api/workflow/documents/:documentId/progress
+ * Progress document to next workflow stage
+ * Creates new version with all approved changes
+ * Admin/Owner only
+ */
+router.post('/documents/:documentId/progress', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { documentId } = req.params;
+    const { notes } = req.body;
+    const { supabaseService } = req;
+    const userId = req.session.userId;
+    const userEmail = req.session.userEmail;
+    const organizationId = req.session.organizationId;
+
+    // Get document details
+    const { data: document, error: docError } = await supabaseService
+      .from('documents')
+      .select('id, title, version, organization_id')
+      .eq('id', documentId)
+      .single();
+
+    if (docError || !document) {
+      return res.status(404).json({
+        success: false,
+        error: 'Document not found'
+      });
+    }
+
+    // Get workflow configuration
+    const { data: workflow } = await supabaseService
+      .from('document_workflows')
+      .select(`
+        workflow_template_id,
+        workflow_templates:workflow_template_id (
+          id,
+          name,
+          workflow_stages (
+            id,
+            stage_name,
+            stage_order
+          )
+        )
+      `)
+      .eq('document_id', documentId)
+      .single();
+
+    if (!workflow) {
+      return res.status(400).json({
+        success: false,
+        error: 'Document has no workflow assigned'
+      });
+    }
+
+    // Get all sections
+    const { data: sections, error: sectionsError } = await supabaseService
+      .from('document_sections')
+      .select('*')
+      .eq('document_id', documentId)
+      .order('path_ordinals', { ascending: true });
+
+    if (sectionsError || !sections) {
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to fetch document sections'
+      });
+    }
+
+    // Check if ALL sections are approved
+    const sectionIds = sections.map(s => s.id);
+    const { data: workflowStates } = await supabaseService
+      .from('section_workflow_states')
+      .select('section_id, status, workflow_stage_id')
+      .in('section_id', sectionIds)
+      .order('created_at', { ascending: false });
+
+    // Build map of current states
+    const stateMap = new Map();
+    (workflowStates || []).forEach(state => {
+      if (!stateMap.has(state.section_id)) {
+        stateMap.set(state.section_id, state);
+      }
+    });
+
+    // Check if all sections are approved
+    const unapprovedSections = sections.filter(s => {
+      const state = stateMap.get(s.id);
+      return !state || state.status !== 'approved';
+    });
+
+    if (unapprovedSections.length > 0) {
+      return res.status(400).json({
+        success: false,
+        error: `Cannot progress: ${unapprovedSections.length} section(s) not approved`,
+        unapprovedCount: unapprovedSections.length,
+        totalSections: sections.length
+      });
+    }
+
+    // Build new document version with approved changes
+    const sectionsSnapshot = sections.map(section => {
+      // Use locked_text if locked, otherwise current_text or original_text
+      const finalText = section.is_locked
+        ? section.locked_text
+        : (section.current_text || section.original_text);
+
+      return {
+        ...section,
+        final_text: finalText,
+        was_modified: section.is_locked && section.locked_text !== section.original_text
+      };
+    });
+
+    // Get all approved suggestions
+    const { data: approvedSuggestions } = await supabaseService
+      .from('suggestions')
+      .select('id, section_id, status')
+      .eq('document_id', documentId)
+      .eq('status', 'approved');
+
+    const appliedSuggestions = (approvedSuggestions || []).map(s => ({
+      id: s.id,
+      section_id: s.section_id,
+      action: 'applied',
+      applied_at: new Date().toISOString()
+    }));
+
+    // Get current stage name
+    const currentStage = stateMap.values().next().value;
+    const stageName = workflow.workflow_templates?.workflow_stages?.find(
+      s => s.id === currentStage?.workflow_stage_id
+    )?.stage_name || 'Unknown';
+
+    // Create new document version using database function
+    const { data: versionData, error: versionError } = await supabaseService
+      .rpc('create_document_version', {
+        p_document_id: documentId,
+        p_version_name: `Progression from ${stageName}`,
+        p_description: notes || `Document progressed from ${stageName} stage`,
+        p_sections_snapshot: sectionsSnapshot,
+        p_approval_snapshot: workflowStates || [],
+        p_applied_suggestions: appliedSuggestions,
+        p_workflow_stage: stageName,
+        p_workflow_template_id: workflow.workflow_template_id,
+        p_created_by: userId,
+        p_created_by_email: userEmail
+      });
+
+    if (versionError) {
+      console.error('Error creating document version:', versionError);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to create document version'
+      });
+    }
+
+    // Mark suggestions as implemented
+    if (approvedSuggestions && approvedSuggestions.length > 0) {
+      await supabaseService
+        .from('suggestions')
+        .update({
+          status: 'implemented',
+          implemented_at: new Date().toISOString(),
+          implemented_in_version: versionData[0].version_id
+        })
+        .in('id', approvedSuggestions.map(s => s.id));
+    }
+
+    res.json({
+      success: true,
+      message: `Document progressed successfully to version ${versionData[0].version_number}`,
+      version: {
+        id: versionData[0].version_id,
+        version_number: versionData[0].version_number
+      },
+      stats: {
+        sectionsProcessed: sections.length,
+        suggestionsApplied: appliedSuggestions.length,
+        fromStage: stageName
+      }
+    });
+  } catch (error) {
+    console.error('Progress document error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/workflow/documents/:documentId/progress-status
+ * Check if document is ready to progress (all sections approved)
+ */
+router.get('/documents/:documentId/progress-status', requireAuth, async (req, res) => {
+  try {
+    const { documentId } = req.params;
+    const { supabaseService } = req;
+
+    // Get all sections
+    const { data: sections } = await supabaseService
+      .from('document_sections')
+      .select('id')
+      .eq('document_id', documentId);
+
+    if (!sections || sections.length === 0) {
+      return res.json({
+        success: true,
+        canProgress: false,
+        reason: 'No sections in document',
+        stats: {
+          totalSections: 0,
+          approvedSections: 0,
+          percentage: 0
+        }
+      });
+    }
+
+    const sectionIds = sections.map(s => s.id);
+
+    // Get workflow states
+    const { data: workflowStates } = await supabaseService
+      .from('section_workflow_states')
+      .select('section_id, status')
+      .in('section_id', sectionIds)
+      .order('created_at', { ascending: false });
+
+    // Build map of current states
+    const stateMap = new Map();
+    (workflowStates || []).forEach(state => {
+      if (!stateMap.has(state.section_id)) {
+        stateMap.set(state.section_id, state);
+      }
+    });
+
+    // Count approved sections
+    const approvedCount = sections.filter(s => {
+      const state = stateMap.get(s.id);
+      return state && state.status === 'approved';
+    }).length;
+
+    const percentage = Math.round((approvedCount / sections.length) * 100);
+    const canProgress = approvedCount === sections.length;
+
+    // Count unmodified sections
+    const { data: suggestedSections } = await supabaseService
+      .from('suggestion_sections')
+      .select('section_id')
+      .in('section_id', sectionIds);
+
+    const sectionsWithSuggestions = new Set(
+      (suggestedSections || []).map(ss => ss.section_id)
+    );
+
+    const unmodifiedCount = sections.filter(s => !sectionsWithSuggestions.has(s.id)).length;
+
+    res.json({
+      success: true,
+      canProgress,
+      reason: canProgress ? 'All sections approved' : `${sections.length - approvedCount} section(s) pending approval`,
+      stats: {
+        totalSections: sections.length,
+        approvedSections: approvedCount,
+        unmodifiedSections: unmodifiedCount,
+        percentage
+      }
+    });
+  } catch (error) {
+    console.error('Check progress status error:', error);
     res.status(500).json({
       success: false,
       error: error.message

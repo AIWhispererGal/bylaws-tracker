@@ -141,28 +141,59 @@
 
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label for="level1Name" class="form-label">Top Level Name</label>
-                            <input
-                                type="text"
-                                class="form-control"
-                                id="level1Name"
-                                name="level1_name"
-                                placeholder="e.g., Article, Chapter, Part"
-                            >
-                            <div class="form-text">Singular form (e.g., "Article")</div>
+                            <label for="level1Name" class="form-label">Level 1 (Top)</label>
+                            <input type="text" class="form-control" id="level1Name" name="level1_name" placeholder="e.g., Article">
+                            <div class="form-text">Example: Article, Chapter, Part</div>
                         </div>
-
                         <div class="col-md-6">
-                            <label for="level2Name" class="form-label">Sub Level Name</label>
-                            <input
-                                type="text"
-                                class="form-control"
-                                id="level2Name"
-                                name="level2_name"
-                                placeholder="e.g., Section, Subsection"
-                            >
-                            <div class="form-text">Singular form (e.g., "Section")</div>
+                            <label for="level2Name" class="form-label">Level 2</label>
+                            <input type="text" class="form-control" id="level2Name" name="level2_name" placeholder="e.g., Section">
+                            <div class="form-text">Example: Section, Division</div>
                         </div>
+                        <div class="col-md-6">
+                            <label for="level3Name" class="form-label">Level 3</label>
+                            <input type="text" class="form-control" id="level3Name" name="level3_name" placeholder="e.g., Subsection">
+                            <div class="form-text">Example: Subsection, Subdivision</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="level4Name" class="form-label">Level 4</label>
+                            <input type="text" class="form-control" id="level4Name" name="level4_name" placeholder="e.g., Paragraph">
+                            <div class="form-text">Example: Paragraph, Clause</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="level5Name" class="form-label">Level 5</label>
+                            <input type="text" class="form-control" id="level5Name" name="level5_name" placeholder="e.g., Subparagraph">
+                            <div class="form-text">Example: Subparagraph, Subclause</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="level6Name" class="form-label">Level 6</label>
+                            <input type="text" class="form-control" id="level6Name" name="level6_name" placeholder="e.g., Item">
+                            <div class="form-text">Example: Item, Point</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="level7Name" class="form-label">Level 7</label>
+                            <input type="text" class="form-control" id="level7Name" name="level7_name" placeholder="e.g., Subitem">
+                            <div class="form-text">Example: Subitem, Subpoint</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="level8Name" class="form-label">Level 8</label>
+                            <input type="text" class="form-control" id="level8Name" name="level8_name" placeholder="e.g., Detail">
+                            <div class="form-text">Example: Detail, Element</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="level9Name" class="form-label">Level 9</label>
+                            <input type="text" class="form-control" id="level9Name" name="level9_name" placeholder="e.g., Subdetail">
+                            <div class="form-text">Example: Subdetail, Subelement</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="level10Name" class="form-label">Level 10 (Deepest)</label>
+                            <input type="text" class="form-control" id="level10Name" name="level10_name" placeholder="e.g., Component">
+                            <div class="form-text">Example: Component, Fragment</div>
+                        </div>
+                    </div>
+                    <div class="alert alert-info mt-3">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Note:</strong> Leave levels blank if you don't need all 10 levels. The parser will use as many as you define.
                     </div>
 
                     <!-- Numbering Style -->

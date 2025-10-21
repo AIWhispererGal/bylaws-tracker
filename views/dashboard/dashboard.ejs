@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %> - Bylaws Amendment Tracker</title>
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="/css/mobile-menu.css">
+  <link rel="stylesheet" href="/css/style.css">
+
+  <style>
+    :root {
+      --sidebar-width: 260px;
+      --header-height: 64px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background-color: #f8f9fa;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      width: var(--sidebar-width);
+      background: linear-gradient(180deg, #2c3e50 0%, #34495e 100%);
+      color: white;
+      overflow-y: auto;
+      z-index: 1000;
+      box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+    }
+
+    .sidebar-header {
+      padding: 1.5rem 1rem;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .sidebar-header h4 {
+      margin: 0;
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    .nav-section {
+      padding: 1rem 0;
+    }
+
+    .nav-section-title {
+      padding: 0.5rem 1rem;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.5);
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .nav-link {
+      color: rgba(255,255,255,0.85);
+      padding: 0.75rem 1rem;
+      display: flex;
+      align-items: center;
+      transition: all 0.2s;
+      border-left: 3px solid transparent;
+    }
+
+    .nav-link:hover {
+      background-color: rgba(255,255,255,0.1);
+      color: white;
+      border-left-color: #3498db;
+    }
+
+    .nav-link.active {
+      background-color: rgba(52, 152, 219, 0.2);
+      color: white;
+      border-left-color: #3498db;
+    }
+
+    .nav-link i {
+      width: 24px;
+      margin-right: 0.75rem;
+      font-size: 1.1rem;
+    }
+
+    /* Main content */
+    .main-content {
+      margin-left: var(--sidebar-width);
+      min-height: 100vh;
+    }
+
+    .topbar {
+      height: var(--header-height);
+      background: white;
+      border-bottom: 1px solid #dee2e6;
+      padding: 0 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+    }
+
+    .user-menu {
+      position: relative;
+    }
+
+    .user-dropdown {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .user-dropdown:hover {
+      background: #f8f9fa;
+    }
+
+    .user-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 0.875rem;
+    }
+
+    .content-wrapper {
+      padding: 2rem;
+    }
+
+    /* Stats cards */
+    .stat-card {
+      background: white;
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      transition: transform 0.2s, box-shadow 0.2s;
+      border: 1px solid #e9ecef;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    }
+
+    .stat-card .icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .stat-card .icon.primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+    .stat-card .icon.success { background: linear-gradient(135deg, #48c6ef 0%, #6f86d6 100%); color: white; }
+    .stat-card .icon.warning { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; }
+    .stat-card .icon.info { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; }
+
+    .stat-card .value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #2c3e50;
+      margin-bottom: 0.25rem;
+    }
+
+    .stat-card .label {
+      color: #6c757d;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+
+    /* Content sections */
+    .content-section {
+      background: white;
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      border: 1px solid #e9ecef;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 2px solid #f8f9fa;
+    }
+
+    .section-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #2c3e50;
+      margin: 0;
+    }
+
+    /* Table styling */
+    .table-wrapper {
+      overflow-x: auto;
+    }
+
+    .data-table {
+      width: 100%;
+      margin: 0;
+    }
+
+    .data-table th {
+      background-color: #f8f9fa;
+      color: #495057;
+      font-weight: 600;
+      font-size: 0.875rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 0.75rem 1rem;
+      border-bottom: 2px solid #dee2e6;
+    }
+
+    .data-table td {
+      padding: 1rem;
+      vertical-align: middle;
+    }
+
+    .data-table tbody tr {
+      transition: background-color 0.2s;
+    }
+
+    .data-table tbody tr:hover {
+      background-color: #f8f9fa;
+    }
+
+    /* Badges */
+    .status-badge {
+      padding: 0.35rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Activity feed */
+    .activity-item {
+      display: flex;
+      align-items: start;
+      padding: 1rem 0;
+      border-bottom: 1px solid #f8f9fa;
+    }
+
+    .activity-item:last-child {
+      border-bottom: none;
+    }
+
+    .activity-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 1rem;
+      flex-shrink: 0;
+    }
+
+    .activity-icon.primary { background: #e3f2fd; color: #1976d2; }
+    .activity-icon.success { background: #e8f5e9; color: #388e3c; }
+    .activity-icon.info { background: #e1f5fe; color: #0288d1; }
+
+    .activity-content {
+      flex: 1;
+    }
+
+    .activity-description {
+      color: #2c3e50;
+      font-size: 0.875rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .activity-time {
+      color: #6c757d;
+      font-size: 0.75rem;
+    }
+
+    /* Loading states */
+    .loading-spinner {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem;
+      color: #6c757d;
+    }
+
+    /* Empty states */
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: #6c757d;
+    }
+
+    .empty-state i {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      opacity: 0.5;
+    }
+
+    /* Suggestions list styles */
+    .suggestion-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .suggestion-item {
+      padding: 1rem;
+      border-bottom: 1px solid #f8f9fa;
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    .suggestion-item:last-child {
+      border-bottom: none;
+    }
+
+    .suggestion-item:hover {
+      background-color: #f8f9fa;
+    }
+
+    .status-badge.status-open {
+      background-color: #d4edda;
+      color: #155724;
+    }
+
+    .status-badge.status-rejected {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+
+    .suggestion-details {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .suggestion-details .citation {
+      font-weight: 600;
+      color: #2c3e50;
+      font-size: 0.875rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .suggestion-details .preview {
+      color: #495057;
+      font-size: 0.875rem;
+      font-style: italic;
+      margin-bottom: 0.5rem;
+      line-height: 1.4;
+    }
+
+    .suggestion-details .meta {
+      color: #6c757d;
+      font-size: 0.75rem;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .sidebar {
+        transform: translateX(-100%);
+      }
+
+      .main-content {
+        margin-left: 0;
+      }
+
+      .task-item {
+        flex-wrap: wrap;
+      }
+
+      .task-meta {
+        width: 100%;
+        justify-content: flex-start;
+        margin-top: 0.5rem;
+      }
+
+      .task-title,
+      .task-description {
+        white-space: normal;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-header">
+      <h4><i class="bi bi-file-text"></i> Bylaws Tracker</h4>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">Main</div>
+      <a href="/dashboard" class="nav-link active">
+        <i class="bi bi-speedometer2"></i>
+        <span>Dashboard</span>
+      </a>
+      <a href="/dashboard/documents" class="nav-link">
+        <i class="bi bi-file-earmark-text"></i>
+        <span>Documents</span>
+      </a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">Workflow</div>
+      <a href="#suggestions" class="nav-link" onclick="return false;" data-bs-toggle="tooltip" title="Coming soon - Suggestions view">
+        <i class="bi bi-lightbulb"></i>
+        <span>Suggestions</span>
+        <span class="badge bg-secondary ms-auto" style="font-size: 0.65rem;">Soon</span>
+      </a>
+      <a href="#approvals" class="nav-link" onclick="return false;" data-bs-toggle="tooltip" title="Coming soon - Approvals view">
+        <i class="bi bi-clipboard-check"></i>
+        <span>Approvals</span>
+        <span class="badge bg-secondary ms-auto" style="font-size: 0.65rem;">Soon</span>
+      </a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">Settings</div>
+      <a href="/admin/organization" class="nav-link">
+        <i class="bi bi-gear"></i>
+        <span>Organization</span>
+      </a>
+      <% if (typeof currentUser !== 'undefined' && currentUser && (currentUser.role === 'admin' || currentUser.role === 'owner' || currentUser.is_global_admin)) { %>
+        <a href="/admin/users" class="nav-link">
+          <i class="bi bi-people"></i>
+          <span>Manage Members</span>
+        </a>
+      <% } %>
+      <% if (typeof currentUser !== 'undefined' && currentUser && (currentUser.role === 'admin' || currentUser.role === 'owner' || currentUser.is_global_admin)) { %>
+        <a href="/admin/workflows" class="nav-link">
+          <i class="bi bi-diagram-3"></i>
+          <span>Workflows</span>
+        </a>
+      <% } %>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <!-- Top Bar -->
+    <div class="topbar">
+      <h1 class="h4 mb-0">Dashboard</h1>
+      <div class="d-flex align-items-center gap-3">
+        <!-- Role and Context Badges -->
+        <% if (typeof currentUser !== 'undefined' && currentUser) { %>
+          <div class="role-badges">
+            <!-- Global Admin Badge -->
+            <% if (currentUser.is_global_admin) { %>
+              <span class="badge badge-danger" data-bs-toggle="tooltip" title="Full system access across all organizations">
+                <i class="bi bi-shield-fill-check"></i> Global Admin
+              </span>
+            <% } %>
+
+            <!-- Organization Context Badge -->
+            <% if (typeof currentOrganization !== 'undefined' && currentOrganization) { %>
+              <span class="current-org-badge" data-bs-toggle="tooltip" title="Currently viewing <%= currentOrganization.name %>">
+                <i class="bi bi-building"></i>
+                <%= currentOrganization.name %>
+              </span>
+            <% } %>
+
+            <!-- Role Badges -->
+            <% if (currentUser.role === 'viewer') { %>
+              <span class="badge badge-info" data-bs-toggle="tooltip" title="View-only access - cannot create or approve suggestions">
+                <i class="bi bi-eye"></i> Viewer
+              </span>
+            <% } else if (currentUser.role === 'admin' || currentUser.role === 'owner') { %>
+              <span class="badge badge-warning" data-bs-toggle="tooltip" title="<%= currentUser.role === 'owner' ? 'Organization Owner' : 'Administrator' %> - full organization access">
+                <i class="bi bi-star-fill"></i> <%= currentUser.role === 'owner' ? 'Owner' : 'Admin' %>
+              </span>
+            <% } %>
+          </div>
+        <% } %>
+
+        <!-- Action Buttons -->
+        <% if (typeof currentUser !== 'undefined' && currentUser) { %>
+          <button
+            class="btn btn-outline-primary btn-sm"
+            <% if (currentUser.role === 'viewer') { %>
+              disabled
+              data-bs-toggle="tooltip"
+              title="Export feature requires member access or higher. Contact your administrator."
+            <% } %>
+          >
+            <i class="bi bi-download me-1"></i> Export
+          </button>
+          <button
+            class="btn btn-primary btn-sm"
+            data-bs-toggle="modal"
+            data-bs-target="#uploadDocumentModal"
+            <% if (currentUser.role === 'viewer') { %>
+              disabled
+              data-bs-toggle="tooltip"
+              title="Viewers cannot create documents. Contact your administrator to upgrade your access."
+            <% } %>
+          >
+            <i class="bi bi-plus-lg me-1"></i> New Document
+          </button>
+        <% } %>
+
+        <!-- User Menu -->
+        <% if (typeof currentUser !== 'undefined' && currentUser) { %>
+          <div class="user-menu">
+            <div class="dropdown">
+              <div class="user-dropdown" data-bs-toggle="dropdown" aria-expanded="false" role="button" tabindex="0">
+                <div class="user-avatar" aria-hidden="true">
+                  <%= currentUser.email ? currentUser.email.charAt(0).toUpperCase() : 'U' %>
+                </div>
+                <span><%= currentUser.email || 'User' %></span>
+                <i class="bi bi-chevron-down"></i>
+              </div>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="/auth/profile"><i class="bi bi-person me-2"></i>Profile</a></li>
+                <% if (currentUser.role === 'admin' || currentUser.role === 'owner' || currentUser.is_global_admin) { %>
+                  <li><a class="dropdown-item" href="/admin/users"><i class="bi bi-people me-2"></i>Manage Users</a></li>
+                  <li><hr class="dropdown-divider"></li>
+                <% } %>
+                <li><a class="dropdown-item" href="/auth/select"><i class="bi bi-building me-2"></i>Switch Organization</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item text-danger" href="/auth/logout"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
+              </ul>
+            </div>
+          </div>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="content-wrapper">
+      <!-- Viewer Mode Alert -->
+      <% if (typeof currentUser !== 'undefined' && currentUser && currentUser.role === 'viewer') { %>
+        <div class="viewer-mode-alert">
+          <i class="bi bi-info-circle-fill"></i>
+          <div class="alert-content">
+            <div class="alert-title">View-Only Access</div>
+            <div class="alert-message">
+              You have read-only access to this organization. To create suggestions or approve changes,
+              contact your administrator to upgrade your access level.
+            </div>
+          </div>
+        </div>
+      <% } %>
+
+      <!-- Stats Row -->
+      <div class="row g-4 mb-4" id="statsContainer">
+        <div class="col-md-3">
+          <div class="stat-card">
+            <div class="icon primary">
+              <i class="bi bi-file-earmark-text"></i>
+            </div>
+            <div class="value" id="totalDocuments">-</div>
+            <div class="label">Total Documents</div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="stat-card">
+            <div class="icon success">
+              <i class="bi bi-list-check"></i>
+            </div>
+            <div class="value" id="activeSections">-</div>
+            <div class="label">Active Sections</div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="stat-card">
+            <div class="icon warning">
+              <i class="bi bi-lightbulb"></i>
+            </div>
+            <div class="value" id="pendingSuggestions">-</div>
+            <div class="label">Pending Suggestions</div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="stat-card">
+            <div class="icon info">
+              <i class="bi bi-graph-up"></i>
+            </div>
+            <div class="value" id="approvalProgress">-</div>
+            <div class="label">Approval Progress</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Documents and Recent Suggestions Row -->
+      <div class="row g-4">
+        <!-- Recent Documents -->
+        <div class="col-lg-7">
+          <div class="content-section">
+            <div class="section-header">
+              <h2 class="section-title">Recent Documents</h2>
+              <a href="/dashboard/documents" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="table-wrapper">
+              <table class="table data-table" id="documentsTable">
+                <thead>
+                  <tr>
+                    <th>Title</th>
+                    <th>Type</th>
+                    <th>Sections</th>
+                    <th>Status</th>
+                    <th>Modified</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="documentsBody">
+                  <tr>
+                    <td colspan="6" class="text-center">
+                      <div class="loading-spinner">
+                        <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                        Loading documents...
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Suggestions Feed -->
+        <div class="col-lg-5">
+          <div class="content-section">
+            <div class="section-header">
+              <h2 class="section-title">Recent Suggestions</h2>
+              <div class="btn-group btn-group-sm" role="group">
+                <button type="button" class="btn btn-outline-secondary active" onclick="Dashboard.filterSuggestions('all')">All</button>
+                <button type="button" class="btn btn-outline-secondary" onclick="Dashboard.filterSuggestions('open')">Open</button>
+                <button type="button" class="btn btn-outline-secondary" onclick="Dashboard.filterSuggestions('rejected')">Rejected</button>
+              </div>
+            </div>
+            <% if (typeof recentSuggestions !== 'undefined' && recentSuggestions && recentSuggestions.length > 0) { %>
+              <ul class="suggestion-list" id="suggestionsList">
+                <% recentSuggestions.forEach(function(suggestion) { %>
+                  <li class="suggestion-item" data-status="<%= suggestion.status %>">
+                    <span class="status-badge status-<%= suggestion.status %>">
+                      <%= suggestion.status === 'open' ? 'Open' : suggestion.status === 'rejected' ? 'Rejected' : suggestion.status.charAt(0).toUpperCase() + suggestion.status.slice(1) %>
+                    </span>
+                    <div class="suggestion-details">
+                      <div class="citation">
+                        <%= suggestion.section_citation || 'Unknown Section' %>
+                      </div>
+                      <div class="preview">
+                        "<%= (suggestion.suggested_content || suggestion.suggested_text || '').substring(0, 80) %><%= (suggestion.suggested_content || suggestion.suggested_text || '').length > 80 ? '...' : '' %>"
+                      </div>
+                      <div class="meta">
+                        by <%= suggestion.author_name || suggestion.author_email || 'Anonymous' %>,
+                        <%= new Date(suggestion.created_at).toLocaleDateString() %>
+                      </div>
+                    </div>
+                  </li>
+                <% }); %>
+              </ul>
+            <% } else { %>
+              <div class="empty-state" id="suggestionsList">
+                <i class="bi bi-lightbulb"></i>
+                <p class="mb-0 mt-2">No recent suggestions</p>
+              </div>
+            <% } %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Document Upload Modal -->
+  <div class="modal fade" id="uploadDocumentModal" tabindex="-1" aria-labelledby="uploadDocumentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="uploadDocumentModalLabel">
+            <i class="bi bi-file-earmark-arrow-up"></i> Upload New Document
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="uploadDocumentForm" enctype="multipart/form-data">
+            <div class="mb-3">
+              <label for="documentFile" class="form-label">Document File (.docx)</label>
+              <input type="file" class="form-control" id="documentFile" name="document" accept=".doc,.docx" required>
+              <div class="form-text">Maximum file size: 10MB. Only Word documents (.doc, .docx) are supported.</div>
+            </div>
+
+            <!-- Progress Bar (hidden by default) -->
+            <div id="uploadProgress" class="mb-3" style="display: none;">
+              <div class="progress">
+                <div id="uploadProgressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+              </div>
+              <div id="uploadStatus" class="text-center mt-2 text-muted">Uploading...</div>
+            </div>
+
+            <!-- Error Display -->
+            <div id="uploadError" class="alert alert-danger" style="display: none;"></div>
+
+            <!-- Success Display -->
+            <div id="uploadSuccess" class="alert alert-success" style="display: none;"></div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" id="uploadDocumentBtn">
+            <i class="bi bi-cloud-upload"></i> Upload Document
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/js/tooltips.js"></script>
+  <script src="/js/mobile-menu.js"></script>
+  <script src="/js/dashboard.js"></script>
+
+  <!-- Upload Modal Handler -->
+  <script>
+    // Document Upload Handler
+    document.getElementById('uploadDocumentBtn').addEventListener('click', function() {
+      const form = document.getElementById('uploadDocumentForm');
+      const fileInput = document.getElementById('documentFile');
+      const progressDiv = document.getElementById('uploadProgress');
+      const progressBar = document.getElementById('uploadProgressBar');
+      const statusDiv = document.getElementById('uploadStatus');
+      const errorDiv = document.getElementById('uploadError');
+      const successDiv = document.getElementById('uploadSuccess');
+      const uploadBtn = this;
+
+      // Validate file selected
+      if (!fileInput.files || fileInput.files.length === 0) {
+        errorDiv.textContent = 'Please select a file to upload';
+        errorDiv.style.display = 'block';
+        return;
+      }
+
+      // Validate file type
+      const file = fileInput.files[0];
+      const validTypes = ['application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/msword'];
+      if (!validTypes.includes(file.type)) {
+        errorDiv.textContent = 'Invalid file type. Please upload a Word document (.doc or .docx)';
+        errorDiv.style.display = 'block';
+        return;
+      }
+
+      // Validate file size (10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        errorDiv.textContent = 'File size exceeds 10MB limit';
+        errorDiv.style.display = 'block';
+        return;
+      }
+
+      // Reset UI
+      errorDiv.style.display = 'none';
+      successDiv.style.display = 'none';
+      progressDiv.style.display = 'block';
+      uploadBtn.disabled = true;
+
+      // Create FormData
+      const formData = new FormData();
+      formData.append('document', file);
+
+      // Upload with progress tracking
+      const xhr = new XMLHttpRequest();
+
+      xhr.upload.addEventListener('progress', function(e) {
+        if (e.lengthComputable) {
+          const percentComplete = (e.loaded / e.total) * 100;
+          progressBar.style.width = percentComplete + '%';
+          statusDiv.textContent = `Uploading... ${Math.round(percentComplete)}%`;
+        }
+      });
+
+      xhr.addEventListener('load', function() {
+        if (xhr.status === 200) {
+          try {
+            const response = JSON.parse(xhr.responseText);
+            if (response.success) {
+              progressBar.classList.remove('progress-bar-striped', 'progress-bar-animated');
+              progressBar.classList.add('bg-success');
+              progressBar.style.width = '100%';
+              statusDiv.textContent = 'Upload complete! Processing document...';
+
+              // Show success message
+              let successMessage = `Document "${response.document.title}" uploaded successfully with ${response.document.sectionsCount} sections.`;
+              if (response.warnings && response.warnings.length > 0) {
+                successMessage += '\n\nWarnings:\n' + response.warnings.join('\n');
+              }
+              successDiv.textContent = successMessage;
+              successDiv.style.display = 'block';
+
+              // Hide progress after 2 seconds and reload page
+              setTimeout(() => {
+                location.reload();
+              }, 2000);
+            } else {
+              throw new Error(response.error || 'Upload failed');
+            }
+          } catch (e) {
+            errorDiv.textContent = 'Error: ' + e.message;
+            errorDiv.style.display = 'block';
+            progressDiv.style.display = 'none';
+            uploadBtn.disabled = false;
+          }
+        } else {
+          let errorMessage = 'Upload failed';
+          try {
+            const response = JSON.parse(xhr.responseText);
+            errorMessage = response.error || errorMessage;
+            if (response.validationErrors && response.validationErrors.length > 0) {
+              errorMessage += '\n\nValidation Errors:\n' + response.validationErrors.map(e => e.message).join('\n');
+            }
+          } catch (e) {
+            errorMessage = `Server error: ${xhr.status}`;
+          }
+          errorDiv.textContent = errorMessage;
+          errorDiv.style.display = 'block';
+          progressDiv.style.display = 'none';
+          uploadBtn.disabled = false;
+        }
+      });
+
+      xhr.addEventListener('error', function() {
+        errorDiv.textContent = 'Network error occurred during upload';
+        errorDiv.style.display = 'block';
+        progressDiv.style.display = 'none';
+        uploadBtn.disabled = false;
+      });
+
+      xhr.open('POST', '/admin/documents/upload');
+      xhr.send(formData);
+    });
+
+    // Reset modal when closed
+    document.getElementById('uploadDocumentModal').addEventListener('hidden.bs.modal', function() {
+      document.getElementById('uploadDocumentForm').reset();
+      document.getElementById('uploadProgress').style.display = 'none';
+      document.getElementById('uploadError').style.display = 'none';
+      document.getElementById('uploadSuccess').style.display = 'none';
+      document.getElementById('uploadDocumentBtn').disabled = false;
+    });
+  </script>
+</body>
+</html>

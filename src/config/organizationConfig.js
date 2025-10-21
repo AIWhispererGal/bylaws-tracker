@@ -81,9 +81,65 @@ class OrganizationConfig {
             numbering: 'numeric',
             prefix: 'Section ',
             depth: 1
+          },
+          {
+            name: 'Subsection',
+            type: 'subsection',
+            numbering: 'numeric',
+            prefix: 'Subsection ',
+            depth: 2
+          },
+          {
+            name: 'Paragraph',
+            type: 'paragraph',
+            numbering: 'alpha',
+            prefix: '(',
+            depth: 3
+          },
+          {
+            name: 'Subparagraph',
+            type: 'subparagraph',
+            numbering: 'numeric',
+            prefix: '',
+            depth: 4
+          },
+          {
+            name: 'Clause',
+            type: 'clause',
+            numbering: 'alphaLower',
+            prefix: '(',
+            depth: 5
+          },
+          {
+            name: 'Subclause',
+            type: 'subclause',
+            numbering: 'roman',
+            prefix: '',
+            depth: 6
+          },
+          {
+            name: 'Item',
+            type: 'item',
+            numbering: 'numeric',
+            prefix: '•',
+            depth: 7
+          },
+          {
+            name: 'Subitem',
+            type: 'subitem',
+            numbering: 'alpha',
+            prefix: '◦',
+            depth: 8
+          },
+          {
+            name: 'Point',
+            type: 'point',
+            numbering: 'numeric',
+            prefix: '-',
+            depth: 9
           }
         ],
-        maxDepth: 5,
+        maxDepth: 10,
         allowNesting: true
       },
 
@@ -268,17 +324,49 @@ class OrganizationConfig {
       console.log('[CONFIG-DEBUG]   - hierarchy_config:', data.hierarchy_config ? 'present' : 'NULL');
       console.log('[CONFIG-DEBUG]   - settings.hierarchy:', data.settings?.hierarchy ? 'present' : 'absent');
 
-      // Build config from database, only including non-null values
-      // This prevents null database values from overriding defaults
-      const dbConfig = { ...data.settings };
+      // ✅ FIX: Start with defaults to ensure nothing is missing
+      const defaultConfig = this.getDefaultConfig();
+      const dbConfig = {};
 
-      // Only include hierarchy if it's actually set in the database
-      if (data.hierarchy_config) {
+      // ✅ FIX: Only include settings if they have actual values
+      if (data.settings && Object.keys(data.settings).length > 0) {
+        Object.entries(data.settings).forEach(([key, value]) => {
+          // Only include non-null, non-undefined values
+          if (value !== null && value !== undefined) {
+            dbConfig[key] = value;
+          }
+        });
+      }
+
+      // ✅ FIX: Only include hierarchy if it's actually set AND valid
+      // Must validate that levels have required properties (type, depth, numbering)
+      const hasValidHierarchy =
+        data.hierarchy_config &&
+        data.hierarchy_config.levels &&
+        Array.isArray(data.hierarchy_config.levels) &&
+        data.hierarchy_config.levels.length > 0 &&
+        data.hierarchy_config.levels.every(level =>
+          level.type !== undefined &&
+          level.depth !== undefined &&
+          level.numbering !== undefined
+        );
+
+      if (hasValidHierarchy) {
         dbConfig.hierarchy = data.hierarchy_config;
+        console.log('[CONFIG-DEBUG] ✅ Using complete hierarchy from database');
+      } else {
+        // CRITICAL: Preserve default hierarchy when DB has incomplete/invalid data
+        dbConfig.hierarchy = defaultConfig.hierarchy;
+        if (data.hierarchy_config?.levels?.length > 0) {
+          console.log('[CONFIG-DEBUG] ⚠️  Database hierarchy incomplete (missing type/depth), using defaults');
+        } else {
+          console.log('[CONFIG-DEBUG] ⚠️  No database hierarchy, using defaults');
+        }
       }
 
       console.log('[CONFIG-DEBUG] 📦 Returning dbConfig with keys:', Object.keys(dbConfig));
       console.log('[CONFIG-DEBUG]   - dbConfig.hierarchy:', dbConfig.hierarchy ? 'present' : 'absent');
+      console.log('[CONFIG-DEBUG]   - dbConfig.hierarchy.levels:', dbConfig.hierarchy?.levels?.length || 0);
 
       return dbConfig;
     } catch (error) {
@@ -351,6 +439,37 @@ class OrganizationConfig {
       valid: errors.length === 0,
       errors
     };
+  }
+
+  /**
+   * Deep merge utility - recursively merges source into target
+   * Preserves nested default values when source has undefined/null
+   */
+  deepMerge(target, source) {
+    const output = { ...target };
+
+    if (this.isObject(target) && this.isObject(source)) {
+      Object.keys(source).forEach(key => {
+        if (this.isObject(source[key])) {
+          if (!(key in target)) {
+            Object.assign(output, { [key]: source[key] });
+          } else {
+            output[key] = this.deepMerge(target[key], source[key]);
+          }
+        } else {
+          Object.assign(output, { [key]: source[key] });
+        }
+      });
+    }
+
+    return output;
+  }
+
+  /**
+   * Helper to check if value is a plain object
+   */
+  isObject(item) {
+    return (item && typeof item === 'object' && !Array.isArray(item));
   }
 }
 

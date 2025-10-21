@@ -8,6 +8,7 @@ const express = require('express');
 const router = express.Router();
 const Joi = require('joi');
 const { requireGlobalAdmin, attachGlobalAdminStatus } = require('../middleware/globalAdmin');
+const { sendInvitationEmail } = require('../services/emailService');
 
 // ============================================================================
 // VALIDATION SCHEMAS
@@ -95,6 +96,18 @@ async function getOrgUserLimit(supabase, organizationId) {
  * Create or update user record in users table
  */
 async function upsertUser(supabase, authUser) {
+  // Get regular_user type_id
+  const { data: userType, error: typeError } = await supabase
+    .from('user_types')
+    .select('id')
+    .eq('type_code', 'regular_user')
+    .single();
+
+  if (typeError) {
+    console.error('[upsertUser] Failed to get user type:', typeError);
+    throw new Error(`Failed to get user type: ${typeError.message}`);
+  }
+
   const { data, error } = await supabase
     .from('users')
     .upsert({
@@ -103,6 +116,7 @@ async function upsertUser(supabase, authUser) {
       name: authUser.user_metadata?.name || null,
       avatar_url: authUser.user_metadata?.avatar_url || null,
       auth_provider: 'supabase',
+      user_type_id: userType.id,  // ✅ FIX: Set user_type_id
       last_login: new Date().toISOString()
     }, {
       onConflict: 'id'
@@ -110,7 +124,11 @@ async function upsertUser(supabase, authUser) {
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    console.error('[upsertUser] Failed to upsert user:', error);
+    throw error;
+  }
+
   return data;
 }
 
@@ -740,17 +758,68 @@ router.post('/invite-user', async (req, res) => {
     // Check if there's already a pending invitation for this email
     const { data: existingInvite } = await supabaseService
       .from('user_invitations')
-      .select('id, status')
+      .select('id, status, token, expires_at')
       .eq('email', email)
       .eq('organization_id', organizationId)
       .eq('status', 'pending')
       .single();
 
     if (existingInvite) {
-      return res.status(400).json({
-        success: false,
-        error: 'A pending invitation already exists for this email'
-      });
+      // Check if existing invitation has expired
+      const isExpired = new Date(existingInvite.expires_at) < new Date();
+
+      if (isExpired) {
+        // Mark old invitation as expired
+        await supabaseService
+          .from('user_invitations')
+          .update({ status: 'expired' })
+          .eq('id', existingInvite.id);
+
+        // Continue to create new invitation below
+      } else {
+        // Resend email with existing invitation token
+        const inviteUrl = `${process.env.APP_URL || 'http://localhost:3000'}/auth/accept-invite?token=${existingInvite.token}`;
+
+        // Get organization name and inviter name for email
+        const { data: orgData } = await supabaseService
+          .from('organizations')
+          .select('name')
+          .eq('id', organizationId)
+          .single();
+
+        const organizationName = orgData?.name || 'the organization';
+        const invitedBy = req.session.userName || req.session.userEmail || 'An administrator';
+
+        // Resend invitation email
+        const emailResult = await sendInvitationEmail({
+          to: email,
+          inviteUrl,
+          organizationName,
+          invitedBy,
+          role
+        });
+
+        if (!emailResult.success && emailResult.mode !== 'development') {
+          console.error('Failed to resend invitation email:', emailResult.error);
+        }
+
+        return res.json({
+          success: true,
+          message: emailResult.mode === 'development'
+            ? `Invitation already exists for ${email} (Development mode: Check console for URL)`
+            : `Invitation email resent to ${email}`,
+          invitation: {
+            id: existingInvite.id,
+            email,
+            role,
+            organizationId,
+            inviteUrl: process.env.NODE_ENV === 'development' ? inviteUrl : undefined,
+            sentAt: new Date().toISOString(),
+            expiresAt: existingInvite.expires_at,
+            resent: true
+          }
+        });
+      }
     }
 
     // Generate secure invitation token
@@ -783,13 +852,35 @@ router.post('/invite-user', async (req, res) => {
     // Generate invitation URL
     const inviteUrl = `${process.env.APP_URL || 'http://localhost:3000'}/auth/accept-invite?token=${token}`;
 
-    // In production, send email here using your email service
-    // For now, log the invitation URL
-    console.log('Invitation URL:', inviteUrl);
+    // Get organization name and inviter name for email
+    const { data: orgData } = await supabaseService
+      .from('organizations')
+      .select('name')
+      .eq('id', organizationId)
+      .single();
+
+    const organizationName = orgData?.name || 'the organization';
+    const invitedBy = req.session.userName || req.session.userEmail || 'An administrator';
+
+    // Send invitation email
+    const emailResult = await sendInvitationEmail({
+      to: email,
+      inviteUrl,
+      organizationName,
+      invitedBy,
+      role
+    });
+
+    if (!emailResult.success && emailResult.mode !== 'development') {
+      console.error('Failed to send invitation email:', emailResult.error);
+      // Don't fail the invitation if email fails - URL is still in database
+    }
 
     res.json({
       success: true,
-      message: `Invitation sent to ${email}`,
+      message: emailResult.mode === 'development'
+        ? `Invitation created for ${email} (Development mode: Check console for URL)`
+        : `Invitation email sent to ${email}`,
       invitation: {
         id: invitation.id,
         email,
@@ -987,20 +1078,30 @@ router.post('/accept-invite', async (req, res) => {
       });
     }
 
-    // Check if user already exists
-    const { data: existingUser } = await supabaseService
-      .from('users')
-      .select('id')
-      .eq('email', invitation.email)
-      .single();
-
+    // Check if user already exists in Supabase Auth
     let userId;
+    let userExistsInAuth = false;
 
-    if (existingUser) {
-      // User exists, just link to organization
-      userId = existingUser.id;
-    } else {
-      // Create new Supabase Auth user
+    // Try to get user from Supabase Auth by email
+    const { data: authUserList, error: listError } = await supabaseService.auth.admin.listUsers();
+
+    if (!listError && authUserList?.users) {
+      const existingAuthUser = authUserList.users.find(u => u.email === invitation.email);
+      if (existingAuthUser) {
+        userExistsInAuth = true;
+        userId = existingAuthUser.id;
+
+        // Make sure user exists in users table
+        await upsertUser(supabaseService, {
+          id: existingAuthUser.id,
+          email: existingAuthUser.email,
+          user_metadata: { name: full_name }
+        });
+      }
+    }
+
+    // If user doesn't exist in Auth, create new account
+    if (!userExistsInAuth) {
       const { data: authData, error: authError } = await supabaseService.auth.admin.createUser({
         email: invitation.email,
         password: password,
@@ -1012,6 +1113,16 @@ router.post('/accept-invite', async (req, res) => {
 
       if (authError) {
         console.error('Auth user creation error:', authError);
+
+        // If error is "user exists", try to handle it
+        if (authError.message?.includes('already been registered')) {
+          return res.status(400).json({
+            success: false,
+            error: 'An account with this email already exists. Please sign in instead.',
+            existingUser: true
+          });
+        }
+
         return res.status(400).json({
           success: false,
           error: authError.message || 'Failed to create user account'
@@ -1160,7 +1271,8 @@ router.get('/select', async (req, res) => {
         organizations = data || [];
       } else {
         // Regular user: show only their organizations
-        const { data, error } = await supabase
+        // Use service client to bypass RLS and ensure we get user's orgs
+        const { data, error } = await req.supabaseService
           .from('user_organizations')
           .select(`
             organization_id,

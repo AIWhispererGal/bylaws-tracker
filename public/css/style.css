@@ -1,0 +1,241 @@
+/**
+ * Global Styles for Bylaws Amendment Tracker
+ * Additional styles that complement dashboard and components
+ */
+
+/* Task List Enhancements */
+.task-list {
+  margin: 0;
+  padding: 0;
+}
+
+.list-group-item-action:hover {
+  background-color: #f8f9fa;
+  transform: translateX(2px);
+  transition: all 0.2s ease;
+}
+
+.list-group-item .badge {
+  font-size: 11px;
+  padding: 4px 8px;
+}
+
+/* ============================================================
+ * PHASE 2: Section Refresh Visual Feedback
+ * ============================================================ */
+
+/* Section refresh animation */
+.section-updated {
+  animation: sectionHighlight 2s ease-in-out;
+}
+
+@keyframes sectionHighlight {
+  0% { background-color: inherit; }
+  10% { background-color: #fff3cd; }
+  100% { background-color: inherit; }
+}
+
+/* Selected suggestion highlight */
+.selected-suggestion {
+  transition: all 0.3s ease-in-out;
+}
+
+/* Locked alert styling */
+.locked-alert {
+  border-left: 4px solid #0d6efd;
+}
+
+/* Viewer Mode Alert */
+.viewer-mode-alert {
+  display: flex;
+  align-items: start;
+  gap: 1rem;
+  padding: 1rem;
+  background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+  border: 1px solid #bbdefb;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+}
+
+.viewer-mode-alert i {
+  font-size: 1.5rem;
+  color: #1976d2;
+  flex-shrink: 0;
+  margin-top: 0.25rem;
+}
+
+.alert-content {
+  flex: 1;
+}
+
+.alert-title {
+  font-weight: 600;
+  color: #1565c0;
+  margin-bottom: 0.25rem;
+}
+
+.alert-message {
+  font-size: 0.875rem;
+  color: #424242;
+  line-height: 1.5;
+}
+
+/* Role Badges */
+.role-badges {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-right: 1rem;
+}
+
+/* Global Admin Badge */
+.badge.badge-danger {
+  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+  color: white;
+  padding: 0.35rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  box-shadow: 0 2px 4px rgba(220, 53, 69, 0.3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.badge.badge-danger i {
+  font-size: 0.875rem;
+}
+
+/* Current Organization Badge */
+.current-org-badge {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  border: 1px solid #dee2e6;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: #495057;
+  font-weight: 500;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.current-org-badge i {
+  color: #6c757d;
+}
+
+/* View-Only / Viewer Badge */
+.badge.badge-info {
+  background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+  color: white;
+  padding: 0.35rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  box-shadow: 0 2px 4px rgba(23, 162, 184, 0.3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.badge.badge-info i {
+  font-size: 0.875rem;
+}
+
+/* Admin Badge */
+.badge.badge-warning {
+  background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+  color: #212529;
+  padding: 0.35rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  box-shadow: 0 2px 4px rgba(255, 193, 7, 0.3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.badge.badge-warning i {
+  font-size: 0.875rem;
+}
+
+/* Disabled Button Styling */
+button:disabled,
+a.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  position: relative;
+}
+
+button:disabled:hover,
+a.disabled:hover {
+  opacity: 0.6;
+  transform: none;
+}
+
+/* Tooltip Styling (Bootstrap 5 Compatible) */
+.tooltip {
+  font-size: 0.875rem;
+}
+
+.tooltip-inner {
+  max-width: 250px;
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  background-color: #2c3e50;
+  border-radius: 6px;
+}
+
+.tooltip-arrow::before {
+  border-top-color: #2c3e50 !important;
+  border-bottom-color: #2c3e50 !important;
+}
+
+/* Responsive Utilities */
+@media (max-width: 768px) {
+  .role-badges {
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+
+  .current-org-badge {
+    font-size: 0.75rem;
+    padding: 0.35rem 0.75rem;
+  }
+
+  .badge {
+    font-size: 0.65rem;
+    padding: 0.25rem 0.5rem;
+  }
+
+  .viewer-mode-alert {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .sidebar,
+  .topbar,
+  .btn,
+  .viewer-mode-alert {
+    display: none !important;
+  }
+
+  .main-content {
+    margin-left: 0 !important;
+  }
+
+  .task-item {
+    page-break-inside: avoid;
+  }
+}

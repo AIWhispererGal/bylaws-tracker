@@ -111,8 +111,10 @@ class SetupService {
         .from('workflow_templates')
         .insert({
           organization_id: orgId,
-          template_name: workflowConfig.name || 'Default Workflow',
+          name: workflowConfig.name || 'Default Workflow',
+          description: workflowConfig.description || 'Two-stage approval process',
           is_default: true,
+          is_active: true,
           created_at: new Date().toISOString()
         })
         .select()
