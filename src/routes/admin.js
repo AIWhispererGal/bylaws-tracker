@@ -2061,13 +2061,15 @@ router.post('/sections/:id/indent',
           // Not fatal - section moved successfully
         }
       } else {
-        // Root level sections - shift ordinals manually
-        const { error: shiftError } = await supabaseService
-          .from('document_sections')
-          .update({ ordinal: supabaseService.sql`ordinal - 1` })
-          .eq('document_id', section.document_id)
-          .is('parent_section_id', null)
-          .gt('ordinal', section.ordinal);
+        // Root level sections - use RPC function to shift ordinals
+        const { error: shiftError } = await supabaseService.rpc(
+          'decrement_sibling_ordinals',
+          {
+            p_parent_id: null, // Root level
+            p_start_ordinal: section.ordinal,
+            p_decrement_by: 1
+          }
+        );
 
         if (shiftError) {
           console.error('[INDENT] Root ordinal shift error:', shiftError);
@@ -2157,13 +2159,15 @@ router.post('/sections/:id/dedent',
           p_increment_by: 1
         });
       } else {
-        // Shifting root-level sections
-        const { error: shiftError } = await supabaseService
-          .from('document_sections')
-          .update({ ordinal: supabaseService.sql`ordinal + 1` })
-          .eq('document_id', section.document_id)
-          .is('parent_section_id', null)
-          .gte('ordinal', newOrdinal);
+        // Shifting root-level sections - use RPC function
+        const { error: shiftError } = await supabaseService.rpc(
+          'increment_sibling_ordinals',
+          {
+            p_parent_id: null, // Root level
+            p_start_ordinal: newOrdinal,
+            p_increment_by: 1
+          }
+        );
 
         if (shiftError) {
           console.error('[DEDENT] Root shift error:', shiftError);
@@ -2221,6 +2225,141 @@ router.post('/sections/:id/dedent',
       res.status(500).json({
         success: false,
         error: error.message || 'Failed to dedent section'
+      });
+    }
+});
+
+/**
+ * POST /admin/sections/:id/move-up
+ * Move a section up one position among its siblings
+ */
+router.post('/sections/:id/move-up',
+  requireAdmin,
+  validateSectionEditable,
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const section = req.section;
+      const { supabaseService } = req;
+
+      console.log(`[MOVE-UP] Moving section ${id} up (current ordinal: ${section.ordinal})`);
+
+      // Check if already first
+      if (section.ordinal <= 1) {
+        return res.status(400).json({
+          success: false,
+          error: 'Cannot move up: section is already first among siblings',
+          code: 'ALREADY_FIRST'
+        });
+      }
+
+      // Find previous sibling (ordinal - 1)
+      const { data: prevSibling, error: prevError } = await supabaseService
+        .from('document_sections')
+        .select('id, section_number, section_title, ordinal')
+        .eq('document_id', section.document_id)
+        .eq('parent_section_id', section.parent_section_id)
+        .eq('ordinal', section.ordinal - 1)
+        .maybeSingle();
+
+      if (prevError) {
+        throw prevError;
+      }
+
+      if (!prevSibling) {
+        return res.status(400).json({
+          success: false,
+          error: 'No previous sibling found',
+          code: 'NO_PREV_SIBLING'
+        });
+      }
+
+      // Swap ordinals using RPC function
+      const { error: swapError } = await supabaseService.rpc('swap_sibling_ordinals', {
+        p_section_id_1: section.id,
+        p_section_id_2: prevSibling.id
+      });
+
+      if (swapError) {
+        throw swapError;
+      }
+
+      console.log(`[MOVE-UP] ✅ Section ${id} moved up successfully`);
+
+      res.json({
+        success: true,
+        message: `Moved up (now before "${prevSibling.section_number || prevSibling.section_title}")`,
+        newOrdinal: section.ordinal - 1
+      });
+
+    } catch (error) {
+      console.error('[MOVE-UP] Error:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message || 'Failed to move section up'
+      });
+    }
+});
+
+/**
+ * POST /admin/sections/:id/move-down
+ * Move a section down one position among its siblings
+ */
+router.post('/sections/:id/move-down',
+  requireAdmin,
+  validateSectionEditable,
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const section = req.section;
+      const { supabaseService } = req;
+
+      console.log(`[MOVE-DOWN] Moving section ${id} down (current ordinal: ${section.ordinal})`);
+
+      // Find next sibling (ordinal + 1)
+      const { data: nextSibling, error: nextError } = await supabaseService
+        .from('document_sections')
+        .select('id, section_number, section_title, ordinal')
+        .eq('document_id', section.document_id)
+        .eq('parent_section_id', section.parent_section_id)
+        .eq('ordinal', section.ordinal + 1)
+        .maybeSingle();
+
+      if (nextError) {
+        throw nextError;
+      }
+
+      if (!nextSibling) {
+        return res.status(400).json({
+          success: false,
+          error: 'Cannot move down: section is already last among siblings',
+          code: 'ALREADY_LAST'
+        });
+      }
+
+      // Swap ordinals using RPC function
+      const { error: swapError } = await supabaseService.rpc('swap_sibling_ordinals', {
+        p_section_id_1: section.id,
+        p_section_id_2: nextSibling.id
+      });
+
+      if (swapError) {
+        throw swapError;
+      }
+
+      console.log(`[MOVE-DOWN] ✅ Section ${id} moved down successfully`);
+
+      res.json({
+        success: true,
+        message: `Moved down (now after "${nextSibling.section_number || nextSibling.section_title}")`,
+        newOrdinal: section.ordinal + 1
+      });
+
+    } catch (error) {
+      console.error('[MOVE-DOWN] Error:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message || 'Failed to move section down'
       });
     }
 });
