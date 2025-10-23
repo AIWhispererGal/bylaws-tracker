@@ -21,6 +21,10 @@ class HierarchyDetector {
         const matches = text.matchAll(pattern.regex);
 
         for (const match of matches) {
+          // Calculate line number and context for filtering
+          const lineNumber = this.getLineNumber(text, match.index);
+          const lineText = this.getLineText(text, match.index);
+
           detected.push({
             level: level.name,
             type: level.type,
@@ -29,7 +33,11 @@ class HierarchyDetector {
             fullMatch: match[0],
             index: match.index,
             numberingScheme: level.numbering,
-            depth: level.depth
+            depth: level.depth,
+            // Context metadata for false positive filtering
+            lineNumber: lineNumber,
+            lineText: lineText.trim(),
+            patternVariant: pattern.variant || 'prefixed'
           });
         }
       }
@@ -45,9 +53,81 @@ class HierarchyDetector {
   buildDetectionPatterns(level) {
     const patterns = [];
 
-    // Handle missing prefix gracefully
-    if (!level.prefix) {
-      console.warn(`[HierarchyDetector] Level ${level.type} has no prefix defined, skipping...`);
+    // Handle missing/empty prefix - generate line-start patterns
+    if (!level.prefix || level.prefix.trim() === '') {
+      console.log(`[HierarchyDetector] Level ${level.type} has empty prefix, using line-start patterns`);
+
+      // Generate line-start patterns based on numbering scheme
+      switch (level.numbering) {
+        case 'numeric':
+          // Line-start: "1. " (requires text after to avoid false positives from tables)
+          patterns.push({
+            regex: new RegExp(`^\\s*(\\d+)\\.\\s+(?=\\w)`, 'gm'),
+            scheme: 'numeric',
+            variant: 'line-start'
+          });
+          // Parenthetical: "(1)"
+          patterns.push({
+            regex: new RegExp(`\\(\\s*(\\d+)\\s*\\)`, 'g'),
+            scheme: 'numeric',
+            variant: 'parenthetical'
+          });
+          break;
+
+        case 'alpha':
+          // Line-start: "A. " (requires text after to avoid false positives)
+          patterns.push({
+            regex: new RegExp(`^\\s*([A-Z])\\.\\s+(?=\\w)`, 'gm'),
+            scheme: 'alpha',
+            variant: 'line-start'
+          });
+          // Parenthetical: "(A)"
+          patterns.push({
+            regex: new RegExp(`\\(\\s*([A-Z])\\s*\\)`, 'g'),
+            scheme: 'alpha',
+            variant: 'parenthetical'
+          });
+          break;
+
+        case 'alphaLower':
+          // Line-start: "a. " (requires text after to avoid false positives)
+          patterns.push({
+            regex: new RegExp(`^\\s*([a-z])\\.\\s+(?=\\w)`, 'g'),
+            scheme: 'alphaLower',
+            variant: 'line-start'
+          });
+          // Parenthetical: "(a)"
+          patterns.push({
+            regex: new RegExp(`\\(\\s*([a-z])\\s*\\)`, 'g'),
+            scheme: 'alphaLower',
+            variant: 'parenthetical'
+          });
+          break;
+
+        case 'roman':
+          // Line-start: "i. ", "I. " (requires text after to avoid false positives)
+          patterns.push({
+            regex: new RegExp(`^\\s*([IVXivx]+)\\.\\s+(?=\\w)`, 'gmi'),
+            scheme: 'roman',
+            variant: 'line-start'
+          });
+          // Parenthetical: "(i)", "(I)"
+          patterns.push({
+            regex: new RegExp(`\\(\\s*([IVXivx]+)\\s*\\)`, 'gi'),
+            scheme: 'roman',
+            variant: 'parenthetical'
+          });
+          break;
+
+        default:
+          // Generic pattern for unknown schemes
+          patterns.push({
+            regex: new RegExp(`^\\s*([\\w]+)\\.\\s+`, 'gmi'),
+            scheme: 'generic',
+            variant: 'line-start'
+          });
+      }
+
       return patterns;
     }
 
@@ -371,6 +451,36 @@ class HierarchyDetector {
       allowNesting: true,
       detectedPatterns: detectedItems.length
     };
+  }
+
+  /**
+   * Get line number from character index
+   * @param {string} text - Full document text
+   * @param {number} charIndex - Character position in text
+   * @returns {number} Line number (1-indexed)
+   */
+  getLineNumber(text, charIndex) {
+    return text.substring(0, charIndex).split('\n').length;
+  }
+
+  /**
+   * Get full line text containing character index
+   * @param {string} text - Full document text
+   * @param {number} charIndex - Character position in text
+   * @returns {string} The complete line containing the character
+   */
+  getLineText(text, charIndex) {
+    const lines = text.split('\n');
+    let currentPos = 0;
+
+    for (const line of lines) {
+      if (charIndex >= currentPos && charIndex < currentPos + line.length) {
+        return line;
+      }
+      currentPos += line.length + 1; // +1 for newline
+    }
+
+    return '';
   }
 }
 

@@ -152,25 +152,31 @@ const SetupWizard = {
 
     /**
      * Handle Organization Form Submit
+     * FIX: Prevent double submission with immediate button disable
      */
     async handleOrganizationSubmit(e) {
         e.preventDefault();
+        e.stopPropagation(); // FIX: Prevent event bubbling
+
         const form = e.target;
         const submitBtn = form.querySelector('button[type="submit"]');
 
-        // Prevent double submission
+        // FIX: Disable button IMMEDIATELY before validation
         if (submitBtn.disabled) {
+            console.log('[SETUP-CLIENT] Form already submitting, ignoring duplicate');
             return;
         }
+        submitBtn.disabled = true;
 
         // Validate all fields
         if (!form.checkValidity()) {
             form.classList.add('was-validated');
+            // Re-enable on validation failure
+            submitBtn.disabled = false;
             return;
         }
 
-        // Disable submit button to prevent double-click
-        submitBtn.disabled = true;
+        // Update button text AFTER validation passes
         submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
 
         // Show loading
@@ -180,6 +186,7 @@ const SetupWizard = {
         const formData = new FormData(form);
 
         try {
+            console.log('[SETUP-CLIENT] Submitting organization form...');
             const response = await fetch('/setup/organization', {
                 method: 'POST',
                 // FormData includes CSRF token from hidden input field
@@ -188,14 +195,16 @@ const SetupWizard = {
             });
 
             const result = await response.json();
+            console.log('[SETUP-CLIENT] Server response:', result);
 
             if (result.success && result.redirectUrl) {
+                console.log('[SETUP-CLIENT] Redirecting to:', result.redirectUrl);
                 window.location.href = result.redirectUrl;
             } else {
                 throw new Error(result.error || 'Failed to save organization info');
             }
         } catch (error) {
-            console.error('Submission error:', error);
+            console.error('[SETUP-CLIENT] Submission error:', error);
             alert('Failed to save: ' + error.message);
 
             // Re-enable button on error

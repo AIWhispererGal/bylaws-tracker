@@ -171,12 +171,15 @@ async function getUserRole(userId, organizationId) {
 
 /**
  * Middleware: Require specific permission
+ * NOTE: Uses req.session.userId for session-based authentication
  */
 function requirePermission(permission, orgLevel = false) {
   return async (req, res, next) => {
     try {
-      const userId = req.user?.id;
-      const organizationId = req.session?.currentOrganization || req.body?.organization_id || req.params?.organization_id;
+      // FIX: Use session-based authentication consistently
+      const userId = req.session?.userId;
+      // Use organizationId (primary session key) or fall back to currentOrganization
+      const organizationId = req.session?.organizationId || req.session?.currentOrganization || req.body?.organization_id || req.params?.organization_id;
 
       if (!userId) {
         return res.status(401).json({
@@ -221,12 +224,15 @@ function requirePermission(permission, orgLevel = false) {
 
 /**
  * Middleware: Require minimum role level
+ * NOTE: Uses req.session.userId for session-based authentication
  */
 function requireMinRoleLevel(minLevel) {
   return async (req, res, next) => {
     try {
-      const userId = req.user?.id;
-      const organizationId = req.session?.currentOrganization || req.body?.organization_id || req.params?.organization_id;
+      // FIX: Use session-based authentication consistently
+      const userId = req.session?.userId;
+      // Use organizationId (primary session key) or fall back to currentOrganization
+      const organizationId = req.session?.organizationId || req.session?.currentOrganization || req.body?.organization_id || req.params?.organization_id;
 
       if (!userId) {
         return res.status(401).json({
@@ -266,12 +272,15 @@ function requireMinRoleLevel(minLevel) {
 
 /**
  * Middleware: Require specific role
+ * NOTE: Uses req.session.userId for session-based authentication
  */
 function requireRole(...allowedRoles) {
   return async (req, res, next) => {
     try {
-      const userId = req.user?.id;
-      const organizationId = req.session?.currentOrganization || req.body?.organization_id || req.params?.organization_id;
+      // FIX: Use session-based authentication consistently
+      const userId = req.session?.userId;
+      // Use organizationId (primary session key) or fall back to currentOrganization
+      const organizationId = req.session?.organizationId || req.session?.currentOrganization || req.body?.organization_id || req.params?.organization_id;
 
       if (!userId) {
         return res.status(401).json({

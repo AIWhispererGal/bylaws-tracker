@@ -1,0 +1,134 @@
+{
+  "timestamp": "2025-10-21T22:44:49.769Z",
+  "phase": "baseline",
+  "checks": [
+    {
+      "name": "server.js exists",
+      "passed": true,
+      "critical": true
+    },
+    {
+      "name": "package.json exists",
+      "passed": true,
+      "critical": true
+    },
+    {
+      "name": "src/ directory exists",
+      "passed": true,
+      "critical": true
+    },
+    {
+      "name": "views/ directory exists",
+      "passed": true,
+      "critical": true
+    },
+    {
+      "name": "public/ directory exists",
+      "passed": true,
+      "critical": true
+    },
+    {
+      "name": "database/ directory exists",
+      "passed": true,
+      "critical": true
+    },
+    {
+      "name": "src/ has JavaScript files (found 32)",
+      "passed": true,
+      "critical": true
+    },
+    {
+      "name": "views/ has EJS files (found 31)",
+      "passed": true,
+      "critical": true
+    },
+    {
+      "name": "Archive directory exists",
+      "passed": true,
+      "critical": true
+    },
+    {
+      "name": "archive/docs exists",
+      "passed": false,
+      "critical": false
+    },
+    {
+      "name": "archive/database exists",
+      "passed": false,
+      "critical": false
+    },
+    {
+      "name": "archive/test-files exists",
+      "passed": true,
+      "critical": false
+    },
+    {
+      "name": "README.md exists (active)",
+      "passed": true,
+      "critical": true
+    },
+    {
+      "name": "docs/roadmap/README.md exists (active)",
+      "passed": true,
+      "critical": true
+    },
+    {
+      "name": ".env.example exists (active)",
+      "passed": true,
+      "critical": true
+    },
+    {
+      "name": "Protected file server.js intact",
+      "passed": true,
+      "critical": true
+    },
+    {
+      "name": "Protected file package.json intact",
+      "passed": true,
+      "critical": true
+    },
+    {
+      "name": "Protected file package-lock.json intact",
+      "passed": true,
+      "critical": true
+    },
+    {
+      "name": "Protected file .gitignore intact",
+      "passed": true,
+      "critical": true
+    },
+    {
+      "name": "Protected directory src/ intact",
+      "passed": true,
+      "critical": true
+    },
+    {
+      "name": "Protected directory views/ intact",
+      "passed": true,
+      "critical": true
+    },
+    {
+      "name": "Protected directory public/ intact",
+      "passed": true,
+      "critical": true
+    },
+    {
+      "name": "Protected directory database/ intact",
+      "passed": true,
+      "critical": true
+    },
+    {
+      "name": "Protected directory node_modules/ intact",
+      "passed": true,
+      "critical": true
+    }
+  ],
+  "passed": 22,
+  "failed": 2,
+  "warnings": [
+    "archive/docs exists",
+    "archive/database exists"
+  ],
+  "srcFileCount": 32,
+  "viewFileCount": 31
+}

@@ -352,7 +352,7 @@ router.get('/sections', requireAuth, async (req, res) => {
         )
       `)
       .in('document_id', docIds)
-      .order('path_ordinals', { ascending: true })
+      .order('document_order', { ascending: true })
       .limit(100);
 
     if (sectionsError) throw sectionsError;
@@ -846,7 +846,7 @@ router.get('/documents/:documentId/toc', requireAuth, async (req, res) => {
       .from('document_sections')
       .select('id, section_number, section_title, depth, parent_section_id, current_text, original_text, is_locked, path_ordinals')
       .eq('document_id', documentId)
-      .order('path_ordinals', { ascending: true });
+      .order('document_order', { ascending: true });
 
     if (sectionsError) {
       throw sectionsError;
@@ -921,7 +921,7 @@ router.get('/sections/:sectionId/navigation', requireAuth, async (req, res) => {
       .from('document_sections')
       .select('id, section_number, parent_section_id, path_ordinals')
       .eq('document_id', section.document_id)
-      .order('path_ordinals', { ascending: true });
+      .order('document_order', { ascending: true });
 
     if (!allSections) {
       throw new Error('Failed to load document sections');
@@ -1015,7 +1015,7 @@ async function handleDocumentView(req, res) {
         path_ordinals
       `)
       .eq('document_id', documentId)
-      .order('path_ordinals', { ascending: true });
+      .order('document_order', { ascending: true });
 
     if (sectionsError) {
       console.error('[DOCUMENT VIEWER] Error fetching sections:', sectionsError);

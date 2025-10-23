@@ -2247,7 +2247,7 @@ router.post('/documents/:documentId/progress', requireAuth, requireAdmin, async 
       .from('document_sections')
       .select('*')
       .eq('document_id', documentId)
-      .order('path_ordinals', { ascending: true });
+      .order('document_order', { ascending: true });
 
     if (sectionsError || !sections) {
       return res.status(500).json({

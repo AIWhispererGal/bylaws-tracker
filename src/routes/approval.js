@@ -147,7 +147,7 @@ router.get('/workflow/:documentId', requireMember, async (req, res) => {
       .from('document_sections')
       .select('id, section_number, section_title')
       .eq('document_id', documentId)
-      .order('path_ordinals', { ascending: true });
+      .order('document_order', { ascending: true });
 
     if (sectionsError) throw sectionsError;
 
@@ -633,7 +633,7 @@ router.post('/version', requireMember, async (req, res) => {
       .from('document_sections')
       .select('*')
       .eq('document_id', document_id)
-      .order('path_ordinals', { ascending: true });
+      .order('document_order', { ascending: true });
 
     // Get all workflow states
     const sectionIds = sections.map(s => s.id);

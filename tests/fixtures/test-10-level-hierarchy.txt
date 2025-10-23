@@ -1,0 +1,52 @@
+TEST DOCUMENT - 10 LEVEL HIERARCHY
+====================================
+
+ARTICLE I - GOVERNANCE
+
+Section 1 - Board Structure
+
+1. Executive Committee
+   This section describes the executive committee structure.
+
+   A. Committee Composition
+      The committee shall consist of officers.
+
+      1. Required Officers
+         All officers must be elected.
+
+         (a) President
+             The president shall preside over meetings.
+
+             i. Daily Duties
+                Daily operations and oversight.
+
+                A. Meeting Coordination
+                   Schedule and conduct meetings.
+
+                   a. Weekly Meetings
+                      Conduct weekly staff meetings.
+
+                      i. Agenda Preparation
+                         Prepare detailed agendas.
+
+                         α. Topic Selection
+                            Select relevant discussion topics.
+
+ARTICLE II - OPERATIONS
+
+Section 2 - Procedures
+
+2. Voting Procedures
+   Standard voting procedures apply.
+
+   B. Quorum Requirements
+      Quorum must be established.
+
+      2. Member Attendance
+         Minimum attendance requirements.
+
+         (b) Proxy Voting
+             Proxy votes are permitted.
+
+             ii. Proxy Submission
+                 Proxies must be submitted in advance.

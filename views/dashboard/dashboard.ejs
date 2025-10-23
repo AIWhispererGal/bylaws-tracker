@@ -69,7 +69,7 @@
       border-left: 3px solid transparent;
     }
 
-    .nav-link:hover {
+    .nav-link:hover:not(.disabled) {
       background-color: rgba(255,255,255,0.1);
       color: white;
       border-left-color: #3498db;
@@ -79,6 +79,16 @@
       background-color: rgba(52, 152, 219, 0.2);
       color: white;
       border-left-color: #3498db;
+    }
+
+    .nav-link.disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .nav-link.disabled:hover {
+      background-color: transparent;
+      border-left-color: transparent;
     }
 
     .nav-link i {
@@ -408,49 +418,35 @@
     </div>
 
     <div class="nav-section">
-      <div class="nav-section-title">Main</div>
-      <a href="/dashboard" class="nav-link active">
-        <i class="bi bi-speedometer2"></i>
-        <span>Dashboard</span>
-      </a>
-      <a href="/dashboard/documents" class="nav-link">
-        <i class="bi bi-file-earmark-text"></i>
-        <span>Documents</span>
-      </a>
-    </div>
-
-    <div class="nav-section">
-      <div class="nav-section-title">Workflow</div>
-      <a href="#suggestions" class="nav-link" onclick="return false;" data-bs-toggle="tooltip" title="Coming soon - Suggestions view">
-        <i class="bi bi-lightbulb"></i>
-        <span>Suggestions</span>
-        <span class="badge bg-secondary ms-auto" style="font-size: 0.65rem;">Soon</span>
-      </a>
-      <a href="#approvals" class="nav-link" onclick="return false;" data-bs-toggle="tooltip" title="Coming soon - Approvals view">
-        <i class="bi bi-clipboard-check"></i>
-        <span>Approvals</span>
-        <span class="badge bg-secondary ms-auto" style="font-size: 0.65rem;">Soon</span>
-      </a>
-    </div>
-
-    <div class="nav-section">
-      <div class="nav-section-title">Settings</div>
-      <a href="/admin/organization" class="nav-link">
-        <i class="bi bi-gear"></i>
-        <span>Organization</span>
-      </a>
+      <div class="nav-section-title">Management</div>
       <% if (typeof currentUser !== 'undefined' && currentUser && (currentUser.role === 'admin' || currentUser.role === 'owner' || currentUser.is_global_admin)) { %>
+        <a href="/admin/organization" class="nav-link">
+          <i class="bi bi-building"></i>
+          <span>Organization Settings</span>
+        </a>
         <a href="/admin/users" class="nav-link">
           <i class="bi bi-people"></i>
-          <span>Manage Members</span>
+          <span>Users</span>
         </a>
       <% } %>
-      <% if (typeof currentUser !== 'undefined' && currentUser && (currentUser.role === 'admin' || currentUser.role === 'owner' || currentUser.is_global_admin)) { %>
-        <a href="/admin/workflows" class="nav-link">
-          <i class="bi bi-diagram-3"></i>
-          <span>Workflows</span>
-        </a>
-      <% } %>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">Resources</div>
+      <a href="#reports" class="nav-link disabled" onclick="return false;" data-bs-toggle="tooltip" title="Coming soon - Reports and analytics">
+        <i class="bi bi-graph-up"></i>
+        <span>Reports</span>
+        <span class="badge bg-secondary ms-auto" style="font-size: 0.65rem;">Soon</span>
+      </a>
+      <a href="#analytics" class="nav-link disabled" onclick="return false;" data-bs-toggle="tooltip" title="Coming soon - Advanced analytics">
+        <i class="bi bi-bar-chart"></i>
+        <span>Analytics</span>
+        <span class="badge bg-secondary ms-auto" style="font-size: 0.65rem;">Soon</span>
+      </a>
+      <a href="#help" class="nav-link">
+        <i class="bi bi-question-circle"></i>
+        <span>Help</span>
+      </a>
     </div>
   </nav>
 
@@ -530,10 +526,6 @@
               </div>
               <ul class="dropdown-menu dropdown-menu-end">
                 <li><a class="dropdown-item" href="/auth/profile"><i class="bi bi-person me-2"></i>Profile</a></li>
-                <% if (currentUser.role === 'admin' || currentUser.role === 'owner' || currentUser.is_global_admin) { %>
-                  <li><a class="dropdown-item" href="/admin/users"><i class="bi bi-people me-2"></i>Manage Users</a></li>
-                  <li><hr class="dropdown-divider"></li>
-                <% } %>
                 <li><a class="dropdown-item" href="/auth/select"><i class="bi bi-building me-2"></i>Switch Organization</a></li>
                 <li><hr class="dropdown-divider"></li>
                 <li><a class="dropdown-item text-danger" href="/auth/logout"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>

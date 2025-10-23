@@ -8,6 +8,7 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs').promises;
+const { debounceMiddleware } = require('../middleware/debounce');
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -76,8 +77,22 @@ router.get('/organization', (req, res) => {
 /**
  * POST /setup/organization - Save organization info and create admin user
  */
-router.post('/organization', upload.single('logo'), async (req, res) => {
+router.post('/organization', debounceMiddleware, upload.single('logo'), async (req, res) => {
     try {
+        // 🔒 SESSION-BASED LOCK: Prevent duplicate submissions from same session
+        if (req.session.organizationCreationInProgress) {
+            console.log('[SETUP-LOCK] ⏸️  Organization creation already in progress for this session');
+            return res.status(409).json({
+                success: false,
+                error: 'Organization creation already in progress',
+                message: 'Please wait for the current request to complete'
+            });
+        }
+
+        // Set lock flag IMMEDIATELY (before any async operations)
+        req.session.organizationCreationInProgress = true;
+        console.log('[SETUP-LOCK] 🔒 Set organizationCreationInProgress lock for session');
+
         const organizationData = {
             organization_name: req.body.organization_name,
             organization_type: req.body.organization_type,
@@ -241,10 +256,19 @@ router.post('/organization', upload.single('logo'), async (req, res) => {
         // Store password temporarily for auto-login later (will be cleared after setup)
         req.session.adminPassword = adminData.admin_password;
 
+        // 🔓 Clear session lock on success
+        delete req.session.organizationCreationInProgress;
+        console.log('[SETUP-LOCK] 🔓 Cleared organizationCreationInProgress lock (success)');
+
         // Return JSON response with redirect URL
         res.json({ success: true, redirectUrl: '/setup/document-type' });
     } catch (error) {
         console.error('Organization setup error:', error);
+
+        // 🔓 Clear session lock on error
+        delete req.session.organizationCreationInProgress;
+        console.log('[SETUP-LOCK] 🔓 Cleared organizationCreationInProgress lock (error)');
+
         res.status(500).json({
             success: false,
             error: error.message
@@ -380,6 +404,20 @@ router.get('/import', (req, res) => {
  */
 router.post('/import', upload.single('document'), async (req, res) => {
     try {
+        // 🔒 CHECK: Prevent duplicate processSetupData calls
+        if (req.session.setupProcessingInProgress) {
+            console.log('[SETUP-IMPORT-LOCK] ⏸️  Setup processing already in progress');
+            return res.status(409).json({
+                success: false,
+                error: 'Setup processing already in progress',
+                message: 'Please wait for the current setup to complete'
+            });
+        }
+
+        // Set lock flag IMMEDIATELY (will be cleared when processSetupData completes)
+        req.session.setupProcessingInProgress = true;
+        console.log('[SETUP-IMPORT-LOCK] 🔒 Set setupProcessingInProgress lock');
+
         let importData = {};
 
         if (req.body.googleDocUrl) {
@@ -433,6 +471,11 @@ router.post('/import', upload.single('document'), async (req, res) => {
                     console.log('[SETUP-DEBUG] ✅ processSetupData completed successfully');
                     req.session.setupData.status = 'complete';
                     console.log('[SETUP-DEBUG] ✅ Set status to "complete"');
+
+                    // 🔓 Clear processing lock on success
+                    delete req.session.setupProcessingInProgress;
+                    console.log('[SETUP-IMPORT-LOCK] 🔓 Cleared setupProcessingInProgress lock (success)');
+
                     // Save session to persist status change
                     req.session.save((err) => {
                         if (err) console.error('[SETUP] Session save error:', err);
@@ -446,6 +489,11 @@ router.post('/import', upload.single('document'), async (req, res) => {
                     req.session.setupData.error = err.message;
                     req.session.setupData.errorDetails = err.stack || JSON.stringify(err, null, 2);
                     console.log('[SETUP-DEBUG] ❌ Set status to "error"');
+
+                    // 🔓 Clear processing lock on error
+                    delete req.session.setupProcessingInProgress;
+                    console.log('[SETUP-IMPORT-LOCK] 🔓 Cleared setupProcessingInProgress lock (error)');
+
                     // Save session to persist error status
                     req.session.save((err) => {
                         if (err) console.error('[SETUP] Session save error:', err);
@@ -457,6 +505,11 @@ router.post('/import', upload.single('document'), async (req, res) => {
         res.json({ success: true, redirectUrl: '/setup/processing' });
     } catch (error) {
         console.error('Import error:', error);
+
+        // 🔓 Clear processing lock on error
+        delete req.session.setupProcessingInProgress;
+        console.log('[SETUP-IMPORT-LOCK] 🔓 Cleared setupProcessingInProgress lock (import error)');
+
         res.status(500).json({
             success: false,
             error: error.message
@@ -568,9 +621,19 @@ router.get('/success', async (req, res) => {
             req.session.isAuthenticated = true;
         }
 
-        // Store organization_id for dashboard access
+        // ✅ FIX: Store organization_id AND role for dashboard access
         if (setupData.organizationId) {
             req.session.organizationId = setupData.organizationId;
+            console.log('[SETUP-AUTH] ✅ Set session.organizationId:', setupData.organizationId);
+        }
+
+        if (setupData.userRole) {
+            req.session.userRole = setupData.userRole;
+            console.log('[SETUP-AUTH] ✅ Set session.userRole:', setupData.userRole);
+
+            // CRITICAL: Set isAdmin based on role
+            req.session.isAdmin = ['owner', 'admin'].includes(setupData.userRole);
+            console.log('[SETUP-AUTH] ✅ Set session.isAdmin:', req.session.isAdmin, '(role:', setupData.userRole, ')');
         }
 
         // Clear setup data and mark as configured
@@ -580,7 +643,9 @@ router.get('/success', async (req, res) => {
         // Save session and redirect to dashboard
         req.session.save((err) => {
             if (err) {
-                console.error('Session save error:', err);
+                console.error('[SETUP-AUTH] Session save error:', err);
+            } else {
+                console.log('[SETUP-AUTH] ✅ Session saved successfully');
             }
             res.redirect('/dashboard');
         });
@@ -667,15 +732,58 @@ async function processSetupData(setupData, supabaseService) {
 
                     if (orgData && adminUser) {
                         console.log('[SETUP-DEBUG] ✅ orgData exists, creating organization...');
-                        // Generate slug from organization name with timestamp for uniqueness
+                        // Generate slug from organization name
                         const baseSlug = orgData.organization_name
                             .toLowerCase()
                             .replace(/[^a-z0-9]+/g, '-')
                             .replace(/^-+|-+$/g, '');
 
+                        // ✅ NEW: Check if organization with this slug already exists
+                        console.log('[SETUP-DEBUG] 🔍 Checking for existing organization with slug pattern:', baseSlug);
+                        const { data: existingOrg, error: checkError } = await supabase
+                            .from('organizations')
+                            .select('id, name, slug')
+                            .ilike('slug', `${baseSlug}%`)
+                            .order('created_at', { ascending: false })
+                            .limit(1)
+                            .maybeSingle();
+
+                        if (existingOrg && !checkError) {
+                            console.log(`[SETUP-DEBUG] 🔄 Organization with similar slug already exists (id: ${existingOrg.id}, slug: ${existingOrg.slug})`);
+
+                            // Check if this user is already linked to this organization
+                            const { data: existingLink, error: linkCheckError } = await supabase
+                                .from('user_organizations')
+                                .select('id')
+                                .eq('user_id', adminUser.user_id)
+                                .eq('organization_id', existingOrg.id)
+                                .maybeSingle();
+
+                            if (existingLink && !linkCheckError) {
+                                console.log(`[SETUP-DEBUG] ✅ User already linked to organization, returning existing org (idempotent)`);
+                                setupData.organizationId = existingOrg.id;
+
+                                // Mark step as complete and return success
+                                if (!setupData.completedSteps.includes('organization')) {
+                                    setupData.completedSteps.push('organization');
+                                }
+
+                                // Skip to next step - organization already exists
+                                console.log('[SETUP-DEBUG] ⏭️  Skipping organization creation (already exists)');
+                                break;
+                            }
+                        }
+
+                        if (checkError && checkError.code !== 'PGRST116') {
+                            // PGRST116 = no rows found (expected for new org)
+                            console.error('[SETUP-DEBUG] ❌ Error checking for existing org:', checkError);
+                            throw new Error('Failed to verify organization uniqueness');
+                        }
+
+                        // Generate unique slug with timestamp for new organizations
                         const timestamp = Date.now().toString(36);
                         const slug = `${baseSlug}-${timestamp}`;
-                        console.log('[SETUP-DEBUG] 🔗 Generated slug:', slug);
+                        console.log('[SETUP-DEBUG] 🔗 Generated unique slug:', slug);
 
                         console.log('[SETUP-DEBUG] 💾 Inserting into Supabase organizations table...');
 
@@ -790,7 +898,27 @@ async function processSetupData(setupData, supabaseService) {
                             throw new Error('Failed to get owner role for organization creator');
                         }
 
-                        const { error: linkError } = await supabase
+                        // CRITICAL VALIDATION: Log everything before attempting INSERT
+                        console.log('[SETUP-DEBUG] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                        console.log('[SETUP-DEBUG] Attempting user_organizations INSERT with:');
+                        console.log('[SETUP-DEBUG]   user_id:', adminUser?.user_id, '(type:', typeof adminUser?.user_id, ')');
+                        console.log('[SETUP-DEBUG]   organization_id:', data?.id, '(type:', typeof data?.id, ')');
+                        console.log('[SETUP-DEBUG]   role:', userRole);
+                        console.log('[SETUP-DEBUG]   org_role_id:', ownerRole?.id, '(type:', typeof ownerRole?.id, ')');
+                        console.log('[SETUP-DEBUG] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+                        // Validate required fields
+                        if (!adminUser?.user_id) {
+                            throw new Error('CRITICAL: adminUser.user_id is missing!');
+                        }
+                        if (!data?.id) {
+                            throw new Error('CRITICAL: organization.id is missing!');
+                        }
+                        if (!ownerRole?.id) {
+                            throw new Error('CRITICAL: ownerRole.id is missing!');
+                        }
+
+                        const { error: linkError } = await supabaseService
                             .from('user_organizations')
                             .insert({
                                 user_id: adminUser.user_id,
@@ -801,12 +929,15 @@ async function processSetupData(setupData, supabaseService) {
                             });
 
                         if (linkError) {
-                            console.log('[SETUP-DEBUG] ❌ Error linking user to organization:', linkError);
-                            // Don't throw - organization is created, just log the error
-                            console.error('[SETUP-DEBUG] ⚠️  User-organization link failed but continuing setup');
-                        } else {
-                            console.log('[SETUP-DEBUG] ✅ User linked to organization with role:', userRole);
+                            console.error('[SETUP-ERROR] ❌ CRITICAL: Failed to link user to organization!', linkError);
+                            throw new Error(`Failed to link user to organization: ${linkError.message}`);
                         }
+
+                        console.log('[SETUP-DEBUG] ✅ User', adminUser.user_id, 'linked to organization', data.id, 'with role:', userRole);
+
+                        // ✅ FIX: Store organization_id and role in setupData for session update
+                        setupData.userRole = userRole;
+                        console.log('[SETUP-DEBUG] ✅ Stored userRole in setupData:', userRole);
 
                         // Create default workflow template for new organization
                         console.log('[SETUP-DEBUG] 🔄 Creating default workflow template...');

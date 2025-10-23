@@ -670,7 +670,7 @@
                 </div>
 
                 <!-- Section Editing Buttons (Admin Only) -->
-                <% if (req.session.isGlobalAdmin || userRole === 'admin' || userRole === 'owner') { %>
+                <% if (req.session.isGlobalAdmin || userRole?.role_code === 'admin' || userRole?.role_code === 'owner') { %>
                 <div class="section-edit-actions mt-3 pt-3 border-top">
                   <div class="d-flex gap-2 flex-wrap align-items-center">
                     <small class="text-muted me-2"><strong>Edit Section:</strong></small>
@@ -718,6 +718,20 @@
                       data-section-id="<%= section.id %>"
                       data-has-suggestions="<%= hasSuggestions %>">
                       <i class="bi bi-union"></i> Join
+                    </button>
+                    <button
+                      class="btn btn-sm btn-outline-secondary indent-btn"
+                      onclick="indentSection('<%= section.id %>', event)"
+                      title="Increase indent (make child of previous sibling)"
+                      data-section-id="<%= section.id %>">
+                      <i class="bi bi-arrow-right"></i> Indent
+                    </button>
+                    <button
+                      class="btn btn-sm btn-outline-secondary dedent-btn"
+                      onclick="dedentSection('<%= section.id %>', event)"
+                      title="Decrease indent (promote to parent's level)"
+                      data-section-id="<%= section.id %>">
+                      <i class="bi bi-arrow-left"></i> Dedent
                     </button>
                   </div>
                   <% if (hasSuggestions) { %>
@@ -2085,49 +2099,61 @@
     }
 
     /**
-     * Dedent Section (move to parent's level)
+     * Indent Section (make child of previous sibling)
      */
-    async function dedentSection(sectionId, event) {
+    async function indentSection(sectionId, event) {
       event.stopPropagation();
 
       try {
-        const sections = <%- JSON.stringify(sections) %>;
-        const section = sections.find(s => s.id === sectionId);
-
-        if (!section) {
-          showToast('Section not found', 'danger');
-          return;
-        }
-
-        if (!section.parent_section_id) {
-          showToast('Section is already at root level', 'warning');
-          return;
-        }
-
-        // Find parent to get grandparent ID
-        const parent = sections.find(s => s.id === section.parent_section_id);
-
-        if (!parent) {
-          showToast('Parent section not found', 'danger');
-          return;
-        }
-
-        const response = await fetch(`/admin/sections/${sectionId}/move`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            newParentId: parent.parent_section_id || null,
-            newOrdinal: parent.ordinal + 1  // Insert right after current parent
-          })
+        const response = await fetch(`/admin/sections/${sectionId}/indent`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
         });
 
         const data = await response.json();
 
         if (data.success) {
-          showToast('Section dedented successfully', 'success');
-          setTimeout(() => location.reload(), 500);
+          showToast(`Section indented successfully (now child of "${data.newParentTitle}")`, 'success');
+          setTimeout(() => location.reload(), 1000);
         } else {
-          showToast('Error: ' + (data.error || 'Failed to dedent section'), 'danger');
+          if (data.code === 'NO_SIBLING') {
+            showToast('Cannot indent: This is the first section at this level', 'warning');
+          } else {
+            showToast('Error: ' + (data.error || 'Failed to indent section'), 'danger');
+          }
+        }
+      } catch (error) {
+        console.error('Indent error:', error);
+        showToast('Failed to indent section', 'danger');
+      }
+    }
+
+    /**
+     * Dedent Section (promote to parent's level)
+     */
+    async function dedentSection(sectionId, event) {
+      event.stopPropagation();
+
+      try {
+        const response = await fetch(`/admin/sections/${sectionId}/dedent`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          const parentMsg = data.formerParentTitle
+            ? `(promoted from under "${data.formerParentTitle}")`
+            : '';
+          showToast(`Section dedented successfully ${parentMsg}`, 'success');
+          setTimeout(() => location.reload(), 1000);
+        } else {
+          if (data.code === 'ALREADY_ROOT') {
+            showToast('Cannot dedent: Section is already at root level', 'warning');
+          } else {
+            showToast('Error: ' + (data.error || 'Failed to dedent section'), 'danger');
+          }
         }
       } catch (error) {
         console.error('Dedent error:', error);

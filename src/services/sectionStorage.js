@@ -28,7 +28,8 @@ class SectionStorage {
         return {
           document_id: documentId,
           parent_section_id: section.parent_id,
-          ordinal: section.ordinal,
+          ordinal: section.ordinal,  // Sibling position (by design)
+          document_order: index + 1,  // Document-wide sequential order
           depth: section.depth,
           section_number: section.section_number,
           section_title: section.title,

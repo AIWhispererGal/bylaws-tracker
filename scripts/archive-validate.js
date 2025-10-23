@@ -2,212 +2,235 @@
 
 /**
  * Archive Validation Script
- *
- * Validates archive integrity and provides health checks.
- *
- * Usage:
- *   node scripts/archive-validate.js
+ * Validates archive structure and integrity after cleanup operations
  */
 
 const fs = require('fs');
 const path = require('path');
 
-const PROJECT_ROOT = path.resolve(__dirname, '..');
-const ARCHIVE_BASE = path.join(PROJECT_ROOT, 'archive');
+const VALIDATION_RESULTS = {
+  timestamp: new Date().toISOString(),
+  phase: process.argv[2] || 'unknown',
+  checks: [],
+  passed: 0,
+  failed: 0,
+  warnings: []
+};
 
-class ArchiveValidator {
-  constructor() {
-    this.issues = [];
-    this.stats = {
-      totalCategories: 0,
-      totalFiles: 0,
-      totalSize: 0,
-      categoryStats: {}
-    };
-  }
+// Color output
+const colors = {
+  reset: '\x1b[0m',
+  green: '\x1b[32m',
+  red: '\x1b[31m',
+  yellow: '\x1b[33m',
+  blue: '\x1b[34m'
+};
 
-  log(message, level = 'info') {
-    const prefix = {
-      info: '📋',
-      success: '✅',
-      warning: '⚠️',
-      error: '❌'
-    }[level] || 'ℹ️';
-    console.log(`${prefix} ${message}`);
-  }
+function check(name, condition, critical = true) {
+  const result = {
+    name,
+    passed: condition,
+    critical
+  };
 
-  getFileSize(filePath) {
-    try {
-      const stats = fs.statSync(filePath);
-      return stats.size;
-    } catch {
-      return 0;
+  VALIDATION_RESULTS.checks.push(result);
+
+  if (condition) {
+    VALIDATION_RESULTS.passed++;
+    console.log(`${colors.green}✓${colors.reset} ${name}`);
+  } else {
+    VALIDATION_RESULTS.failed++;
+    const symbol = critical ? '✗' : '⚠';
+    const color = critical ? colors.red : colors.yellow;
+    console.log(`${color}${symbol}${colors.reset} ${name}`);
+
+    if (!critical) {
+      VALIDATION_RESULTS.warnings.push(name);
     }
   }
 
-  formatBytes(bytes) {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  return condition;
+}
+
+function fileExists(filepath) {
+  try {
+    return fs.existsSync(filepath);
+  } catch (error) {
+    return false;
   }
+}
 
-  validateStructure() {
-    this.log('Validating archive structure...', 'info');
-
-    if (!fs.existsSync(ARCHIVE_BASE)) {
-      this.issues.push({
-        severity: 'error',
-        message: 'Archive directory does not exist'
-      });
-      return false;
-    }
-
-    const expectedCategories = [
-      'outdated-docs',
-      'old-tests',
-      'deprecated-code',
-      'migration-history',
-      'test-files',
-      'database-diagnostics',
-      'root-level-files'
-    ];
-
-    for (const category of expectedCategories) {
-      const categoryPath = path.join(ARCHIVE_BASE, category);
-
-      if (!fs.existsSync(categoryPath)) {
-        this.issues.push({
-          severity: 'warning',
-          message: `Category directory missing: ${category}`
-        });
-      } else {
-        this.stats.totalCategories++;
-        this.validateCategory(category, categoryPath);
-      }
-    }
-
-    return true;
+function directoryExists(dirpath) {
+  try {
+    const stat = fs.statSync(dirpath);
+    return stat.isDirectory();
+  } catch (error) {
+    return false;
   }
+}
 
-  validateCategory(category, categoryPath) {
-    const readmePath = path.join(categoryPath, 'README.md');
+function countFiles(dirpath, extension = null) {
+  try {
+    if (!directoryExists(dirpath)) return 0;
 
-    if (!fs.existsSync(readmePath)) {
-      this.issues.push({
-        severity: 'warning',
-        message: `Missing README.md in ${category}`
-      });
-    }
-
-    // Count files and calculate size
-    const files = fs.readdirSync(categoryPath);
-    let fileCount = 0;
-    let totalSize = 0;
+    let count = 0;
+    const files = fs.readdirSync(dirpath, { withFileTypes: true });
 
     for (const file of files) {
-      const filePath = path.join(categoryPath, file);
-      const stats = fs.statSync(filePath);
+      const fullPath = path.join(dirpath, file.name);
 
-      if (stats.isFile()) {
-        fileCount++;
-        totalSize += stats.size;
-        this.stats.totalFiles++;
-        this.stats.totalSize += stats.size;
+      if (file.isDirectory()) {
+        count += countFiles(fullPath, extension);
+      } else if (!extension || file.name.endsWith(extension)) {
+        count++;
       }
     }
 
-    this.stats.categoryStats[category] = {
-      fileCount,
-      totalSize,
-      formattedSize: this.formatBytes(totalSize)
-    };
-  }
-
-  checkManifests() {
-    this.log('\nChecking migration manifests...', 'info');
-
-    const manifestDir = path.join(ARCHIVE_BASE, 'manifests');
-
-    if (!fs.existsSync(manifestDir)) {
-      this.log('No manifests directory found', 'warning');
-      return;
-    }
-
-    const manifests = fs.readdirSync(manifestDir)
-      .filter(f => f.endsWith('.json'));
-
-    this.log(`Found ${manifests.length} migration manifest(s)`, 'info');
-
-    for (const manifest of manifests) {
-      const manifestPath = path.join(manifestDir, manifest);
-
-      try {
-        const data = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-
-        this.log(`  ${manifest}:`, 'info');
-        this.log(`    Timestamp: ${data.timestamp}`, 'info');
-        this.log(`    Migrations: ${data.migrations.length}`, 'info');
-        this.log(`    Rollbackable: ${data.rollbackable ? 'Yes' : 'No'}`, 'info');
-      } catch (error) {
-        this.issues.push({
-          severity: 'error',
-          message: `Invalid manifest: ${manifest} - ${error.message}`
-        });
-      }
-    }
-  }
-
-  generateReport() {
-    this.log('\n=== Archive Validation Report ===', 'info');
-
-    this.log(`\nStructure:`, 'info');
-    this.log(`  Categories: ${this.stats.totalCategories}`, 'info');
-    this.log(`  Total Files: ${this.stats.totalFiles}`, 'info');
-    this.log(`  Total Size: ${this.formatBytes(this.stats.totalSize)}`, 'info');
-
-    this.log(`\nCategory Breakdown:`, 'info');
-    for (const [category, stats] of Object.entries(this.stats.categoryStats)) {
-      this.log(`  ${category}:`, 'info');
-      this.log(`    Files: ${stats.fileCount}`, 'info');
-      this.log(`    Size: ${stats.formattedSize}`, 'info');
-    }
-
-    if (this.issues.length > 0) {
-      this.log(`\nIssues Found: ${this.issues.length}`, 'warning');
-
-      const errors = this.issues.filter(i => i.severity === 'error');
-      const warnings = this.issues.filter(i => i.severity === 'warning');
-
-      if (errors.length > 0) {
-        this.log('\nErrors:', 'error');
-        errors.forEach(issue => this.log(`  ${issue.message}`, 'error'));
-      }
-
-      if (warnings.length > 0) {
-        this.log('\nWarnings:', 'warning');
-        warnings.forEach(issue => this.log(`  ${issue.message}`, 'warning'));
-      }
-    } else {
-      this.log('\n✅ No issues found!', 'success');
-    }
-
-    return this.issues.length === 0;
-  }
-
-  validate() {
-    this.validateStructure();
-    this.checkManifests();
-    return this.generateReport();
+    return count;
+  } catch (error) {
+    return 0;
   }
 }
 
-// CLI execution
-if (require.main === module) {
-  const validator = new ArchiveValidator();
-  const isValid = validator.validate();
-  process.exit(isValid ? 0 : 1);
+function validateArchiveStructure() {
+  console.log(`\n${colors.blue}=== Archive Structure Validation ===${colors.reset}\n`);
+
+  check('Archive directory exists', directoryExists('archive'));
+
+  // Expected archive subdirectories
+  const expectedDirs = [
+    'archive/docs',
+    'archive/database',
+    'archive/test-files'
+  ];
+
+  expectedDirs.forEach(dir => {
+    check(`${dir} exists`, directoryExists(dir), false);
+  });
 }
 
-module.exports = ArchiveValidator;
+function validateCriticalFiles() {
+  console.log(`\n${colors.blue}=== Critical Files Validation ===${colors.reset}\n`);
+
+  // Critical root files
+  check('server.js exists', fileExists('server.js'));
+  check('package.json exists', fileExists('package.json'));
+
+  // Critical directories
+  check('src/ directory exists', directoryExists('src'));
+  check('views/ directory exists', directoryExists('views'));
+  check('public/ directory exists', directoryExists('public'));
+  check('database/ directory exists', directoryExists('database'));
+
+  // Count critical files
+  const srcCount = countFiles('src', '.js');
+  const viewCount = countFiles('views', '.ejs');
+
+  check(`src/ has JavaScript files (found ${srcCount})`, srcCount > 0);
+  check(`views/ has EJS files (found ${viewCount})`, viewCount > 0);
+
+  VALIDATION_RESULTS.srcFileCount = srcCount;
+  VALIDATION_RESULTS.viewFileCount = viewCount;
+}
+
+function validateActiveDocumentation() {
+  console.log(`\n${colors.blue}=== Active Documentation Validation ===${colors.reset}\n`);
+
+  // Key documentation that should NOT be archived
+  const activeDocs = [
+    'README.md',
+    'docs/roadmap/README.md',
+    '.env.example'
+  ];
+
+  activeDocs.forEach(doc => {
+    check(`${doc} exists (active)`, fileExists(doc));
+  });
+}
+
+function validateNoUnintendedDeletions() {
+  console.log(`\n${colors.blue}=== Unintended Deletion Check ===${colors.reset}\n`);
+
+  // Files that should NEVER be deleted
+  const protectedFiles = [
+    'server.js',
+    'package.json',
+    'package-lock.json',
+    '.gitignore'
+  ];
+
+  protectedFiles.forEach(file => {
+    check(`Protected file ${file} intact`, fileExists(file));
+  });
+
+  // Protected directories
+  const protectedDirs = [
+    'src',
+    'views',
+    'public',
+    'database',
+    'node_modules'
+  ];
+
+  protectedDirs.forEach(dir => {
+    check(`Protected directory ${dir}/ intact`, directoryExists(dir));
+  });
+}
+
+function generateReport() {
+  console.log(`\n${colors.blue}=== Validation Summary ===${colors.reset}\n`);
+
+  const totalChecks = VALIDATION_RESULTS.passed + VALIDATION_RESULTS.failed;
+  const passRate = ((VALIDATION_RESULTS.passed / totalChecks) * 100).toFixed(1);
+
+  console.log(`Phase: ${colors.yellow}${VALIDATION_RESULTS.phase}${colors.reset}`);
+  console.log(`Checks Passed: ${colors.green}${VALIDATION_RESULTS.passed}/${totalChecks}${colors.reset} (${passRate}%)`);
+
+  if (VALIDATION_RESULTS.failed > 0) {
+    console.log(`${colors.red}Failed Checks: ${VALIDATION_RESULTS.failed}${colors.reset}`);
+  }
+
+  if (VALIDATION_RESULTS.warnings.length > 0) {
+    console.log(`${colors.yellow}Warnings: ${VALIDATION_RESULTS.warnings.length}${colors.reset}`);
+  }
+
+  // Save report
+  const reportPath = `tests/validation/phase-${VALIDATION_RESULTS.phase}-report.json`;
+  try {
+    fs.mkdirSync('tests/validation', { recursive: true });
+    fs.writeFileSync(reportPath, JSON.stringify(VALIDATION_RESULTS, null, 2));
+    console.log(`\nReport saved to: ${reportPath}`);
+  } catch (error) {
+    console.error(`Failed to save report: ${error.message}`);
+  }
+
+  // Exit code
+  const criticalFailures = VALIDATION_RESULTS.checks.filter(c => !c.passed && c.critical).length;
+
+  if (criticalFailures > 0) {
+    console.log(`\n${colors.red}VALIDATION FAILED - ${criticalFailures} critical issues${colors.reset}`);
+    process.exit(1);
+  } else if (VALIDATION_RESULTS.failed > 0) {
+    console.log(`\n${colors.yellow}VALIDATION PASSED WITH WARNINGS${colors.reset}`);
+    process.exit(0);
+  } else {
+    console.log(`\n${colors.green}VALIDATION PASSED - All checks successful${colors.reset}`);
+    process.exit(0);
+  }
+}
+
+// Main execution
+console.log(`${colors.blue}╔════════════════════════════════════════════╗${colors.reset}`);
+console.log(`${colors.blue}║   Archive Cleanup Validation Script       ║${colors.reset}`);
+console.log(`${colors.blue}╚════════════════════════════════════════════╝${colors.reset}`);
+console.log(`\nPhase: ${VALIDATION_RESULTS.phase}`);
+console.log(`Timestamp: ${VALIDATION_RESULTS.timestamp}\n`);
+
+// Run all validations
+validateCriticalFiles();
+validateArchiveStructure();
+validateActiveDocumentation();
+validateNoUnintendedDeletions();
+
+// Generate final report
+generateReport();

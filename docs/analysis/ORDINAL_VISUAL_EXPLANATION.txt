@@ -1,0 +1,175 @@
+╔════════════════════════════════════════════════════════════════════════════════╗
+║                    ORDINAL FIELD ROOT CAUSE - VISUAL EXPLANATION               ║
+╚════════════════════════════════════════════════════════════════════════════════╝
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ THE PROBLEM: Sections display in wrong order in UI                             │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+  Expected Order (Parse Order):          Actual Display (Wrong Order):
+  ┌───────────────────────┐              ┌───────────────────────┐
+  │ 1. Article I          │              │ 1. Article I          │ ← ordinal=1
+  │ 2.   Section 1.1      │              │ 2.   Section 1.1      │ ← ordinal=1 (SAME!)
+  │ 3.   Section 1.2      │              │ 3.   Section 2.1      │ ← ordinal=1 (SAME!)
+  │ 4. Article II         │              │ 4.   Section 1.2      │ ← ordinal=2
+  │ 5.   Section 2.1      │              │ 5. Article II         │ ← ordinal=2 (SAME!)
+  │ 6.   Section 2.2      │              │ 6.   Section 2.2      │ ← ordinal=2 (SAME!)
+  └───────────────────────┘              └───────────────────────┘
+                                                   ↑
+                                         JUMBLED because multiple
+                                         sections have same ordinal!
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ THE ROOT CAUSE: ordinal field stores SIBLING position, not document position   │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+Database Table: document_sections
+┌─────────────┬───────┬────────┬───────────┬──────────────────┬──────────────────┐
+│ Section     │ Depth │ Ordinal│ Parent    │ Meaning          │ Document Order   │
+├─────────────┼───────┼────────┼───────────┼──────────────────┼──────────────────┤
+│ Article I   │   0   │   1    │ NULL      │ 1st root section │        1         │
+│ Section 1.1 │   1   │   1    │ Article I │ 1st child of I   │        2         │
+│ Section 1.2 │   1   │   2    │ Article I │ 2nd child of I   │        3         │
+│ Article II  │   0   │   2    │ NULL      │ 2nd root section │        4         │
+│ Section 2.1 │   1   │   1    │ Article II│ 1st child of II  │        5         │
+│ Section 2.2 │   1   │   2    │ Article II│ 2nd child of II  │        6         │
+└─────────────┴───────┴────────┴───────────┴──────────────────┴──────────────────┘
+                        ↑                                              ↑
+                   SIBLING POSITION                           WHAT WE NEED!
+                   (by design for hierarchy)                  (parse sequence)
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ THE DATA FLOW: How ordinal gets set                                            │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+1. PARSER CREATES SECTIONS (wordParser.js, textParser.js)
+   ┌─────────────────────────────────────────────────────┐
+   │ sections[0] = { title: "Article I",   ordinal: 1 }  │  ← Sequential
+   │ sections[1] = { title: "Section 1.1", ordinal: 2 }  │  ← Sequential
+   │ sections[2] = { title: "Section 1.2", ordinal: 3 }  │  ← Sequential
+   │ sections[3] = { title: "Article II",  ordinal: 4 }  │  ← Sequential
+   │ sections[4] = { title: "Section 2.1", ordinal: 5 }  │  ← Sequential
+   │ sections[5] = { title: "Section 2.2", ordinal: 6 }  │  ← Sequential
+   └─────────────────────────────────────────────────────┘
+              ↓ Pass to sectionStorage.buildHierarchy()
+
+2. SECTION STORAGE RECALCULATES ORDINALS (sectionStorage.js lines 124-140)
+   ┌───────────────────────────────────────────────────────────────┐
+   │ // Count siblings at same depth with same parent              │
+   │ if (parentStack.length > 0) {                                 │
+   │   siblings = filter(s => s.parent === currentParent)          │
+   │   ordinal = siblings.length + 1  ← OVERWRITES parse ordinal! │
+   │ }                                                             │
+   └───────────────────────────────────────────────────────────────┘
+              ↓ Transforms sequential ordinals to sibling positions
+
+3. RESULT IN DATABASE
+   ┌─────────────────────────────────────────────────────┐
+   │ Article I   → ordinal: 1 (1st root)                 │
+   │ Section 1.1 → ordinal: 1 (1st child of I)           │  ← Duplicate!
+   │ Section 1.2 → ordinal: 2 (2nd child of I)           │
+   │ Article II  → ordinal: 2 (2nd root)                 │  ← Duplicate!
+   │ Section 2.1 → ordinal: 1 (1st child of II)          │  ← Duplicate!
+   │ Section 2.2 → ordinal: 2 (2nd child of II)          │  ← Duplicate!
+   └─────────────────────────────────────────────────────┘
+
+4. BUT ALSO STORES ORIGINAL IN METADATA! (sectionStorage.js line 44)
+   ┌─────────────────────────────────────────────────────┐
+   │ metadata: {                                         │
+   │   ordinal_position: index + 1  ← THE SOLUTION!     │
+   │ }                                                   │
+   └─────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ THE SOLUTION: Use metadata->ordinal_position for queries                       │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+BEFORE (Wrong):                         AFTER (Correct):
+┌────────────────────────────┐         ┌─────────────────────────────────────┐
+│ .order('ordinal', {        │         │ .order('metadata->ordinal_position',│
+│   ascending: true          │         │   { ascending: true }               │
+│ })                         │         │ )                                   │
+└────────────────────────────┘         └─────────────────────────────────────┘
+         ↓                                       ↓
+  Sorts by sibling position            Sorts by parse sequence
+  (creates jumbled order)              (preserves document order)
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ FIELD COMPARISON TABLE                                                          │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────┬─────────────────┬──────────────────┬───────────────────┐
+│ Field                  │ Stores          │ Used For         │ Example Values    │
+├────────────────────────┼─────────────────┼──────────────────┼───────────────────┤
+│ ordinal                │ Sibling position│ Hierarchy logic  │ 1, 1, 2, 2, 1, 2  │
+│ (current - WRONG for   │ (1st child,     │ Parent-child     │ (has duplicates)  │
+│  document ordering)    │  2nd child)     │ relationships    │                   │
+├────────────────────────┼─────────────────┼──────────────────┼───────────────────┤
+│ metadata->             │ Parse sequence  │ Document-wide    │ 1, 2, 3, 4, 5, 6  │
+│ ordinal_position       │ (document order)│ ordering         │ (sequential!)     │
+│ (Phase 1 - Use this!)  │                 │                  │                   │
+├────────────────────────┼─────────────────┼──────────────────┼───────────────────┤
+│ document_order         │ Parse sequence  │ Fast document    │ 1, 2, 3, 4, 5, 6  │
+│ (Phase 2 - Future)     │ (dedicated col) │ ordering         │ (sequential!)     │
+├────────────────────────┼─────────────────┼──────────────────┼───────────────────┤
+│ path_ordinals          │ Hierarchical    │ Breadcrumb paths │ [1], [1,1], [1,2] │
+│ (alternative option)   │ array           │ Ancestor queries │ [2], [2,1], [2,2] │
+├────────────────────────┼─────────────────┼──────────────────┼───────────────────┤
+│ created_at             │ Insert time     │ Audit trail      │ Timestamps        │
+│ (NOT reliable!)        │                 │ NOT for ordering │ (batch issues)    │
+└────────────────────────┴─────────────────┴──────────────────┴───────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ IMPLEMENTATION CHECKLIST                                                        │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+Phase 1: IMMEDIATE FIX (This Week)
+  ☐ 1. Verify metadata->ordinal_position exists in database
+  ☐ 2. Update src/routes/dashboard.js (6 instances)
+  ☐ 3. Update src/routes/approval.js (2 instances)
+  ☐ 4. Update src/routes/admin.js (1 instance)
+  ☐ 5. Update src/routes/workflow.js (1 instance)
+  ☐ 6. Test on development environment
+  ☐ 7. Deploy to staging
+  ☐ 8. Validate correct section ordering
+  ☐ 9. Deploy to production
+  ☐ 10. Monitor for 48 hours
+
+Phase 2: ENHANCEMENT (Next Sprint)
+  ☐ 1. Review migration script: 003_add_document_order.sql
+  ☐ 2. Test migration on staging database
+  ☐ 3. Run migration on production during maintenance window
+  ☐ 4. Update sectionStorage.js to populate document_order
+  ☐ 5. Update all queries to use document_order
+  ☐ 6. Performance benchmark (should be <15ms)
+  ☐ 7. Monitor for 1 week
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ WHY THIS APPROACH IS CORRECT                                                    │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+✅ ordinal field is NOT BROKEN - it's working exactly as designed
+   • It stores sibling position for hierarchical relationships
+   • Multiple sections SHOULD have same ordinal (1st child, 2nd child)
+   • This is correct database design for tree structures
+
+✅ metadata->ordinal_position already exists and contains correct data
+   • Added by sectionStorage.js line 44 since initial parser creation
+   • Stores the original parse sequence (1, 2, 3, 4...)
+   • No migration needed - data is already there!
+
+✅ This is a QUERY fix, not a storage bug
+   • The database has both values (sibling position AND document order)
+   • We were just querying the wrong field
+   • Simple ORDER BY change fixes the entire issue
+
+✅ Two-phase approach minimizes risk
+   • Phase 1: Use existing metadata field (zero risk)
+   • Phase 2: Add dedicated column for performance (planned migration)
+   • Can deploy Phase 1 immediately, Phase 2 when convenient
+
+╔════════════════════════════════════════════════════════════════════════════════╗
+║ CONCLUSION: The ordinal field is correct. We just need to use the right field ║
+║ for document ordering: metadata->ordinal_position (now) or document_order      ║
+║ (future enhancement).                                                          ║
+╚════════════════════════════════════════════════════════════════════════════════╝

@@ -1,65 +1,316 @@
--- BYLAWS AMENDMENT TRACKER DATABASE SCHEMA
--- Run this in your Supabase SQL editor
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
 
--- Table 1: Document sections (like Article V, Section 1)
-CREATE TABLE IF NOT EXISTS bylaw_sections (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  doc_id VARCHAR(255) NOT NULL,
-  section_citation VARCHAR(255) NOT NULL,
-  section_title TEXT,
-  original_text TEXT,
-  new_text TEXT,
-  final_text TEXT,
-  
-  -- Locking fields
-  locked_by_committee BOOLEAN DEFAULT FALSE,
-  locked_at TIMESTAMP,
-  locked_by VARCHAR(255),
-  selected_suggestion_id UUID,
-  committee_notes TEXT,
-  
-  -- Board approval
-  board_approved BOOLEAN DEFAULT FALSE,
-  board_approved_at TIMESTAMP,
-  
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
+CREATE TABLE public.document_sections (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  document_id uuid NOT NULL,
+  parent_section_id uuid,
+  ordinal integer NOT NULL CHECK (ordinal > 0),
+  depth integer NOT NULL DEFAULT 0 CHECK (depth >= 0 AND depth <= 10),
+  path_ids ARRAY NOT NULL,
+  path_ordinals ARRAY NOT NULL,
+  section_number character varying,
+  section_title text,
+  section_type character varying,
+  original_text text,
+  current_text text,
+  metadata jsonb DEFAULT '{}'::jsonb,
+  created_at timestamp without time zone DEFAULT now(),
+  updated_at timestamp without time zone DEFAULT now(),
+  organization_id uuid NOT NULL,
+  is_locked boolean NOT NULL DEFAULT false,
+  locked_at timestamp without time zone,
+  locked_by uuid,
+  selected_suggestion_id uuid,
+  locked_text text,
+  document_order integer NOT NULL CHECK (document_order > 0),
+  CONSTRAINT document_sections_pkey PRIMARY KEY (id),
+  CONSTRAINT document_sections_document_id_fkey FOREIGN KEY (document_id) REFERENCES public.documents(id),
+  CONSTRAINT document_sections_parent_section_id_fkey FOREIGN KEY (parent_section_id) REFERENCES public.document_sections(id),
+  CONSTRAINT document_sections_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES public.organizations(id),
+  CONSTRAINT document_sections_locked_by_fkey FOREIGN KEY (locked_by) REFERENCES auth.users(id),
+  CONSTRAINT document_sections_selected_suggestion_id_fkey FOREIGN KEY (selected_suggestion_id) REFERENCES public.suggestions(id)
 );
-
--- Table 2: Suggestions for each section
-CREATE TABLE IF NOT EXISTS bylaw_suggestions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  section_id UUID REFERENCES bylaw_sections(id) ON DELETE CASCADE,
-  google_suggestion_id VARCHAR(255),
-  
-  suggested_text TEXT,
-  rationale TEXT,
-  author_email VARCHAR(255),
-  author_name VARCHAR(255),
-  
-  status VARCHAR(50) DEFAULT 'open',
-  support_count INTEGER DEFAULT 0,
-  committee_selected BOOLEAN DEFAULT FALSE,
-  
-  created_at TIMESTAMP DEFAULT NOW()
+CREATE TABLE public.document_versions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  document_id uuid NOT NULL,
+  version_number character varying NOT NULL,
+  version_name character varying,
+  description text,
+  sections_snapshot jsonb NOT NULL,
+  approval_snapshot jsonb,
+  created_by uuid,
+  created_by_email character varying,
+  created_at timestamp without time zone DEFAULT now(),
+  approved_at timestamp without time zone,
+  approved_by uuid,
+  approval_stage character varying,
+  is_current boolean DEFAULT false,
+  is_published boolean DEFAULT false,
+  published_at timestamp without time zone,
+  metadata jsonb DEFAULT '{}'::jsonb,
+  CONSTRAINT document_versions_pkey PRIMARY KEY (id),
+  CONSTRAINT document_versions_document_id_fkey FOREIGN KEY (document_id) REFERENCES public.documents(id),
+  CONSTRAINT document_versions_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id),
+  CONSTRAINT document_versions_approved_by_fkey FOREIGN KEY (approved_by) REFERENCES public.users(id)
 );
-
--- Table 3: Who likes which suggestion
-CREATE TABLE IF NOT EXISTS bylaw_votes (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  suggestion_id UUID REFERENCES bylaw_suggestions(id) ON DELETE CASCADE,
-  user_email VARCHAR(255) NOT NULL,
-  vote_type VARCHAR(20),
-  is_preferred BOOLEAN DEFAULT FALSE,
-  
-  created_at TIMESTAMP DEFAULT NOW(),
-  UNIQUE(suggestion_id, user_email)
+CREATE TABLE public.document_workflows (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  document_id uuid NOT NULL UNIQUE,
+  workflow_template_id uuid NOT NULL,
+  activated_at timestamp without time zone DEFAULT now(),
+  status character varying NOT NULL DEFAULT 'active'::character varying,
+  current_stage_id uuid,
+  created_at timestamp without time zone DEFAULT now(),
+  updated_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT document_workflows_pkey PRIMARY KEY (id),
+  CONSTRAINT document_workflows_document_id_fkey FOREIGN KEY (document_id) REFERENCES public.documents(id),
+  CONSTRAINT document_workflows_workflow_template_id_fkey FOREIGN KEY (workflow_template_id) REFERENCES public.workflow_templates(id),
+  CONSTRAINT document_workflows_current_stage_id_fkey FOREIGN KEY (current_stage_id) REFERENCES public.workflow_stages(id)
 );
-
--- Create indexes for speed
-CREATE INDEX IF NOT EXISTS idx_sections_doc ON bylaw_sections(doc_id);
-CREATE INDEX IF NOT EXISTS idx_suggestions_section ON bylaw_suggestions(section_id);
-
--- Grant permissions (adjust for your Supabase setup)
-GRANT ALL ON ALL TABLES IN SCHEMA public TO anon;
-GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon;
+CREATE TABLE public.documents (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  organization_id uuid NOT NULL,
+  title character varying NOT NULL,
+  description text,
+  document_type character varying DEFAULT 'bylaws'::character varying,
+  google_doc_id character varying,
+  external_source character varying,
+  version character varying DEFAULT '1.0'::character varying,
+  version_history jsonb DEFAULT '[]'::jsonb,
+  status character varying DEFAULT 'draft'::character varying,
+  published_at timestamp without time zone,
+  archived_at timestamp without time zone,
+  metadata jsonb DEFAULT '{}'::jsonb,
+  created_at timestamp without time zone DEFAULT now(),
+  updated_at timestamp without time zone DEFAULT now(),
+  hierarchy_override jsonb,
+  CONSTRAINT documents_pkey PRIMARY KEY (id),
+  CONSTRAINT documents_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES public.organizations(id)
+);
+CREATE TABLE public.organization_roles (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  role_code character varying NOT NULL UNIQUE,
+  role_name character varying NOT NULL,
+  description text,
+  hierarchy_level integer NOT NULL UNIQUE,
+  org_permissions jsonb DEFAULT '{"can_vote": false, "can_manage_users": false, "can_edit_sections": false, "can_approve_stages": [], "can_delete_documents": false, "can_manage_workflows": false, "can_upload_documents": false, "can_create_suggestions": false, "can_configure_organization": false}'::jsonb,
+  is_system_role boolean DEFAULT false,
+  created_at timestamp without time zone DEFAULT now(),
+  updated_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT organization_roles_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.organizations (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name character varying NOT NULL,
+  slug character varying NOT NULL UNIQUE,
+  organization_type character varying DEFAULT 'neighborhood_council'::character varying,
+  settings jsonb DEFAULT '{}'::jsonb,
+  hierarchy_config jsonb DEFAULT '{"levels": [{"name": "Article", "prefix": "Article", "numbering": "roman"}, {"name": "Section", "prefix": "Section", "numbering": "numeric"}]}'::jsonb,
+  is_configured boolean DEFAULT false,
+  created_at timestamp without time zone DEFAULT now(),
+  updated_at timestamp without time zone DEFAULT now(),
+  state character varying,
+  country character varying DEFAULT 'USA'::character varying,
+  contact_email text,
+  logo_url text,
+  deleted_at timestamp without time zone,
+  CONSTRAINT organizations_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.section_workflow_states (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  section_id uuid NOT NULL,
+  workflow_stage_id uuid NOT NULL,
+  status character varying NOT NULL,
+  actioned_by uuid,
+  actioned_by_email character varying,
+  actioned_at timestamp without time zone DEFAULT now(),
+  notes text,
+  selected_suggestion_id uuid,
+  created_at timestamp without time zone DEFAULT now(),
+  updated_at timestamp without time zone DEFAULT now(),
+  approval_metadata jsonb DEFAULT '{}'::jsonb,
+  CONSTRAINT section_workflow_states_pkey PRIMARY KEY (id),
+  CONSTRAINT section_workflow_states_section_id_fkey FOREIGN KEY (section_id) REFERENCES public.document_sections(id),
+  CONSTRAINT section_workflow_states_workflow_stage_id_fkey FOREIGN KEY (workflow_stage_id) REFERENCES public.workflow_stages(id),
+  CONSTRAINT section_workflow_states_actioned_by_fkey FOREIGN KEY (actioned_by) REFERENCES public.users(id),
+  CONSTRAINT fk_selected_suggestion FOREIGN KEY (selected_suggestion_id) REFERENCES public.suggestions(id)
+);
+CREATE TABLE public.suggestion_sections (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  suggestion_id uuid NOT NULL,
+  section_id uuid NOT NULL,
+  ordinal integer NOT NULL,
+  CONSTRAINT suggestion_sections_pkey PRIMARY KEY (id),
+  CONSTRAINT suggestion_sections_suggestion_id_fkey FOREIGN KEY (suggestion_id) REFERENCES public.suggestions(id),
+  CONSTRAINT suggestion_sections_section_id_fkey FOREIGN KEY (section_id) REFERENCES public.document_sections(id)
+);
+CREATE TABLE public.suggestion_votes (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  suggestion_id uuid NOT NULL,
+  user_id uuid,
+  user_email character varying,
+  vote_type character varying DEFAULT 'support'::character varying,
+  is_preferred boolean DEFAULT false,
+  created_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT suggestion_votes_pkey PRIMARY KEY (id),
+  CONSTRAINT suggestion_votes_suggestion_id_fkey FOREIGN KEY (suggestion_id) REFERENCES public.suggestions(id),
+  CONSTRAINT suggestion_votes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.suggestions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  document_id uuid NOT NULL,
+  is_multi_section boolean DEFAULT false,
+  suggested_text text,
+  rationale text,
+  author_user_id uuid,
+  author_email character varying,
+  author_name character varying,
+  google_suggestion_id character varying,
+  status character varying DEFAULT 'open'::character varying,
+  support_count integer DEFAULT 0,
+  metadata jsonb DEFAULT '{}'::jsonb,
+  article_scope character varying,
+  section_range character varying,
+  created_at timestamp without time zone DEFAULT now(),
+  updated_at timestamp without time zone DEFAULT now(),
+  organization_id uuid NOT NULL,
+  rejected_at timestamp without time zone,
+  rejected_by uuid,
+  rejected_at_stage_id uuid,
+  rejection_notes text,
+  CONSTRAINT suggestions_pkey PRIMARY KEY (id),
+  CONSTRAINT suggestions_document_id_fkey FOREIGN KEY (document_id) REFERENCES public.documents(id),
+  CONSTRAINT suggestions_author_user_id_fkey FOREIGN KEY (author_user_id) REFERENCES public.users(id),
+  CONSTRAINT suggestions_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES public.organizations(id),
+  CONSTRAINT suggestions_rejected_by_fkey FOREIGN KEY (rejected_by) REFERENCES public.users(id),
+  CONSTRAINT suggestions_rejected_at_stage_id_fkey FOREIGN KEY (rejected_at_stage_id) REFERENCES public.workflow_stages(id)
+);
+CREATE TABLE public.user_activity_log (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid,
+  organization_id uuid,
+  action_type character varying NOT NULL,
+  entity_type character varying,
+  entity_id uuid,
+  action_data jsonb DEFAULT '{}'::jsonb,
+  ip_address character varying,
+  user_agent text,
+  created_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT user_activity_log_pkey PRIMARY KEY (id),
+  CONSTRAINT user_activity_log_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
+  CONSTRAINT user_activity_log_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES public.organizations(id)
+);
+CREATE TABLE public.user_invitations (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  organization_id uuid NOT NULL,
+  email text NOT NULL CHECK (email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'::text),
+  role text NOT NULL DEFAULT 'member'::text CHECK (role = ANY (ARRAY['owner'::text, 'admin'::text, 'member'::text, 'viewer'::text])),
+  token text NOT NULL UNIQUE,
+  status text NOT NULL DEFAULT 'pending'::text CHECK (status = ANY (ARRAY['pending'::text, 'accepted'::text, 'expired'::text, 'revoked'::text])),
+  invited_by uuid,
+  expires_at timestamp with time zone NOT NULL DEFAULT (now() + '7 days'::interval),
+  accepted_at timestamp with time zone,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT user_invitations_pkey PRIMARY KEY (id),
+  CONSTRAINT user_invitations_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES public.organizations(id),
+  CONSTRAINT user_invitations_invited_by_fkey FOREIGN KEY (invited_by) REFERENCES auth.users(id)
+);
+CREATE TABLE public.user_organizations (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  organization_id uuid NOT NULL,
+  role character varying NOT NULL DEFAULT 'member'::character varying,
+  permissions jsonb DEFAULT '{"can_vote": true, "can_manage_users": false, "can_edit_sections": true, "can_approve_stages": [], "can_manage_workflows": false, "can_create_suggestions": true}'::jsonb,
+  joined_at timestamp without time zone DEFAULT now(),
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  is_global_admin boolean DEFAULT false,
+  is_active boolean NOT NULL DEFAULT true,
+  invited_at timestamp without time zone,
+  invited_by uuid,
+  last_active timestamp without time zone,
+  org_role_id uuid,
+  CONSTRAINT user_organizations_pkey PRIMARY KEY (id),
+  CONSTRAINT user_organizations_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
+  CONSTRAINT user_organizations_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES public.organizations(id),
+  CONSTRAINT user_organizations_invited_by_fkey FOREIGN KEY (invited_by) REFERENCES public.users(id),
+  CONSTRAINT user_organizations_org_role_id_fkey FOREIGN KEY (org_role_id) REFERENCES public.organization_roles(id)
+);
+CREATE TABLE public.user_types (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  type_code character varying NOT NULL UNIQUE,
+  type_name character varying NOT NULL,
+  description text,
+  global_permissions jsonb DEFAULT '{"can_configure_system": false, "can_view_system_logs": false, "can_create_organizations": false, "can_delete_organizations": false, "can_manage_platform_users": false, "can_access_all_organizations": false}'::jsonb,
+  is_system_type boolean DEFAULT false,
+  created_at timestamp without time zone DEFAULT now(),
+  updated_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT user_types_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.users (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  email character varying NOT NULL UNIQUE,
+  name character varying,
+  avatar_url text,
+  auth_provider character varying DEFAULT 'supabase'::character varying,
+  created_at timestamp without time zone DEFAULT now(),
+  last_login timestamp without time zone,
+  is_global_admin boolean DEFAULT false,
+  user_type_id uuid,
+  CONSTRAINT users_pkey PRIMARY KEY (id),
+  CONSTRAINT users_user_type_id_fkey FOREIGN KEY (user_type_id) REFERENCES public.user_types(id)
+);
+CREATE TABLE public.workflow_audit_log (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  section_id uuid,
+  document_id uuid,
+  user_id uuid,
+  organization_id uuid,
+  action text NOT NULL,
+  previous_status text,
+  new_status text,
+  stage_id uuid,
+  stage_name text,
+  notes text,
+  metadata jsonb DEFAULT '{}'::jsonb,
+  ip_address character varying,
+  user_agent text,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT workflow_audit_log_pkey PRIMARY KEY (id),
+  CONSTRAINT workflow_audit_log_section_id_fkey FOREIGN KEY (section_id) REFERENCES public.document_sections(id),
+  CONSTRAINT workflow_audit_log_document_id_fkey FOREIGN KEY (document_id) REFERENCES public.documents(id),
+  CONSTRAINT workflow_audit_log_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
+  CONSTRAINT workflow_audit_log_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES public.organizations(id),
+  CONSTRAINT workflow_audit_log_stage_id_fkey FOREIGN KEY (stage_id) REFERENCES public.workflow_stages(id)
+);
+CREATE TABLE public.workflow_stages (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  workflow_template_id uuid NOT NULL,
+  stage_name character varying NOT NULL,
+  stage_order integer NOT NULL CHECK (stage_order > 0),
+  can_lock boolean DEFAULT true,
+  can_edit boolean DEFAULT false,
+  can_approve boolean DEFAULT true,
+  requires_approval boolean DEFAULT true,
+  required_roles jsonb DEFAULT '["admin"]'::jsonb,
+  display_color character varying,
+  icon character varying,
+  description text,
+  created_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT workflow_stages_pkey PRIMARY KEY (id),
+  CONSTRAINT workflow_stages_workflow_template_id_fkey FOREIGN KEY (workflow_template_id) REFERENCES public.workflow_templates(id)
+);
+CREATE TABLE public.workflow_templates (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  organization_id uuid NOT NULL,
+  name character varying NOT NULL,
+  description text,
+  is_default boolean DEFAULT false,
+  is_active boolean DEFAULT true,
+  created_at timestamp without time zone DEFAULT now(),
+  updated_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT workflow_templates_pkey PRIMARY KEY (id),
+  CONSTRAINT workflow_templates_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES public.organizations(id)
+);

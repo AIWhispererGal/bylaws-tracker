@@ -4,6 +4,7 @@
  */
 
 const wordParser = require('../parsers/wordParser');
+const textParser = require('../parsers/textParser');
 const hierarchyDetector = require('../parsers/hierarchyDetector');
 const organizationConfig = require('../config/organizationConfig');
 const sectionStorage = require('./sectionStorage');
@@ -188,8 +189,28 @@ class SetupService {
         });
       }
 
-      // Parse the document
-      const parseResult = await wordParser.parseDocument(filePath, config);
+      // Detect file type and select appropriate parser
+      const ext = path.extname(filePath).toLowerCase();
+      let parser;
+      let parserName;
+
+      if (['.txt', '.md'].includes(ext)) {
+        parser = textParser;
+        parserName = 'textParser';
+        console.log(`[SETUP-DEBUG] 📄 Using textParser for ${ext} file`);
+      } else if (['.docx', '.doc'].includes(ext)) {
+        parser = wordParser;
+        parserName = 'wordParser';
+        console.log(`[SETUP-DEBUG] 📄 Using wordParser for ${ext} file`);
+      } else {
+        return {
+          success: false,
+          error: `Unsupported file type: ${ext}. Supported formats: .docx, .doc, .txt, .md`
+        };
+      }
+
+      // Parse the document with the selected parser
+      const parseResult = await parser.parseDocument(filePath, config);
 
       if (!parseResult.success) {
         return {
@@ -198,8 +219,8 @@ class SetupService {
         };
       }
 
-      // Validate sections
-      const validation = wordParser.validateSections(parseResult.sections, config);
+      // Validate sections using the same parser's validation method
+      const validation = parser.validateSections(parseResult.sections, config);
 
       if (!validation.valid) {
         return {

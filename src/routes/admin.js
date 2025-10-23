@@ -35,7 +35,7 @@ function requireAdmin(req, res, next) {
  * GET /admin/users - User management page
  * UPDATED: Uses new permissions system (admin level 3+)
  */
-router.get('/users', requireMinRoleLevel(3), attachPermissions, async (req, res) => {
+router.get('/users', requirePermission('can_manage_users', true), attachPermissions, async (req, res) => {
   try {
     const { supabaseService } = req;
     const organizationId = req.session.organizationId;
@@ -148,21 +148,34 @@ router.get('/users', requireMinRoleLevel(3), attachPermissions, async (req, res)
 });
 
 /**
- * GET /admin/dashboard - Admin overview of all organizations
- * Requires global admin access to view all organizations
- * UPDATED: Uses new permissions check
+ * GET /admin/dashboard - Admin overview of user's organizations
+ * Shows organizations where user has admin or owner access
  */
-router.get('/dashboard', requirePermission('can_access_all_organizations'), attachPermissions, async (req, res) => {
+router.get('/dashboard', attachPermissions, async (req, res) => {
   try {
     const { supabaseService } = req;
+    const userId = req.session.userId;
 
-    // Get all organizations with stats
-    const { data: organizations, error: orgsError } = await supabaseService
-      .from('organizations')
-      .select('*')
+    // Get organizations where user has admin or owner role
+    const { data: userOrgs, error: orgsError } = await supabaseService
+      .from('user_organizations')
+      .select(`
+        organization_id,
+        role,
+        organizations!inner(*)
+      `)
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .in('role', ['owner', 'admin'])
       .order('created_at', { ascending: false });
 
     if (orgsError) throw orgsError;
+
+    // Extract organizations from joined data
+    const organizations = userOrgs?.map(uo => ({
+      ...uo.organizations,
+      userRole: uo.role
+    })) || [];
 
     // Enrich each organization with statistics
     const enrichedOrgs = await Promise.all(
@@ -242,23 +255,45 @@ router.get('/dashboard', requirePermission('can_access_all_organizations'), atta
 
 /**
  * GET /admin/organization - Organization settings/configuration page
- * This route allows admins to configure global organization settings
+ * Shows settings for organizations where user has admin access
  */
-router.get('/organization', requireAdmin, async (req, res) => {
+router.get('/organization', requirePermission('can_configure_organization', true), attachPermissions, async (req, res) => {
   try {
     const { supabaseService } = req;
+    const userId = req.session.userId;
 
-    // Get all organizations for selection
-    const { data: organizations, error } = await supabaseService
-      .from('organizations')
-      .select('*')
-      .order('name', { ascending: true });
+    // Get organizations where user has admin or owner role
+    const { data: userOrgs, error: userOrgsError } = await supabaseService
+      .from('user_organizations')
+      .select(`
+        organization_id,
+        role,
+        organizations!inner(
+          id,
+          name,
+          organization_type,
+          state,
+          country,
+          created_at,
+          settings,
+          hierarchy_config
+        )
+      `)
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .in('role', ['owner', 'admin']);
 
-    if (error) throw error;
+    if (userOrgsError) throw userOrgsError;
+
+    // Extract organizations from the joined data
+    const organizations = userOrgs?.map(uo => ({
+      ...uo.organizations,
+      userRole: uo.role
+    })) || [];
 
     res.render('admin/organization-settings', {
       title: 'Organization Settings',
-      organizations: organizations || [],
+      organizations: organizations,
       currentOrgId: req.session.organizationId || null
     });
   } catch (error) {
@@ -617,12 +652,19 @@ router.post('/documents/upload', requireAdmin, async (req, res) => {
     fileFilter: (req, file, cb) => {
       const allowedMimes = [
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'application/msword'
+        'application/msword',
+        'text/plain',
+        'text/markdown'
       ];
-      if (allowedMimes.includes(file.mimetype)) {
+
+      // Also check file extension as a fallback (some browsers may not send correct MIME types)
+      const ext = path.extname(file.originalname).toLowerCase();
+      const allowedExts = ['.docx', '.doc', '.txt', '.md'];
+
+      if (allowedMimes.includes(file.mimetype) || allowedExts.includes(ext)) {
         cb(null, true);
       } else {
-        cb(new Error('Only .doc and .docx files are allowed'));
+        cb(new Error('Only .doc, .docx, .txt, and .md files are allowed'));
       }
     }
   }).single('document');
@@ -1155,7 +1197,7 @@ router.get('/documents/:docId/sections/tree', requireAdmin, async (req, res) => 
         )
       `)
       .eq('document_id', docId)
-      .order('path_ordinals');
+      .order('document_order', { ascending: true });
 
     if (error) {
       console.error('Fetch sections error:', error);
@@ -1918,5 +1960,269 @@ router.post('/sections/join',
     }
   }
 );
+
+// =============================================================================
+// INDENT/DEDENT SECTIONS (Issue #5)
+// =============================================================================
+
+/**
+ * POST /admin/sections/:id/indent
+ * Increase section depth by making it a child of its previous sibling
+ *
+ * BEHAVIOR:
+ * - Section becomes child of its earlier sibling (same parent)
+ * - Depth increases by 1
+ * - Ordinals recalculate correctly
+ *
+ * RESTRICTIONS:
+ * - Section must have an earlier sibling
+ * - Cannot indent first sibling (no previous sibling)
+ */
+router.post('/sections/:id/indent',
+  requireAdmin,
+  validateSectionEditable,
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.session.userId;
+      const { supabaseService } = req;
+      const section = req.section; // From validateSectionEditable middleware
+
+      console.log(`[INDENT] User ${userId} indenting section ${id}`);
+
+      // 1. Find previous sibling (will become new parent)
+      const { data: previousSibling, error: siblingError } = await supabaseService
+        .from('document_sections')
+        .select('id, ordinal, depth, section_number, section_title')
+        .eq('document_id', section.document_id)
+        .eq('parent_section_id', section.parent_section_id)
+        .lt('ordinal', section.ordinal)
+        .order('ordinal', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (siblingError) {
+        console.error('[INDENT] Sibling query error:', siblingError);
+        throw siblingError;
+      }
+
+      if (!previousSibling) {
+        return res.status(400).json({
+          success: false,
+          error: 'Cannot indent: no earlier sibling to indent under',
+          code: 'NO_SIBLING'
+        });
+      }
+
+      console.log(`[INDENT] Previous sibling found: ${previousSibling.id} (ordinal ${previousSibling.ordinal})`);
+
+      // 2. Get count of new parent's children
+      const { count: childCount } = await supabaseService
+        .from('document_sections')
+        .select('id', { count: 'exact', head: true })
+        .eq('parent_section_id', previousSibling.id);
+
+      const newOrdinal = (childCount || 0) + 1;
+
+      console.log(`[INDENT] New parent will have ${childCount} children, new ordinal: ${newOrdinal}`);
+
+      // 3. Update section to be child of previous sibling
+      const { error: updateError } = await supabaseService
+        .from('document_sections')
+        .update({
+          parent_section_id: previousSibling.id,
+          ordinal: newOrdinal,
+          depth: section.depth + 1,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id);
+
+      if (updateError) {
+        console.error('[INDENT] Update error:', updateError);
+        return res.status(500).json({
+          success: false,
+          error: 'Failed to indent section'
+        });
+      }
+
+      // 4. Close gap at old parent by decrementing ordinals
+      if (section.parent_section_id !== null) {
+        const { error: shiftError } = await supabaseService.rpc(
+          'decrement_sibling_ordinals',
+          {
+            p_parent_id: section.parent_section_id,
+            p_start_ordinal: section.ordinal,
+            p_decrement_by: 1
+          }
+        );
+
+        if (shiftError) {
+          console.error('[INDENT] Ordinal shift error:', shiftError);
+          // Not fatal - section moved successfully
+        }
+      } else {
+        // Root level sections - shift ordinals manually
+        const { error: shiftError } = await supabaseService
+          .from('document_sections')
+          .update({ ordinal: supabaseService.sql`ordinal - 1` })
+          .eq('document_id', section.document_id)
+          .is('parent_section_id', null)
+          .gt('ordinal', section.ordinal);
+
+        if (shiftError) {
+          console.error('[INDENT] Root ordinal shift error:', shiftError);
+        }
+      }
+
+      console.log(`[INDENT] ✅ Section ${id} indented successfully`);
+
+      res.json({
+        success: true,
+        message: 'Section indented successfully',
+        newDepth: section.depth + 1,
+        newParentId: previousSibling.id,
+        newParentTitle: previousSibling.section_title,
+        newOrdinal: newOrdinal
+      });
+
+    } catch (error) {
+      console.error('[INDENT] Error:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message || 'Failed to indent section'
+      });
+    }
+});
+
+/**
+ * POST /admin/sections/:id/dedent
+ * Decrease section depth by making it a sibling of its parent
+ *
+ * BEHAVIOR:
+ * - Section becomes sibling of its current parent
+ * - Depth decreases by 1
+ * - Inserted right after its current parent
+ * - Ordinals recalculate correctly
+ *
+ * RESTRICTIONS:
+ * - Section must have a parent (cannot dedent root level)
+ */
+router.post('/sections/:id/dedent',
+  requireAdmin,
+  validateSectionEditable,
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.session.userId;
+      const { supabaseService } = req;
+      const section = req.section; // From validateSectionEditable middleware
+
+      console.log(`[DEDENT] User ${userId} dedenting section ${id}`);
+
+      // 1. Check if section is already at root level
+      if (!section.parent_section_id) {
+        return res.status(400).json({
+          success: false,
+          error: 'Cannot dedent: section is already at root level',
+          code: 'ALREADY_ROOT'
+        });
+      }
+
+      // 2. Get parent section
+      const { data: parent, error: parentError } = await supabaseService
+        .from('document_sections')
+        .select('id, parent_section_id, ordinal, depth, section_number, section_title')
+        .eq('id', section.parent_section_id)
+        .single();
+
+      if (parentError || !parent) {
+        console.error('[DEDENT] Parent query error:', parentError);
+        return res.status(404).json({
+          success: false,
+          error: 'Parent section not found'
+        });
+      }
+
+      console.log(`[DEDENT] Current parent: ${parent.id} (${parent.section_title}), grandparent: ${parent.parent_section_id || 'ROOT'}`);
+
+      // 3. Section will become sibling of its current parent
+      // Insert it right after the parent
+      const newOrdinal = parent.ordinal + 1;
+
+      // 4. Shift ordinals of sections after parent to make space
+      if (parent.parent_section_id !== null) {
+        await supabaseService.rpc('increment_sibling_ordinals', {
+          p_parent_id: parent.parent_section_id,
+          p_start_ordinal: newOrdinal,
+          p_increment_by: 1
+        });
+      } else {
+        // Shifting root-level sections
+        const { error: shiftError } = await supabaseService
+          .from('document_sections')
+          .update({ ordinal: supabaseService.sql`ordinal + 1` })
+          .eq('document_id', section.document_id)
+          .is('parent_section_id', null)
+          .gte('ordinal', newOrdinal);
+
+        if (shiftError) {
+          console.error('[DEDENT] Root shift error:', shiftError);
+          throw shiftError;
+        }
+      }
+
+      // 5. Update section
+      const { error: updateError } = await supabaseService
+        .from('document_sections')
+        .update({
+          parent_section_id: parent.parent_section_id, // Grandparent (or null for root)
+          ordinal: newOrdinal,
+          depth: section.depth - 1,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id);
+
+      if (updateError) {
+        console.error('[DEDENT] Update error:', updateError);
+        return res.status(500).json({
+          success: false,
+          error: 'Failed to dedent section'
+        });
+      }
+
+      // 6. Close gap at old parent
+      const { error: shiftError } = await supabaseService.rpc(
+        'decrement_sibling_ordinals',
+        {
+          p_parent_id: section.parent_section_id,
+          p_start_ordinal: section.ordinal,
+          p_decrement_by: 1
+        }
+      );
+
+      if (shiftError) {
+        console.error('[DEDENT] Ordinal shift error:', shiftError);
+        // Not fatal
+      }
+
+      console.log(`[DEDENT] ✅ Section ${id} dedented successfully`);
+
+      res.json({
+        success: true,
+        message: 'Section dedented successfully',
+        newDepth: section.depth - 1,
+        newParentId: parent.parent_section_id,
+        newOrdinal: newOrdinal,
+        formerParentTitle: parent.section_title
+      });
+
+    } catch (error) {
+      console.error('[DEDENT] Error:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message || 'Failed to dedent section'
+      });
+    }
+});
 
 module.exports = router;

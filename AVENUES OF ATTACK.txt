@@ -1,0 +1,97 @@
+AVENUES OF ATTACK
+1) Preprocessing could be done in the app or outside to be more "app-ready". I Tried to do this with our canonical example here: "C:\Users\mgall\OneDrive\Desktop\RNCBYLAWS_2024_Restructured.md". I'd like to explore preprocessing steps a bit more.
+2) Why are we detecting things at all when we could just be iterating through the document deciding what's parent/child for chunks? Though we'd have to be careful about chunking up the document. This way we wouldn't lose anything or am I crazy. ?
+3) Would it make more sense to assign hierarchical levels on a per document instead of per ORG basis and have human make tweaks on indentation/chunkins/levels before sending to database at all?
+
+CLUES
+Problem A: Prefix Pattern Mismatch
+javascript// In wordParser.js, for a subsection with prefix "(" and alphaLower numbering:
+const pattern = /\(\s*([a-z]+)(?:\s|\.| :|$)/g;
+// This looks for: "(a)" or "(b)"
+
+// But if a document has:
+"1. To provide..."  // Not "(1)" 
+"2. To advise..."   // Not "(2)"
+No bueno.
+
+Problem B: Generic Numbering at Line Start
+These patterns 1., 2., a., b. are very common and could match many things (page numbers, references, etc.), so they need careful context-aware detection.
+3. Context-Aware Depth Calculation Works, But Needs Input
+The enrichSectionsWithContext() function (lines 900-1040 in wordParser.js) is excellent and correctly implements hierarchical depth tracking using a stack-based algorithm. However, it only works on sections that were already detected. If subsections aren't detected in the first place, this function can't help.
+4. Table of Contents Filtering May Be Too Aggressive
+The TOC detection (lines 422-463) is comprehensive, but if subsection patterns appear in the TOC, they might be filtered out globally, preventing real content from being detected.
+
+
+SUGGESTIONS
+: Enhance Pattern Detection for Line-Start Numbering
+The current regex patterns assume prefixes like "Section " or "Article ". For subsections that start lines with just numbers/letters, you need different patterns:
+Add to hierarchyDetector.js buildDetectionPatterns():
+
+CONSIDER ADDING:
+buildDetectionPatterns(level) {
+  const patterns = [];
+  
+  // ... existing code ...
+
+  // SPECIAL CASE: Empty prefix with numeric/alpha numbering
+  // Matches: "1. ", "2. ", "A. ", "B. " at line start
+  if (!level.prefix || level.prefix === '') {
+    switch (level.numbering) {
+      case 'numeric':
+        patterns.push({
+          regex: new RegExp(`^\\s*(\\d+)\\.\\s+`, 'gm'),  // Line start: "1. "
+          scheme: 'numeric'
+        });
+        break;
+      
+      case 'alpha':
+        patterns.push({
+          regex: new RegExp(`^\\s*([A-Z])\\.\\s+`, 'gm'),  // Line start: "A. "
+          scheme: 'alpha'
+        });
+        break;
+        
+      case 'alphaLower':
+        patterns.push({
+          regex: new RegExp(`^\\s*([a-z])\\.\\s+`, 'gm'),  // Line start: "a. "
+          scheme: 'alphaLower'
+        });
+        break;
+    }
+  }
+  
+  return patterns;
+}
+
+SUGGESTION: Post-Processing Content Chunking
+For documents with inconsistent formatting, add a post-processing step that splits content into subsections based on patterns:
+javascriptchunkSectionContent(section) {
+  const lines = section.text.split('\n');
+  const chunks = [];
+  let currentChunk = null;
+  
+  for (const line of lines) {
+    const match = line.match(/^\s*(\d+|[a-z]|[A-Z])\.\s+(.+)/);
+    
+    if (match) {
+      // Save previous chunk
+      if (currentChunk) chunks.push(currentChunk);
+      
+      // Start new chunk
+      currentChunk = {
+        type: 'subsection',
+        number: match[1],
+        text: match[2],
+        parent_section_id: section.id,
+        depth: section.depth + 1,
+        citation: `${section.citation}(${match[1]})`
+      };
+    } else if (currentChunk) {
+      // Add to current chunk
+      currentChunk.text += '\n' + line;
+    }
+  }
+  
+  if (currentChunk) chunks.push(currentChunk);
+  return chunks;
+}
