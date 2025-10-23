@@ -44,12 +44,12 @@ const inviteUserSchema = Joi.object({
  */
 async function isOrgAdmin(supabase, userId, organizationId) {
   // Check if user is a global admin first
+  // FIX: Query users table (not user_organizations) for global admin status
   const { data: globalAdminCheck } = await supabase
-    .from('user_organizations')
+    .from('users')
     .select('is_global_admin')
-    .eq('user_id', userId)
+    .eq('id', userId)
     .eq('is_global_admin', true)
-    .eq('is_active', true)
     .limit(1)
     .maybeSingle();
 
@@ -1249,12 +1249,12 @@ router.get('/select', async (req, res) => {
 
     // Check if user is logged in and is a global admin
     if (req.session?.userId) {
+      // FIX: Query users table (not user_organizations) for global admin status
       const { data: globalAdminCheck } = await supabase
-        .from('user_organizations')
+        .from('users')
         .select('is_global_admin')
-        .eq('user_id', req.session.userId)
+        .eq('id', req.session.userId)
         .eq('is_global_admin', true)
-        .eq('is_active', true)
         .limit(1)
         .maybeSingle();
 

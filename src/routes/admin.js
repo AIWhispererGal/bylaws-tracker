@@ -1452,7 +1452,8 @@ router.put('/sections/:id/move', requireAdmin, validateSectionEditable, validate
     // CASE 1: Moving to different parent
     if (changingParent) {
       const targetParentId = newParentId;
-      const targetOrdinal = newOrdinal !== undefined ? newOrdinal : 0; // Default to start
+      // FIX: Default to 1 (not 0) since ordinals are 1-indexed per CHECK constraint
+      const targetOrdinal = newOrdinal !== undefined ? newOrdinal : 1; // Default to first position
 
       // 1. Get siblings count at target parent
       const { data: siblingsCount, error: countError } = await supabaseService
@@ -1735,7 +1736,20 @@ router.post('/sections/:id/split',
 
       if (updateError) throw updateError;
 
-      // Step 3: Create new section with second part
+      // Step 3: Get max document_order to calculate next value
+      const { data: maxOrderData, error: maxOrderError } = await supabaseService
+        .from('document_sections')
+        .select('document_order')
+        .eq('document_id', section.document_id)
+        .order('document_order', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (maxOrderError) throw maxOrderError;
+
+      const nextDocumentOrder = (maxOrderData?.document_order || 0) + 1;
+
+      // Step 4: Create new section with second part
       const newSection = {
         document_id: section.document_id,
         parent_section_id: section.parent_section_id,
@@ -1744,6 +1758,8 @@ router.post('/sections/:id/split',
         section_type: section.section_type,
         ordinal: section.ordinal + 1,
         depth: section.depth,
+        document_order: nextDocumentOrder,  // FIX: Add document_order (required NOT NULL field)
+        organization_id: section.organization_id,  // FIX: Also add organization_id (required field)
         original_text: secondPart,
         current_text: secondPart,
         is_locked: false,
@@ -1995,11 +2011,20 @@ router.post('/sections/:id/indent',
       console.log(`[INDENT] User ${userId} indenting section ${id}`);
 
       // 1. Find previous sibling (will become new parent)
-      const { data: previousSibling, error: siblingError } = await supabaseService
+      // FIX: Handle NULL parent_section_id correctly (use .is() for NULL, .eq() for values)
+      let siblingQuery = supabaseService
         .from('document_sections')
         .select('id, ordinal, depth, section_number, section_title')
-        .eq('document_id', section.document_id)
-        .eq('parent_section_id', section.parent_section_id)
+        .eq('document_id', section.document_id);
+
+      // Handle NULL parent_section_id properly to avoid "invalid UUID: 'null'" error
+      if (section.parent_section_id === null) {
+        siblingQuery = siblingQuery.is('parent_section_id', null);
+      } else {
+        siblingQuery = siblingQuery.eq('parent_section_id', section.parent_section_id);
+      }
+
+      const { data: previousSibling, error: siblingError } = await siblingQuery
         .lt('ordinal', section.ordinal)
         .order('ordinal', { ascending: false })
         .limit(1)

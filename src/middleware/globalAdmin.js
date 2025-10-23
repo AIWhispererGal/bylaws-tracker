@@ -14,12 +14,13 @@ async function isGlobalAdmin(req) {
   }
 
   try {
+    // FIX: Query users table (not user_organizations) for global admin status
+    // Global admin is a USER property, not an organization membership property
     const { data, error } = await req.supabase
-      .from('user_organizations')
+      .from('users')
       .select('is_global_admin')
-      .eq('user_id', req.session.userId)
+      .eq('id', req.session.userId)
       .eq('is_global_admin', true)
-      .eq('is_active', true)
       .limit(1)
       .maybeSingle();
 
