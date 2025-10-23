@@ -2065,7 +2065,7 @@ router.post('/sections/:id/indent',
         const { error: shiftError } = await supabaseService.rpc(
           'decrement_sibling_ordinals',
           {
-            p_parent_id: null, // Root level
+            p_parent_id: section.parent_section_id, // Will be NULL for root level
             p_start_ordinal: section.ordinal,
             p_decrement_by: 1
           }
@@ -2163,7 +2163,7 @@ router.post('/sections/:id/dedent',
         const { error: shiftError } = await supabaseService.rpc(
           'increment_sibling_ordinals',
           {
-            p_parent_id: null, // Root level
+            p_parent_id: parent.parent_section_id, // Will be NULL for root level
             p_start_ordinal: newOrdinal,
             p_increment_by: 1
           }
