@@ -1536,27 +1536,31 @@ router.put('/sections/:id/move', requireAdmin, validateSectionEditable, validate
         });
       }
 
-      // Moving up (lower ordinal)
+      // Moving up (lower ordinal) - make space by incrementing ordinals
       if (finalOrdinal < oldOrdinal) {
-        // Shift sections [finalOrdinal .. oldOrdinal-1] UP by 1
-        const { error } = await supabaseService
-          .from('document_sections')
-          .update({ ordinal: supabaseService.sql`ordinal + 1` })
-          .eq('parent_section_id', section.parent_section_id)
-          .gte('ordinal', finalOrdinal)
-          .lt('ordinal', oldOrdinal);
+        // Use RPC function to shift sections UP by 1
+        const { error } = await supabaseService.rpc(
+          'increment_sibling_ordinals',
+          {
+            p_parent_id: section.parent_section_id,
+            p_start_ordinal: finalOrdinal,
+            p_increment_by: 1
+          }
+        );
 
         if (error) throw error;
       }
-      // Moving down (higher ordinal)
+      // Moving down (higher ordinal) - close gap by decrementing ordinals
       else {
-        // Shift sections [oldOrdinal+1 .. finalOrdinal] DOWN by 1
-        const { error } = await supabaseService
-          .from('document_sections')
-          .update({ ordinal: supabaseService.sql`ordinal - 1` })
-          .eq('parent_section_id', section.parent_section_id)
-          .gt('ordinal', oldOrdinal)
-          .lte('ordinal', finalOrdinal);
+        // Use RPC function to shift sections DOWN by 1
+        const { error } = await supabaseService.rpc(
+          'decrement_sibling_ordinals',
+          {
+            p_parent_id: section.parent_section_id,
+            p_start_ordinal: oldOrdinal,
+            p_decrement_by: 1
+          }
+        );
 
         if (error) throw error;
       }
