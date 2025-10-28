@@ -571,6 +571,87 @@ router.get('/profile', async (req, res) => {
 });
 
 /**
+ * POST /auth/profile/update
+ * Update user profile information (BUG1 FIX)
+ */
+router.post('/profile/update', async (req, res) => {
+  try {
+    // Require authentication
+    if (!req.session.userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'Authentication required'
+      });
+    }
+
+    const { name } = req.body;
+
+    // Validate name
+    if (!name || typeof name !== 'string') {
+      return res.status(400).json({
+        success: false,
+        error: 'Name is required'
+      });
+    }
+
+    const trimmedName = name.trim();
+    if (trimmedName.length < 2) {
+      return res.status(400).json({
+        success: false,
+        error: 'Name must be at least 2 characters'
+      });
+    }
+
+    if (trimmedName.length > 255) {
+      return res.status(400).json({
+        success: false,
+        error: 'Name must be less than 255 characters'
+      });
+    }
+
+    const { supabaseService } = req;
+
+    // Update user record in users table
+    // FIX: Don't update updated_at column (it doesn't exist in schema)
+    const { data: updatedUser, error: updateError } = await supabaseService
+      .from('users')
+      .update({ name: trimmedName })
+      .eq('id', req.session.userId)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('Profile update error:', updateError);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to update profile'
+      });
+    }
+
+    // Update session
+    req.session.userName = trimmedName;
+
+    res.json({
+      success: true,
+      message: 'Profile updated successfully',
+      user: {
+        id: updatedUser.id,
+        name: updatedUser.name,
+        email: updatedUser.email
+      }
+    });
+
+  } catch (error) {
+    console.error('Profile update error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update profile',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+/**
  * GET /auth/session
  * Return current session info and validate JWT
  * Refresh token if expired

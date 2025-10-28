@@ -158,7 +158,8 @@ async function getUserRole(userId, organizationId) {
       return null;
     }
 
-    return data?.organization_roles || null;
+    // FIX: Return role_code string, not the entire organization_roles object
+    return data?.organization_roles?.role_code || null;
   } catch (error) {
     console.error('[Permissions] Exception getting user role:', error);
     return null;
@@ -321,9 +322,74 @@ function requireRole(...allowedRoles) {
 
 /**
  * Middleware: Check if user is global admin
+ * BUG2 FIX: Prevent org owners from accessing global admin routes
  */
 function requireGlobalAdmin(req, res, next) {
+  // First check if user is authenticated
+  if (!req.session?.userId) {
+    return res.status(401).json({
+      error: 'Authentication required',
+      code: 'AUTH_REQUIRED'
+    });
+  }
+
+  // Use the permission check which queries the database
   return requirePermission('can_access_all_organizations', false)(req, res, next);
+}
+
+/**
+ * Middleware: Strict global admin check (bypasses org-level permissions)
+ * BUG2 FIX: Use this for routes that should ONLY be accessible by true global admins
+ */
+async function requireStrictGlobalAdmin(req, res, next) {
+  try {
+    const userId = req.session?.userId;
+
+    if (!userId) {
+      return res.status(401).json({
+        error: 'Authentication required',
+        code: 'AUTH_REQUIRED'
+      });
+    }
+
+    // Query users table directly to check is_global_admin flag
+    const { createClient } = require('@supabase/supabase-js');
+    const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+
+    const { data, error } = await supabase
+      .from('users')
+      .select('is_global_admin')
+      .eq('id', userId)
+      .eq('is_global_admin', true)
+      .maybeSingle();
+
+    if (error) {
+      console.error('[requireStrictGlobalAdmin] Database error:', error);
+      return res.status(500).json({
+        error: 'Permission check failed',
+        code: 'PERMISSION_CHECK_ERROR'
+      });
+    }
+
+    if (!data) {
+      console.log(`[requireStrictGlobalAdmin] User ${userId} is not a global admin - DENIED`);
+      return res.status(403).json({
+        error: 'This action requires global administrator privileges',
+        code: 'GLOBAL_ADMIN_REQUIRED',
+        hint: 'Organization administrators cannot access this feature'
+      });
+    }
+
+    // User is confirmed global admin
+    req.isGlobalAdmin = true;
+    next();
+  } catch (error) {
+    console.error('[requireStrictGlobalAdmin] Error:', error);
+    return res.status(500).json({
+      error: 'Permission check failed',
+      code: 'PERMISSION_CHECK_ERROR'
+    });
+  }
 }
 
 /**
@@ -402,6 +468,7 @@ module.exports = {
   requireMinRoleLevel,
   requireRole,
   requireGlobalAdmin,
+  requireStrictGlobalAdmin, // BUG2 FIX: Strict global admin check
   attachPermissions,
 
   // Backwards compatibility

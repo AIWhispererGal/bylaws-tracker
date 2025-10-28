@@ -7,7 +7,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { requireGlobalAdmin } = require('../middleware/globalAdmin');
+const { requireGlobalAdmin, attachGlobalAdminStatus } = require('../middleware/globalAdmin');
 const {
   requireMinRoleLevel,
   requirePermission,
@@ -68,9 +68,10 @@ router.get('/users', requirePermission('can_manage_users', true), attachPermissi
       const userIds = userOrgs.map(uo => uo.user_id);
 
       // Fetch user details from users table
-      const { data: userDetails, error: usersError } = await supabaseService
+      // FIX BUG1: Use 'name' column instead of 'full_name' (column doesn't exist)
+      const { data: userDetails, error: usersError} = await supabaseService
         .from('users')
-        .select('id, email, full_name, is_global_admin, created_at')
+        .select('id, email, name, is_global_admin, created_at')
         .in('id', userIds);
 
       if (usersError) {
@@ -96,7 +97,8 @@ router.get('/users', requirePermission('can_manage_users', true), attachPermissi
         return {
           id: userOrg.user_id,
           email: userDetail.email || 'Unknown',
-          full_name: userDetail.full_name || userDetail.email || 'Unknown User',
+          // FIX BUG1: Display email when name is null
+          full_name: userDetail.name || userDetail.email || 'Unknown User',
           role: userDetail.is_global_admin ? 'global_admin' : userOrg.role,
           is_global_admin: userDetail.is_global_admin || false,
           status: userOrg.is_active ? 'active' : 'inactive',
@@ -348,9 +350,10 @@ router.get('/organization/:id', requireAdmin, async (req, res) => {
 
       console.log('[ADMIN-ORG] Fetching user details for IDs:', userIds);
 
+      // FIX BUG1: Use 'name' column instead of 'full_name'
       const { data: userDetails, error: usersError } = await supabaseService
         .from('users')
-        .select('id, email, full_name')
+        .select('id, email, name')
         .in('id', userIds);
 
       if (usersError) {
@@ -626,7 +629,7 @@ router.get('/documents/:documentId/assign-workflow', requireAdmin, async (req, r
  * POST /admin/documents/upload - Upload a new document
  * Allows org admins to upload additional documents after initial setup
  */
-router.post('/documents/upload', requireAdmin, async (req, res) => {
+router.post('/documents/upload', attachGlobalAdminStatus, requireAdmin, async (req, res) => {
   const multer = require('multer');
   const path = require('path');
   const fs = require('fs').promises;
@@ -675,7 +678,9 @@ router.post('/documents/upload', requireAdmin, async (req, res) => {
       console.error('Upload error:', err);
       return res.status(400).json({
         success: false,
-        error: err.message || 'File upload failed'
+        error: err.message || 'File upload failed',
+        warnings: [],
+        validationErrors: []
       });
     }
 
@@ -691,33 +696,42 @@ router.post('/documents/upload', requireAdmin, async (req, res) => {
         }
         return res.status(400).json({
           success: false,
-          error: 'No organization selected'
+          error: 'No organization selected',
+          warnings: [],
+          validationErrors: []
         });
       }
 
       // Verify user has admin access to this organization
-      const { data: userOrg } = await supabaseService
-        .from('user_organizations')
-        .select('role')
-        .eq('user_id', req.session.userId)
-        .eq('organization_id', organizationId)
-        .single();
+      // Global admins automatically have access (skip user_organizations check)
+      if (!req.isGlobalAdmin) {
+        const { data: userOrg } = await supabaseService
+          .from('user_organizations')
+          .select('role')
+          .eq('user_id', req.session.userId)
+          .eq('organization_id', organizationId)
+          .single();
 
-      if (!userOrg || !['admin', 'owner', 'superuser'].includes(userOrg.role)) {
-        // Clean up uploaded file
-        if (req.file) {
-          await fs.unlink(req.file.path).catch(console.error);
+        if (!userOrg || !['admin', 'owner', 'superuser'].includes(userOrg.role)) {
+          // Clean up uploaded file
+          if (req.file) {
+            await fs.unlink(req.file.path).catch(console.error);
+          }
+          return res.status(403).json({
+            success: false,
+            error: 'Admin access required',
+            warnings: [],
+            validationErrors: []
+          });
         }
-        return res.status(403).json({
-          success: false,
-          error: 'Admin access required'
-        });
       }
 
       if (!req.file) {
         return res.status(400).json({
           success: false,
-          error: 'No file uploaded'
+          error: 'No file uploaded',
+          warnings: [],
+          validationErrors: []
         });
       }
 
@@ -739,6 +753,16 @@ router.post('/documents/upload', requireAdmin, async (req, res) => {
       if (importResult.success) {
         console.log('[ADMIN-UPLOAD] Successfully imported document with', importResult.sectionsCount, 'sections');
 
+        // Complete setup for the organization
+        const setupComplete = await setupService.completeSetup(
+          organizationId,
+          supabaseService
+        );
+
+        if (!setupComplete.success) {
+          console.warn('[ADMIN-UPLOAD] Setup completion warning:', setupComplete.error);
+        }
+
         res.json({
           success: true,
           message: `Document uploaded successfully with ${importResult.sectionsCount} sections`,
@@ -747,15 +771,15 @@ router.post('/documents/upload', requireAdmin, async (req, res) => {
             title: importResult.document.title,
             sectionsCount: importResult.sectionsCount
           },
-          warnings: importResult.warnings || []
+          warnings: Array.isArray(importResult.warnings) ? importResult.warnings : []
         });
       } else {
         console.error('[ADMIN-UPLOAD] Import failed:', importResult.error);
         res.status(400).json({
           success: false,
           error: importResult.error || 'Failed to process document',
-          validationErrors: importResult.validationErrors || [],
-          warnings: importResult.warnings || []
+          validationErrors: Array.isArray(importResult.validationErrors) ? importResult.validationErrors : [],
+          warnings: Array.isArray(importResult.warnings) ? importResult.warnings : []
         });
       }
     } catch (error) {
@@ -768,7 +792,9 @@ router.post('/documents/upload', requireAdmin, async (req, res) => {
 
       res.status(500).json({
         success: false,
-        error: error.message || 'Internal server error'
+        error: error.message || 'Internal server error',
+        warnings: [],
+        validationErrors: []
       });
     }
   });
@@ -1452,8 +1478,6 @@ router.put('/sections/:id/move', requireAdmin, validateSectionEditable, validate
     // CASE 1: Moving to different parent
     if (changingParent) {
       const targetParentId = newParentId;
-      // FIX: Default to 1 (not 0) since ordinals are 1-indexed per CHECK constraint
-      const targetOrdinal = newOrdinal !== undefined ? newOrdinal : 1; // Default to first position
 
       // 1. Get siblings count at target parent
       const { data: siblingsCount, error: countError } = await supabaseService
@@ -1464,9 +1488,17 @@ router.put('/sections/:id/move', requireAdmin, validateSectionEditable, validate
 
       if (countError) throw countError;
 
-      // 2. Validate target ordinal
-      const maxOrdinal = siblingsCount || 0;
-      const finalOrdinal = Math.min(targetOrdinal, maxOrdinal);
+      // 2. Calculate final ordinal
+      // FIX: If user doesn't specify ordinal, append at end (siblingsCount + 1)
+      // If user specifies ordinal, clamp between 1 and siblingsCount + 1
+      let finalOrdinal;
+      if (newOrdinal !== undefined) {
+        // User specified position - clamp to valid range [1, siblingsCount + 1]
+        finalOrdinal = Math.max(1, Math.min(parseInt(newOrdinal), siblingsCount + 1));
+      } else {
+        // User didn't specify - append at end
+        finalOrdinal = siblingsCount + 1;
+      }
 
       // 3. Shift ordinals at target parent to make space
       const { error: shiftError1 } = await supabaseService

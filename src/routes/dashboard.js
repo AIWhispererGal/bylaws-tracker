@@ -71,11 +71,29 @@ router.get('/', requireAuth, attachPermissions, async (req, res) => {
     const orgId = req.organizationId;
 
     // Construct user object from session
-    const user = req.session.userId ? {
+    const currentUser = req.session.userId ? {
       id: req.session.userId,
       email: req.session.userEmail,
-      name: req.session.userName || req.session.userEmail
+      name: req.session.userName || req.session.userEmail,
+      role: req.session.userRole || 'viewer',
+      is_global_admin: req.isGlobalAdmin || false
     } : null;
+
+    // Get organization details for header
+    let currentOrganization = null;
+    try {
+      const { data: org } = await supabase
+        .from('organizations')
+        .select('id, name, organization_type')
+        .eq('id', orgId)
+        .single();
+
+      if (org) {
+        currentOrganization = org;
+      }
+    } catch (orgError) {
+      console.error('Error loading organization details:', orgError);
+    }
 
     // Get recent suggestions for dashboard
     let recentSuggestions = [];
@@ -145,7 +163,9 @@ router.get('/', requireAuth, attachPermissions, async (req, res) => {
     res.render('dashboard/dashboard', {
       title: 'Dashboard',
       organizationId: req.organizationId,
-      user: user,
+      currentUser: currentUser,
+      currentOrganization: currentOrganization,
+      user: currentUser, // Keep for backward compatibility
       recentSuggestions: recentSuggestions,
       // NEW: Pass permissions to view
       permissions: req.permissions || {},

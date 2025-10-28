@@ -217,13 +217,8 @@
       <div class="admin-controls">
         <% if (user) { %>
           <!-- Logged in user controls -->
-          <a href="/auth/admin" class="btn <%= isAdmin ? 'btn-danger' : 'btn-outline-secondary' %>">
-            <i class="bi bi-shield-lock"></i>
-            <%= isAdmin ? 'Exit Admin Mode' : 'Enter Admin Mode' %>
-          </a>
-
           <% if (isAdmin) { %>
-            <a href="/admin/dashboard" class="btn btn-primary ms-2">
+            <a href="/admin/dashboard" class="btn btn-primary">
               <i class="bi bi-speedometer2"></i> Admin Dashboard
             </a>
           <% } %>

@@ -24,13 +24,16 @@ const SectionNavigator = {
 
   /**
    * Build index of all sections with sequential numbering
+   * FIX: Select section cards using data-section-id attribute for better reliability
    */
   buildSectionIndex() {
-    const sectionCards = document.querySelectorAll('[id^="section-"]');
+    // Use data-section-id attribute which is on all section cards
+    const sectionCards = document.querySelectorAll('.section-card[data-section-id]');
     this.sections = [];
 
     sectionCards.forEach((card, index) => {
-      const sectionId = card.id.replace('section-', '');
+      // Get section ID from data attribute (more reliable than parsing id)
+      const sectionId = card.getAttribute('data-section-id');
       const titleElement = card.querySelector('h5');
       const citation = titleElement ? titleElement.textContent.trim() : 'Untitled';
 
@@ -135,50 +138,43 @@ const SectionNavigator = {
 
   /**
    * Create TOC structure in DOM
+   * Creates all elements dynamically - NO EJS dependencies
    */
   createTOCStructure() {
-    // Create backdrop
+    // Always create fresh structure (no EJS fallback needed)
     const backdrop = document.createElement('div');
     backdrop.className = 'toc-backdrop';
     backdrop.id = 'toc-backdrop';
     backdrop.addEventListener('click', () => this.closeTOC());
     document.body.appendChild(backdrop);
 
-    // Create TOC container
     const toc = document.createElement('nav');
     toc.className = 'document-toc';
     toc.id = 'document-toc';
     toc.setAttribute('aria-label', 'Table of Contents');
 
-    // Mobile handle
     const handle = document.createElement('div');
     handle.className = 'toc-handle';
     handle.setAttribute('aria-hidden', 'true');
     toc.appendChild(handle);
 
-    // Header
     const header = this.createTOCHeader();
     toc.appendChild(header);
 
-    // Search
     const search = this.createTOCSearch();
     toc.appendChild(search);
 
-    // Content
     const content = this.createTOCContent();
     toc.appendChild(content);
 
-    // Depth summary
     const summary = this.createDepthSummary();
     toc.appendChild(summary);
 
     document.body.appendChild(toc);
 
-    // Create toggle button
     const toggle = this.createToggleButton();
     document.body.appendChild(toggle);
 
-    // Skip to content link (accessibility)
     const skipLink = document.createElement('a');
     skipLink.href = '#document-sections';
     skipLink.className = 'skip-to-content';
@@ -225,6 +221,58 @@ const SectionNavigator = {
   },
 
   /**
+   * Populate TOC content into an existing container
+   */
+  populateTOCContent(container) {
+    this.sections.forEach(section => {
+      const item = this.createTOCItem(section);
+      container.appendChild(item);
+    });
+  },
+
+  /**
+   * Create a single TOC item element
+   */
+  createTOCItem(section) {
+    const item = document.createElement('div');
+    item.className = `toc-item depth-${section.depth}`;
+    item.setAttribute('data-section-id', section.id);
+    item.setAttribute('data-number', section.number);
+    item.setAttribute('tabindex', '0');
+    item.setAttribute('role', 'link');
+    item.setAttribute('aria-label', `Jump to section ${section.number}: ${section.citation}`);
+
+    let metaBadges = '';
+    if (section.suggestionCount > 0) {
+      metaBadges += `<span class="toc-meta-badge suggestions">${section.suggestionCount} suggestions</span>`;
+    }
+    if (section.isLocked) {
+      metaBadges += `<span class="toc-meta-badge locked"><i class="bi bi-lock-fill"></i> Locked</span>`;
+    }
+
+    item.innerHTML = `
+      <div class="toc-item-content">
+        <span class="toc-item-number">#${section.number}</span>
+        <span class="toc-item-citation">${this.escapeHtml(section.citation)}</span>
+        ${metaBadges ? `<div class="toc-item-meta">${metaBadges}</div>` : ''}
+      </div>
+    `;
+
+    // Click to scroll to section
+    item.addEventListener('click', () => this.scrollToSection(section));
+
+    // Keyboard navigation
+    item.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        this.scrollToSection(section);
+      }
+    });
+
+    return item;
+  },
+
+  /**
    * Create TOC content with all sections
    */
   createTOCContent() {
@@ -233,44 +281,7 @@ const SectionNavigator = {
     content.id = 'toc-content';
     content.setAttribute('role', 'navigation');
 
-    this.sections.forEach(section => {
-      const item = document.createElement('div');
-      item.className = `toc-item depth-${section.depth}`;
-      item.setAttribute('data-section-id', section.id);
-      item.setAttribute('data-number', section.number);
-      item.setAttribute('tabindex', '0');
-      item.setAttribute('role', 'link');
-      item.setAttribute('aria-label', `Jump to section ${section.number}: ${section.citation}`);
-
-      let metaBadges = '';
-      if (section.suggestionCount > 0) {
-        metaBadges += `<span class="toc-meta-badge suggestions">${section.suggestionCount} suggestions</span>`;
-      }
-      if (section.isLocked) {
-        metaBadges += `<span class="toc-meta-badge locked"><i class="bi bi-lock-fill"></i> Locked</span>`;
-      }
-
-      item.innerHTML = `
-        <div class="toc-item-content">
-          <span class="toc-item-number">#${section.number}</span>
-          <span class="toc-item-citation">${this.escapeHtml(section.citation)}</span>
-          ${metaBadges ? `<div class="toc-item-meta">${metaBadges}</div>` : ''}
-        </div>
-      `;
-
-      // Click to scroll to section
-      item.addEventListener('click', () => this.scrollToSection(section));
-
-      // Keyboard navigation
-      item.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          this.scrollToSection(section);
-        }
-      });
-
-      content.appendChild(item);
-    });
+    this.populateTOCContent(content);
 
     return content;
   },
@@ -332,7 +343,7 @@ const SectionNavigator = {
    * Attach all event listeners
    */
   attachEventListeners() {
-    // Toggle button
+    // Toggle button (only JS-created ID)
     document.addEventListener('click', (e) => {
       const toggleButton = e.target.closest('#toc-toggle');
       if (toggleButton) {
@@ -348,7 +359,7 @@ const SectionNavigator = {
       }
     });
 
-    // Search input
+    // Search input (only JS-created ID)
     document.addEventListener('input', (e) => {
       if (e.target.id === 'toc-search-input') {
         this.handleSearch(e.target.value);
@@ -386,14 +397,23 @@ const SectionNavigator = {
    */
   openTOC() {
     this.tocOpen = true;
-    document.getElementById('document-toc').classList.add('open');
-    document.getElementById('toc-backdrop').classList.add('visible');
-    document.getElementById('toc-toggle').classList.add('active');
-    document.getElementById('toc-toggle').setAttribute('aria-expanded', 'true');
+
+    // Use JS-created IDs only
+    const toc = document.getElementById('document-toc');
+    const backdrop = document.getElementById('toc-backdrop');
+    const toggle = document.getElementById('toc-toggle');
+
+    if (toc) toc.classList.add('open');
+    if (backdrop) backdrop.classList.add('visible');
+    if (toggle) {
+      toggle.classList.add('active');
+      toggle.setAttribute('aria-expanded', 'true');
+    }
 
     // Focus search input
     setTimeout(() => {
-      document.getElementById('toc-search-input').focus();
+      const searchInput = document.getElementById('toc-search-input');
+      if (searchInput) searchInput.focus();
     }, 300);
   },
 
@@ -402,10 +422,18 @@ const SectionNavigator = {
    */
   closeTOC() {
     this.tocOpen = false;
-    document.getElementById('document-toc').classList.remove('open');
-    document.getElementById('toc-backdrop').classList.remove('visible');
-    document.getElementById('toc-toggle').classList.remove('active');
-    document.getElementById('toc-toggle').setAttribute('aria-expanded', 'false');
+
+    // Use JS-created IDs only
+    const toc = document.getElementById('document-toc');
+    const backdrop = document.getElementById('toc-backdrop');
+    const toggle = document.getElementById('toc-toggle');
+
+    if (toc) toc.classList.remove('open');
+    if (backdrop) backdrop.classList.remove('visible');
+    if (toggle) {
+      toggle.classList.remove('active');
+      toggle.setAttribute('aria-expanded', 'false');
+    }
   },
 
   /**

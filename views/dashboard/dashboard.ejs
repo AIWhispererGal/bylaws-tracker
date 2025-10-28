@@ -443,9 +443,10 @@
         <span>Analytics</span>
         <span class="badge bg-secondary ms-auto" style="font-size: 0.65rem;">Soon</span>
       </a>
-      <a href="#help" class="nav-link">
+      <a href="#" class="nav-link disabled" onclick="return false;" style="cursor: not-allowed; opacity: 0.5;" data-bs-toggle="tooltip" title="Coming soon - Help documentation and support">
         <i class="bi bi-question-circle"></i>
         <span>Help</span>
+        <span class="badge bg-secondary ms-auto" style="font-size: 0.65rem;">Soon</span>
       </a>
     </div>
   </nav>
@@ -790,7 +791,8 @@
 
               // Show success message
               let successMessage = `Document "${response.document.title}" uploaded successfully with ${response.document.sectionsCount} sections.`;
-              if (response.warnings && response.warnings.length > 0) {
+              // FIX: Safely check for warnings array (may be undefined)
+              if (Array.isArray(response.warnings) && response.warnings.length > 0) {
                 successMessage += '\n\nWarnings:\n' + response.warnings.join('\n');
               }
               successDiv.textContent = successMessage;
@@ -814,8 +816,13 @@
           try {
             const response = JSON.parse(xhr.responseText);
             errorMessage = response.error || errorMessage;
-            if (response.validationErrors && response.validationErrors.length > 0) {
+            // FIX: Show validation errors if present
+            if (Array.isArray(response.validationErrors) && response.validationErrors.length > 0) {
               errorMessage += '\n\nValidation Errors:\n' + response.validationErrors.map(e => e.message).join('\n');
+            }
+            // FIX: Also show warnings in error responses (important for partial failures)
+            if (Array.isArray(response.warnings) && response.warnings.length > 0) {
+              errorMessage += '\n\nWarnings:\n' + response.warnings.join('\n');
             }
           } catch (e) {
             errorMessage = `Server error: ${xhr.status}`;

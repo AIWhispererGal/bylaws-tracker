@@ -28,9 +28,29 @@
             <!-- User Information -->
             <h4 class="card-title mb-4">Account Information</h4>
 
+            <!-- FIX BUG1: Allow users to edit their name -->
             <div class="row mb-3">
               <div class="col-sm-4"><strong>Name:</strong></div>
-              <div class="col-sm-8"><%= user.full_name || user.name || 'Not set' %></div>
+              <div class="col-sm-8">
+                <div id="nameDisplay">
+                  <%= user.name || 'Not set' %>
+                  <button class="btn btn-sm btn-outline-primary ms-2" onclick="editName()">
+                    <i class="bi bi-pencil"></i> Edit
+                  </button>
+                </div>
+                <div id="nameEdit" style="display: none;">
+                  <div class="input-group">
+                    <input type="text" class="form-control" id="nameInput" value="<%= user.name || '' %>" placeholder="Enter your name">
+                    <button class="btn btn-success" onclick="saveName()">
+                      <i class="bi bi-check"></i> Save
+                    </button>
+                    <button class="btn btn-secondary" onclick="cancelEdit()">
+                      <i class="bi bi-x"></i> Cancel
+                    </button>
+                  </div>
+                  <div id="nameError" class="text-danger mt-1" style="display: none;"></div>
+                </div>
+              </div>
             </div>
 
             <div class="row mb-3">
@@ -114,5 +134,91 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Profile edit functionality
+    function editName() {
+      document.getElementById('nameDisplay').style.display = 'none';
+      document.getElementById('nameEdit').style.display = 'block';
+      document.getElementById('nameInput').focus();
+    }
+
+    function cancelEdit() {
+      document.getElementById('nameDisplay').style.display = 'block';
+      document.getElementById('nameEdit').style.display = 'none';
+      document.getElementById('nameError').style.display = 'none';
+    }
+
+    async function saveName() {
+      const nameInput = document.getElementById('nameInput');
+      const nameError = document.getElementById('nameError');
+      const newName = nameInput.value.trim();
+
+      // Validate name
+      if (!newName) {
+        nameError.textContent = 'Name cannot be empty';
+        nameError.style.display = 'block';
+        return;
+      }
+
+      if (newName.length < 2) {
+        nameError.textContent = 'Name must be at least 2 characters';
+        nameError.style.display = 'block';
+        return;
+      }
+
+      try {
+        // Send update request
+        const response = await fetch('/auth/profile/update', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ name: newName })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          // Update display
+          document.getElementById('nameDisplay').innerHTML = `
+            ${newName}
+            <button class="btn btn-sm btn-outline-primary ms-2" onclick="editName()">
+              <i class="bi bi-pencil"></i> Edit
+            </button>
+          `;
+          cancelEdit();
+
+          // Show success message
+          const alertDiv = document.createElement('div');
+          alertDiv.className = 'alert alert-success alert-dismissible fade show mt-3';
+          alertDiv.innerHTML = `
+            <strong>Success!</strong> Your name has been updated.
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          `;
+          document.querySelector('.card-body').prepend(alertDiv);
+          setTimeout(() => alertDiv.remove(), 3000);
+        } else {
+          nameError.textContent = result.error || 'Failed to update name';
+          nameError.style.display = 'block';
+        }
+      } catch (error) {
+        console.error('Update error:', error);
+        nameError.textContent = 'Network error. Please try again.';
+        nameError.style.display = 'block';
+      }
+    }
+
+    // Allow Enter key to save
+    document.addEventListener('DOMContentLoaded', () => {
+      const nameInput = document.getElementById('nameInput');
+      if (nameInput) {
+        nameInput.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') {
+            saveName();
+          }
+        });
+      }
+    });
+  </script>
 </body>
 </html>
