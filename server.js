@@ -38,9 +38,9 @@ app.use(session({
   cookie: {
     secure: process.env.NODE_ENV === 'production', // HTTPS only in production
     httpOnly: true, // Prevent XSS attacks
-    sameSite: process.env.NODE_ENV === 'production' ? 'lax' : 'lax', // Required for Render
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    domain: process.env.NODE_ENV === 'production' ? '.onrender.com' : undefined // Render domain
+    sameSite: 'lax', // Required for Render - allows POST requests
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    // NO domain property - let browser use current domain automatically
   }
 }));
 

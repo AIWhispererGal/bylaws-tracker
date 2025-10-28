@@ -311,8 +311,11 @@
       .then(response => response.json())
       .then(data => {
         if (data.success) {
-          // Redirect to dashboard
-          window.location.href = '/dashboard';
+          // PRODUCTION FIX: Wait 300ms for session.save() to complete on server
+          // This prevents race condition where redirect happens before session persists
+          setTimeout(() => {
+            window.location.href = '/dashboard';
+          }, 300);
         } else {
           alert('Error: ' + data.error);
           button.innerHTML = '<i class="bi bi-box-arrow-in-right"></i> Select Organization';
