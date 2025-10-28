@@ -182,14 +182,11 @@ app.use(async (req, res, next) => {
 
 /**
  * Check if organization is configured in Supabase
- * Caches result in session to avoid repeated DB queries
+ * CRITICAL FIX: Must check is_configured flag, not just existence
  */
 async function checkSetupStatus(req) {
-  // IMPORTANT: Don't cache in session - always check database
-  // Caching causes issues when orgs are created/deleted
-
   try {
-    // Check if organizations table has any entries
+    // Check if organizations table has any entries with is_configured = true
     // Use service client to bypass RLS for setup check
     console.log('[Setup Check] Querying organizations table...');
     console.log('[Setup Check] Supabase URL:', SUPABASE_URL);
@@ -197,7 +194,8 @@ async function checkSetupStatus(req) {
 
     const { data, error } = await supabaseService
       .from('organizations')
-      .select('id')
+      .select('id, is_configured')
+      .eq('is_configured', true)
       .limit(1);
 
     console.log('[Setup Check] Query completed');
@@ -212,13 +210,20 @@ async function checkSetupStatus(req) {
     }
 
     const isConfigured = data && data.length > 0;
-    console.log(`[Setup Check] Found ${data?.length || 0} organizations - isConfigured: ${isConfigured}`);
+    console.log(`[Setup Check] Found ${data?.length || 0} configured organizations - isConfigured: ${isConfigured}`);
 
     return isConfigured;
   } catch (error) {
     console.error('Setup status check failed:', error);
     return false;
   }
+}
+
+// Clear setup cache on server start to prevent stale configuration state
+const setupRequired = require('./src/middleware/setup-required');
+if (setupRequired.clearCache) {
+  setupRequired.clearCache();
+  console.log('[SERVER] Setup cache cleared on startup');
 }
 
 // Mount setup routes

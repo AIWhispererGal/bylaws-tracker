@@ -688,14 +688,34 @@ class TextParser {
         }
       }
 
-      // Calculate contextual depth based on stack
-      let contextualDepth = hierarchyStack.length;
-      let depthReason = 'stack-based';
+      // ✅ FIX: Use configured depth from hierarchy levels, NOT stack length!
+      // Find the level definition for this section type
+      const levelDef = levels.find(l => l.type === section.type);
+      const configuredDepth = levelDef?.depth;
 
-      // Special handling for articles (always depth 0)
+      // Calculate contextual depth - prefer configured depth over stack
+      let contextualDepth;
+      let depthReason;
+
+      if (configuredDepth !== undefined && configuredDepth !== null) {
+        // Use configured depth from hierarchy
+        contextualDepth = configuredDepth;
+        depthReason = 'configured';
+        console.log(`[CONTEXT-DEPTH]   Using configured depth: ${contextualDepth} (from levelDef for type ${section.type})`);
+      } else {
+        // Fallback to stack-based depth for unknown types
+        contextualDepth = hierarchyStack.length;
+        depthReason = 'stack-fallback';
+        console.log(`[CONTEXT-DEPTH]   No configured depth, using stack: ${contextualDepth}`);
+      }
+
+      // Override for special types
       if (section.type === 'article') {
         contextualDepth = 0;
         depthReason = 'article-override';
+      } else if (section.type === 'preamble') {
+        contextualDepth = 0;
+        depthReason = 'preamble-override';
       } else if (section.indentation && section.indentation > 0) {
         // Use indentation as depth hint (validate against hierarchy)
         const indentBasedDepth = Math.min(section.indentation, 9);

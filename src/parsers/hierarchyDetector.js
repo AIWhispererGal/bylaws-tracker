@@ -333,6 +333,7 @@ class HierarchyDetector {
    */
   validateHierarchy(sections, organizationConfig) {
     const errors = [];
+    const warnings = [];
     const levels = organizationConfig.hierarchy?.levels || [];
     const maxDepth = organizationConfig.hierarchy?.maxDepth || 10;
 
@@ -350,11 +351,13 @@ class HierarchyDetector {
         });
       }
 
-      // Check for skipped levels (depth jumps by more than 1)
+      // ✅ FIX: Depth jumps are VALID in real documents! Changed to WARNING.
+      // Example: Article (depth 0) can have deeply nested item (depth 4) - that's OK!
       if (section.depth > prevDepth + 1 && prevDepth >= 0) {
-        errors.push({
+        warnings.push({
           section: section.citation || `Section ${i + 1}`,
-          error: `Depth jumped from ${prevDepth} to ${section.depth}, skipping level(s)`
+          message: `Depth jumped from ${prevDepth} to ${section.depth} (unusual structure but allowed)`,
+          type: 'depth_jump'
         });
       }
 
@@ -387,7 +390,8 @@ class HierarchyDetector {
 
     return {
       valid: errors.length === 0,
-      errors
+      errors,
+      warnings
     };
   }
 

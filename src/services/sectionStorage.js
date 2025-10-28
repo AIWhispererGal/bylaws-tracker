@@ -74,24 +74,38 @@ class SectionStorage {
 
       console.log(`Successfully inserted ${insertedSections.length} sections`);
 
+      // CRITICAL FIX: Now update parent_section_id relationships
+      // This was missing! Parent relationships were never being set after insertion.
+      console.log('Updating parent-child relationships with actual UUIDs...');
+      const parentUpdateResult = await this.updateParentRelationships(documentId, supabase);
+
+      if (!parentUpdateResult.success) {
+        console.error('Error updating parent relationships:', parentUpdateResult.error);
+        // Don't fail the whole operation, but warn
+        console.warn('⚠️  Parent relationships could not be set. Hierarchy operations may not work correctly.');
+      } else {
+        console.log(`✓ Successfully updated ${parentUpdateResult.updatesApplied} parent relationships`);
+      }
+
       // Verify inserted sections have proper paths
       const { data: verifyData, error: verifyError } = await supabase
         .from('document_sections')
-        .select('id, section_number, depth, path_ids, path_ordinals')
+        .select('id, section_number, depth, parent_section_id, path_ids, path_ordinals')
         .eq('document_id', documentId)
         .limit(5);
 
       if (verifyError) {
         console.warn('Could not verify paths, but sections were inserted:', verifyError);
       } else {
-        console.log('Sample sections with paths:', verifyData);
+        console.log('Sample sections with paths and parents:', verifyData);
       }
 
       return {
         success: true,
         sectionsStored: insertedSections.length,
         sections: insertedSections,
-        message: `Successfully stored ${insertedSections.length} sections with hierarchy`
+        message: `Successfully stored ${insertedSections.length} sections with hierarchy`,
+        parentRelationshipsUpdated: parentUpdateResult.updatesApplied || 0
       };
 
     } catch (error) {
@@ -107,7 +121,10 @@ class SectionStorage {
   /**
    * Build parent-child hierarchy relationships from flat section list
    * @param {Array} sections - Flat list of parsed sections
-   * @returns {Array} Sections with parent_id and hierarchy metadata
+   * @returns {Array} Sections with parent_temp_id and hierarchy metadata
+   *
+   * NOTE: parent_temp_id is a temporary reference. Actual parent_section_id UUIDs
+   * will be resolved and set by updateParentRelationships() after insertion.
    */
   async buildHierarchy(sections) {
     const hierarchicalSections = [];
@@ -143,9 +160,8 @@ class SectionStorage {
       // Build hierarchical section
       const hierarchicalSection = {
         ...section,
-        tempId: i, // Temporary ID for building relationships
+        tempId: i, // Temporary ID for building relationships (index in array)
         parent_temp_id: parentStack.length > 0 ? parentStack[parentStack.length - 1].tempId : null,
-        parent_id: null, // Will be set after insertion
         ordinal: ordinal,
         depth: depth,
         section_number: this.formatSectionNumber(section),
@@ -160,10 +176,6 @@ class SectionStorage {
       // Add to parent stack for potential children
       parentStack.push(hierarchicalSection);
     }
-
-    // Now map temp IDs to actual relationships
-    // Since we insert in order, parent_id will remain null for first pass
-    // The database trigger will handle path_ids and path_ordinals
 
     console.log(`Built hierarchy for ${hierarchicalSections.length} sections`);
     console.log(`Root sections (depth 0): ${hierarchicalSections.filter(s => s.depth === 0).length}`);
@@ -195,53 +207,78 @@ class SectionStorage {
 
   /**
    * Update parent relationships after initial insert
-   * This is needed if we want to link sections by actual UUIDs instead of ordinal
+   * This is needed to link sections by actual UUIDs after database insertion
    * @param {string} documentId - Document UUID
    * @param {Object} supabase - Supabase client
    */
   async updateParentRelationships(documentId, supabase) {
     try {
-      // Fetch all sections ordered by ordinal
+      // CRITICAL: Fetch all sections ordered by document_order (sequential insertion order)
+      // NOT by ordinal (which is sibling position only)
       const { data: sections, error } = await supabase
         .from('document_sections')
-        .select('id, ordinal, depth, path_ordinals')
+        .select('id, ordinal, depth, document_order, section_number')
         .eq('document_id', documentId)
-        .order('ordinal', { ascending: true });
+        .order('document_order', { ascending: true });
 
       if (error) {
         throw new Error(`Failed to fetch sections: ${error.message}`);
       }
 
-      // Build parent map based on depth
+      if (!sections || sections.length === 0) {
+        console.log('No sections found for parent relationship update');
+        return { success: true, updatesApplied: 0 };
+      }
+
+      console.log(`Processing parent relationships for ${sections.length} sections...`);
+
+      // Build parent map based on depth hierarchy
       const updates = [];
       const parentStack = [];
 
       for (const section of sections) {
         const depth = section.depth;
 
-        // Pop parents from stack until we reach parent level
+        // Pop parents from stack until we reach the correct parent depth level
+        // Parent should be at depth = current_depth - 1
         while (parentStack.length > depth) {
           parentStack.pop();
         }
 
-        // Update parent_section_id if we have a parent
+        // Update parent_section_id if we have a parent (depth > 0)
         if (depth > 0 && parentStack.length > 0) {
-          const parentId = parentStack[parentStack.length - 1].id;
+          const parent = parentStack[parentStack.length - 1];
 
           updates.push({
             id: section.id,
-            parent_section_id: parentId
+            parent_section_id: parent.id,
+            section_number: section.section_number,
+            parent_number: parent.section_number,
+            depth: depth
           });
+        } else if (depth === 0) {
+          // Root level sections should have null parent
+          // (Already null from insert, but document it for clarity)
         }
 
-        // Add to parent stack
+        // Add current section to parent stack for potential children
         parentStack.push(section);
       }
 
-      // Apply updates
+      // Apply updates in batch for efficiency
       if (updates.length > 0) {
-        console.log(`Updating ${updates.length} parent relationships...`);
+        console.log(`Applying ${updates.length} parent relationship updates...`);
 
+        // Log a sample of the relationships being set
+        if (updates.length > 0) {
+          const sample = updates.slice(0, 5);
+          console.log('Sample parent relationships:');
+          sample.forEach(u => {
+            console.log(`  - ${u.section_number} (depth ${u.depth}) → parent: ${u.parent_number}`);
+          });
+        }
+
+        // Batch update
         for (const update of updates) {
           const { error: updateError } = await supabase
             .from('document_sections')
@@ -249,11 +286,13 @@ class SectionStorage {
             .eq('id', update.id);
 
           if (updateError) {
-            console.warn(`Failed to update section ${update.id}:`, updateError);
+            console.warn(`Failed to update section ${update.section_number}:`, updateError);
           }
         }
 
-        console.log('Parent relationships updated successfully');
+        console.log('✓ Parent relationships updated successfully');
+      } else {
+        console.log('No parent relationships to update (all sections are root level)');
       }
 
       return { success: true, updatesApplied: updates.length };

@@ -192,15 +192,91 @@ const Dashboard = {
   },
 
   /**
-   * Export document
+   * Export document as DOCX with Track Changes formatting
    */
   async exportDocument(documentId) {
     try {
-      // Show placeholder message for now
-      alert('Export functionality coming soon!\n\nThis feature is currently being implemented and will allow you to export documents in multiple formats (PDF, Word, etc.).');
+      console.log('[EXPORT] Starting DOCX export for document:', documentId);
+
+      // Show loading indicator
+      const button = event?.target?.closest('button');
+      const originalText = button?.innerHTML;
+      if (button) {
+        button.disabled = true;
+        button.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Exporting...';
+      }
+
+      // Make request to DOCX endpoint
+      const response = await fetch(`/dashboard/documents/${documentId}/export/docx`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Export failed' }));
+        throw new Error(errorData.error || `Export failed with status ${response.status}`);
+      }
+
+      // Get filename from header or generate default
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = 'document_changes.docx';
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+
+      // Get changed sections count from header
+      const changedSections = response.headers.get('X-Changed-Sections');
+      console.log(`[EXPORT] Downloading ${changedSections} changed sections`);
+
+      // Download file
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      console.log('[EXPORT] Download complete:', filename);
+
+      // Show success message
+      if (window.showToast) {
+        window.showToast('success', `DOCX export successful! ${changedSections} changed sections exported.`);
+      }
+
+      // Re-enable button
+      if (button) {
+        button.disabled = false;
+        button.innerHTML = originalText;
+      }
+
     } catch (error) {
-      console.error('Error exporting document:', error);
-      alert('Failed to export document');
+      console.error('[EXPORT] Error:', error);
+
+      // Show error message
+      const errorMessage = error.message === 'No changed sections to export'
+        ? 'This document has no changes to export. Please make some modifications first.'
+        : `Export failed: ${error.message}`;
+
+      if (window.showToast) {
+        window.showToast('error', errorMessage);
+      } else {
+        alert(errorMessage);
+      }
+
+      // Re-enable button
+      const button = event?.target?.closest('button');
+      if (button) {
+        button.disabled = false;
+        button.innerHTML = button.getAttribute('data-original-text') || '<i class="bi bi-download"></i>';
+      }
     }
   },
 

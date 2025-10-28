@@ -1281,6 +1281,138 @@ router.get('/documents/:documentId/export', requireAuth, async (req, res) => {
 });
 
 /**
+ * GET /documents/:documentId/export/docx - Export document as DOCX with Track Changes
+ * Exports changed sections only with strikethrough/underline formatting
+ */
+router.get('/documents/:documentId/export/docx', requireAuth, async (req, res) => {
+  try {
+    const { supabase } = req;
+    const { documentId } = req.params;
+    const orgId = req.organizationId;
+
+    console.log('[DOCX-EXPORT] Starting DOCX export for document:', documentId);
+
+    // 1. Fetch document details
+    const { data: document, error: docError } = await supabase
+      .from('documents')
+      .select('id, title, created_at, updated_at, organization_id')
+      .eq('id', documentId)
+      .eq('organization_id', orgId)
+      .single();
+
+    if (docError || !document) {
+      console.error('[DOCX-EXPORT] Document fetch error:', docError);
+      return res.status(404).json({
+        success: false,
+        error: 'Document not found or access denied'
+      });
+    }
+
+    // 2. Fetch ALL sections (we'll filter for changes in service)
+    const { data: sections, error: sectionsError } = await supabase
+      .from('document_sections')
+      .select(`
+        id,
+        section_number,
+        section_title,
+        section_type,
+        depth,
+        ordinal,
+        document_order,
+        original_text,
+        current_text,
+        is_locked,
+        locked_at,
+        locked_by,
+        metadata,
+        created_at,
+        updated_at
+      `)
+      .eq('document_id', documentId)
+      .order('document_order', { ascending: true });
+
+    if (sectionsError) {
+      console.error('[DOCX-EXPORT] Error fetching sections:', sectionsError);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to fetch document sections'
+      });
+    }
+
+    // 3. Filter for changed sections only
+    const docxExporter = require('../services/docxExporter');
+    const changedSections = docxExporter.filterChangedSections(sections || []);
+
+    if (changedSections.length === 0) {
+      console.log('[DOCX-EXPORT] No changed sections found');
+      return res.status(400).json({
+        success: false,
+        error: 'No changed sections to export',
+        hint: 'This document has no modifications to export'
+      });
+    }
+
+    console.log(`[DOCX-EXPORT] Found ${changedSections.length} changed sections`);
+
+    // 4. Generate DOCX document
+    const exportMeta = {
+      exportDate: new Date().toLocaleString(),
+      exportedBy: req.session.userName || req.session.userEmail || 'Unknown User',
+      userId: req.session.userId,
+      organizationId: orgId
+    };
+
+    const doc = docxExporter.generateChangedSectionsDocument(
+      document,
+      changedSections,
+      exportMeta
+    );
+
+    // 5. Convert to buffer
+    const buffer = await docxExporter.toBuffer(doc);
+
+    console.log('[DOCX-EXPORT] DOCX generated successfully');
+    console.log(`[DOCX-EXPORT] Buffer size: ${(buffer.length / 1024).toFixed(2)} KB`);
+
+    // 6. Generate filename
+    const sanitizedTitle = document.title
+      .replace(/[^a-z0-9]/gi, '_')
+      .toLowerCase()
+      .substring(0, 50);
+    const dateStr = new Date().toISOString().split('T')[0];
+    const filename = `${sanitizedTitle}_changes_${dateStr}.docx`;
+
+    // 7. Set response headers and send file
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', buffer.length);
+    res.setHeader('X-Export-Version', '1.0');
+    res.setHeader('X-Document-Id', documentId);
+    res.setHeader('X-Changed-Sections', changedSections.length);
+
+    console.log('[DOCX-EXPORT] Export successful:', {
+      documentId,
+      title: document.title,
+      totalSections: sections?.length || 0,
+      changedSections: changedSections.length,
+      filename,
+      sizeKB: (buffer.length / 1024).toFixed(2)
+    });
+
+    res.send(buffer);
+
+  } catch (error) {
+    console.error('[DOCX-EXPORT] Fatal error:', error);
+    console.error('[DOCX-EXPORT] Stack trace:', error.stack);
+    res.status(500).json({
+      success: false,
+      error: 'An error occurred during DOCX export',
+      details: error.message
+    });
+  }
+});
+
+/**
  * GET /document/:documentId - Document viewer (singular)
  */
 router.get('/document/:documentId', requireAuth, attachPermissions, handleDocumentView);
