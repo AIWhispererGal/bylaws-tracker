@@ -10,6 +10,11 @@ const { attachGlobalAdminStatus } = require('./src/middleware/globalAdmin');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// PRODUCTION FIX: Trust Render's reverse proxy for secure cookies
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1); // Trust first proxy (Render)
+}
+
 // Load from environment variables
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
@@ -24,14 +29,18 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const supabaseService = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY);
 
 // Session middleware (must be before routes)
+// PRODUCTION FIX: Configure session for Render deployment
 app.use(session({
   secret: SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
+  proxy: process.env.NODE_ENV === 'production', // Trust Render's reverse proxy
   cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    secure: process.env.NODE_ENV === 'production', // HTTPS only in production
+    httpOnly: true, // Prevent XSS attacks
+    sameSite: process.env.NODE_ENV === 'production' ? 'lax' : 'lax', // Required for Render
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    domain: process.env.NODE_ENV === 'production' ? '.onrender.com' : undefined // Render domain
   }
 }));
 
