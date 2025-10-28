@@ -801,6 +801,7 @@ router.get('/sections/:sectionId', requireAuth, async (req, res) => {
       success: true,
       section: {
         id: section.id,
+        original_text: section.original_text || '',
         current_text: section.current_text || section.original_text || '',
         section_number: section.section_number,
         section_title: section.section_title

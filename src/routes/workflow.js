@@ -1941,7 +1941,8 @@ router.post('/sections/:sectionId/lock', requireAuth, async (req, res) => {
 
     // Get suggestion if provided
     let suggestedText = null;
-    if (suggestionId) {
+    if (suggestionId && suggestionId !== 'original') {
+      // User selected a specific suggestion - fetch it
       const { data: suggestion, error: suggestionError } = await supabaseService
         .from('suggestions')
         .select('suggested_text')
@@ -1953,8 +1954,18 @@ router.post('/sections/:sectionId/lock', requireAuth, async (req, res) => {
       }
     }
 
-    // Determine what text to lock (suggestion or current text)
-    const textToLock = suggestedText || currentSection.current_text || currentSection.original_text;
+    // Determine what text to lock
+    let textToLock;
+    if (suggestionId === 'original') {
+      // User explicitly chose "Keep Original Text" - use original_text (immutable baseline)
+      textToLock = currentSection.original_text;
+    } else if (suggestedText) {
+      // User selected a suggestion
+      textToLock = suggestedText;
+    } else {
+      // Fallback: use current_text
+      textToLock = currentSection.current_text || currentSection.original_text;
+    }
 
     // Lock the section and update current_text to the locked text
     const { data: section, error: lockError } = await supabaseService
@@ -1963,7 +1974,7 @@ router.post('/sections/:sectionId/lock', requireAuth, async (req, res) => {
         is_locked: true,
         locked_at: new Date().toISOString(),
         locked_by: userId,
-        selected_suggestion_id: suggestionId,
+        selected_suggestion_id: suggestionId === 'original' ? null : suggestionId,
         locked_text: textToLock,
         // Update current_text to the locked text
         current_text: textToLock

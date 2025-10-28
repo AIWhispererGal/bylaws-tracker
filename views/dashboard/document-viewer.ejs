@@ -670,7 +670,7 @@
                 </div>
 
                 <!-- Section Editing Buttons (Admin Only) -->
-                <% if (req.session.isGlobalAdmin || userRole?.role_code === 'admin' || userRole?.role_code === 'owner') { %>
+                <% if (req.session.isGlobalAdmin || userRole === 'admin' || userRole === 'owner') { %>
                 <div class="section-edit-actions mt-3 pt-3 border-top">
                   <div class="d-flex gap-2 flex-wrap align-items-center">
                     <small class="text-muted me-2"><strong>Edit Section:</strong></small>
@@ -720,19 +720,12 @@
                       <i class="bi bi-union"></i> Join
                     </button>
                     <button
-                      class="btn btn-sm btn-outline-secondary indent-btn"
-                      onclick="indentSection('<%= section.id %>', event)"
-                      title="Increase indent (make child of previous sibling)"
-                      data-section-id="<%= section.id %>">
-                      <i class="bi bi-arrow-right"></i> Indent
+                      class="btn btn-sm btn-outline-warning"
+                      onclick="showMoveSectionModal('<%= section.id %>', event)"
+                      title="Move section to any parent in the hierarchy">
+                      <i class="bi bi-folder-symlink"></i> Move
                     </button>
-                    <button
-                      class="btn btn-sm btn-outline-secondary dedent-btn"
-                      onclick="dedentSection('<%= section.id %>', event)"
-                      title="Decrease indent (promote to parent's level)"
-                      data-section-id="<%= section.id %>">
-                      <i class="bi bi-arrow-left"></i> Dedent
-                    </button>
+                    <!-- DUPLICATE INDENT/DEDENT BUTTONS REMOVED - already shown above in btn-group -->
                   </div>
                   <% if (hasSuggestions) { %>
                   <small class="text-warning d-block mt-2">
@@ -1149,7 +1142,7 @@
         const response = await fetch(`/api/dashboard/sections/${sectionId}`);
         const data = await response.json();
         if (data.success && data.section) {
-          return data.section.current_text || '';
+          return data.section.original_text || '';
         }
       } catch (error) {
         console.error('Error loading section text:', error);
@@ -1176,7 +1169,7 @@
 
       let html = '';
 
-      // Add "Keep Original Text" option first
+      // Add "Keep Original Text" option first (baseline from upload, never modified)
       html += `
         <div class="suggestion-item border-primary">
           <div class="d-flex justify-content-between align-items-start">
@@ -1190,11 +1183,11 @@
             </div>
             <div class="flex-grow-1">
               <h6 class="mb-2">
-                <i class="bi bi-file-text me-2"></i>Keep Original Text
-                <span class="badge bg-info ms-2">No Changes</span>
+                <i class="bi bi-file-text me-2"></i>Keep Original Text (From Upload)
+                <span class="badge bg-info ms-2">Baseline</span>
               </h6>
               <div class="text-muted small mb-2">
-                Lock this section without selecting any suggestion (keeps current text as-is)
+                Lock with the original text from document upload (immutable baseline for comparisons)
               </div>
               <div class="mb-2" style="white-space: pre-wrap; padding: 0.5rem; background-color: #f8f9fa; border-radius: 4px;">
                 ${escapeHtml(originalText)}
@@ -1276,6 +1269,13 @@
 
       container.innerHTML = html;
 
+      // FIX: Hide placeholder and show suggestions list
+      const placeholder = document.getElementById('suggestions-container-' + sectionId);
+      if (placeholder) {
+        placeholder.style.display = 'none';
+      }
+      container.style.display = 'block';
+
       // Update rejected count badge
       updateRejectedCount(sectionId);
     }
@@ -1346,7 +1346,7 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            suggestionId: suggestionId === 'original' ? null : suggestionId,
+            suggestionId: suggestionId,
             notes: 'Locked via workflow'
           })
         });
@@ -1371,7 +1371,7 @@
           selectedSuggestions.delete(sectionId);
 
           // Update overall workflow progress
-          await updateWorkflowProgress();
+          await refreshWorkflowProgress();
         } else {
           showToast('Error: ' + (data.error || 'Failed to lock suggestion'), 'danger');
         }
@@ -1380,6 +1380,40 @@
         showToast('An error occurred while locking the suggestion', 'danger');
       }
     }
+
+    // Refresh section display after successful lock
+    window.refreshSectionAfterLock = async function(sectionId, lockResponseData) {
+      try {
+        console.log('[REFRESH AFTER LOCK] Response data:', lockResponseData);
+
+        // Update the displayed section text with the new locked text
+        const textDiv = document.getElementById('section-text-' + sectionId);
+        if (textDiv && lockResponseData.section) {
+          // Use locked_text if available, otherwise current_text
+          const newText = lockResponseData.section.locked_text || lockResponseData.section.current_text || '';
+          console.log('[REFRESH AFTER LOCK] Updating text to:', newText.substring(0, 100) + '...');
+          textDiv.textContent = newText;
+        }
+
+        // Update the preview text in collapsed section header
+        const sectionCard = document.getElementById('section-' + sectionId);
+        if (sectionCard && lockResponseData.section) {
+          const previewP = sectionCard.querySelector('.text-muted.mb-0');
+          if (previewP) {
+            const previewText = lockResponseData.section.locked_text || lockResponseData.section.current_text || '';
+            const preview = previewText.substring(0, 200);
+            previewP.textContent = preview + (previewText.length > 200 ? '...' : '');
+          }
+        }
+
+        // Refresh workflow state and suggestions
+        // NOTE: Do NOT call loadSuggestions() here - it re-fetches and can overwrite the text
+        await loadSectionWorkflowState(sectionId);
+
+      } catch (error) {
+        console.error('[REFRESH AFTER LOCK] Error:', error);
+      }
+    };
 
     // Unlock section (admin/owner/global admin only)
     async function unlockSection(sectionId) {
@@ -1404,7 +1438,7 @@
           // Reload the section state
           await loadSectionWorkflowState(sectionId);
           await loadSuggestions(sectionId);
-          await updateWorkflowProgress();
+          await refreshWorkflowProgress();
 
           // Refresh the page to show updated lock status
           location.reload();
@@ -1459,7 +1493,7 @@
           return;
         }
 
-        const originalText = data.section.current_text || '';
+        const originalText = data.section.original_text || '';
 
         // Get locked text from the DOM (it's already rendered)
         const sections = <%- JSON.stringify(sections) %>;
@@ -2652,6 +2686,157 @@
       // Optional: Refresh workflow progress every 30 seconds
       // setInterval(() => refreshWorkflowProgress(documentId), 30000);
     });
+
+    // ============================================================
+    // MOVE SECTION MODAL FUNCTIONS
+    // ============================================================
+
+    /**
+     * Show the Move Section modal with hierarchical parent selection
+     */
+    async function showMoveSectionModal(sectionId, event) {
+      event.stopPropagation();
+
+      const sections = <%- JSON.stringify(sections) %>;
+      const section = sections.find(s => s.id === sectionId);
+
+      if (!section) {
+        showToast('Section not found', 'danger');
+        return;
+      }
+
+      // Store the section ID
+      document.getElementById('moveSectionId').value = sectionId;
+
+      // Show current section info
+      const infoDiv = document.getElementById('moveSectionInfo');
+      infoDiv.innerHTML = `
+        <strong>${section.section_number || 'No number'}</strong> ${section.section_title || 'Untitled'}
+        <br><small class="text-muted">Type: ${section.section_type || 'unknown'} | Depth: ${section.depth || 0}</small>
+      `;
+
+      // Build hierarchical section list
+      const select = document.getElementById('moveParentSelect');
+      select.innerHTML = '<option value="null">📄 Top Level (No Parent)</option>';
+
+      // Helper function to check if a section is a descendant
+      function isDescendant(potentialChild, potentialAncestor) {
+        let current = potentialChild;
+        let visited = new Set(); // Prevent infinite loops
+        while (current && !visited.has(current.id)) {
+          visited.add(current.id);
+          if (current.id === potentialAncestor.id) return true;
+          current = sections.find(s => s.id === current.parent_section_id);
+        }
+        return false;
+      }
+
+      // Sort sections by path for hierarchical display
+      const sortedSections = [...sections].sort((a, b) => {
+        const pathA = a.path_ordinals || [];
+        const pathB = b.path_ordinals || [];
+        for (let i = 0; i < Math.max(pathA.length, pathB.length); i++) {
+          const ordA = parseInt(pathA[i]) || 0;
+          const ordB = parseInt(pathB[i]) || 0;
+          if (ordA !== ordB) return ordA - ordB;
+        }
+        return 0;
+      });
+
+      // Add each section as an option (except the section being moved and its descendants)
+      sortedSections.forEach(s => {
+        // Don't allow moving to itself or to its own descendants
+        if (s.id === sectionId || isDescendant(s, section)) {
+          return;
+        }
+
+        // Create visual hierarchy with indentation
+        const indent = '  '.repeat(s.depth || 0);
+        const typeIcon = {
+          'preamble': '📜',
+          'article': '📋',
+          'section': '📑',
+          'subsection': '📄',
+          'paragraph': '¶',
+          'subparagraph': '·'
+        }[s.section_type] || '•';
+
+        const label = `${indent}${typeIcon} ${s.section_number || ''} ${s.section_title || 'Untitled'}`.trim();
+        const option = document.createElement('option');
+        option.value = s.id;
+        option.textContent = label;
+
+        // Highlight current parent
+        if (s.id === section.parent_section_id) {
+          option.textContent = label + ' (current parent)';
+          option.selected = true;
+        }
+
+        select.appendChild(option);
+      });
+
+      // Clear ordinal input
+      document.getElementById('moveOrdinal').value = '';
+
+      // Show modal
+      const modal = new bootstrap.Modal(document.getElementById('moveSectionModal'));
+      modal.show();
+    }
+
+    /**
+     * Confirm and execute the section move
+     */
+    async function confirmMoveSection() {
+      const sectionId = document.getElementById('moveSectionId').value;
+      const newParentId = document.getElementById('moveParentSelect').value;
+      const newOrdinal = document.getElementById('moveOrdinal').value;
+
+      if (!sectionId) {
+        showToast('No section selected', 'danger');
+        return;
+      }
+
+      try {
+        const payload = {};
+
+        // Handle "null" string for top-level
+        if (newParentId === 'null') {
+          payload.newParentId = null;
+        } else {
+          payload.newParentId = newParentId;
+        }
+
+        // Only include ordinal if specified
+        if (newOrdinal && parseInt(newOrdinal) > 0) {
+          payload.newOrdinal = parseInt(newOrdinal);
+        }
+
+        console.log('[MOVE SECTION] Sending request:', { sectionId, payload });
+
+        const response = await fetch(`/admin/sections/${sectionId}/move`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          showToast('✅ Section moved successfully! Reloading...', 'success');
+          // Close modal
+          const modal = bootstrap.Modal.getInstance(document.getElementById('moveSectionModal'));
+          if (modal) modal.hide();
+          // Reload page to show new hierarchy
+          setTimeout(() => location.reload(), 800);
+        } else {
+          showToast(data.error || 'Failed to move section', 'danger');
+          console.error('[MOVE SECTION] Error:', data);
+        }
+      } catch (error) {
+        console.error('[MOVE SECTION] Exception:', error);
+        showToast('Failed to move section: ' + error.message, 'danger');
+      }
+    }
   </script>
 
   <!-- Retitle Modal -->
@@ -2839,5 +3024,60 @@
       </div>
     </div>
   </div>
+
+  <!-- Move Section Modal -->
+  <div class="modal fade" id="moveSectionModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-folder-symlink me-2"></i>Move Section</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="moveSectionId">
+
+          <div class="alert alert-info">
+            <i class="bi bi-info-circle me-2"></i>
+            <strong>Move any section to a new parent.</strong> This will move the section (and all its children) to a new location in the hierarchy. Perfect for fixing parsing errors or reorganizing the document structure.
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label"><strong>Current Section:</strong></label>
+            <div id="moveSectionInfo" class="p-2 bg-light border rounded">
+              <!-- Populated dynamically -->
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label"><strong>New Parent Section:</strong></label>
+            <select class="form-select" id="moveParentSelect" size="12" style="font-family: monospace;">
+              <option value="null">📄 Top Level (No Parent)</option>
+              <!-- Populated dynamically with hierarchy -->
+            </select>
+            <small class="text-muted">
+              <i class="bi bi-info-circle"></i>
+              Indented items show document hierarchy. Cannot move to itself or its own children.
+            </small>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label"><strong>Position among siblings (optional):</strong></label>
+            <input type="number" class="form-control" id="moveOrdinal" min="1" placeholder="Leave blank to append at end">
+            <small class="text-muted">
+              <i class="bi bi-lightbulb"></i>
+              Specify position: 1 = first child, 2 = second child, etc. Leave empty to add at the end.
+            </small>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-warning" onclick="confirmMoveSection()">
+            <i class="bi bi-folder-symlink me-1"></i>Move Section Here
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>
