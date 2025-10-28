@@ -491,16 +491,6 @@
         <!-- Action Buttons -->
         <% if (typeof currentUser !== 'undefined' && currentUser) { %>
           <button
-            class="btn btn-outline-primary btn-sm"
-            <% if (currentUser.role === 'viewer') { %>
-              disabled
-              data-bs-toggle="tooltip"
-              title="Export feature requires member access or higher. Contact your administrator."
-            <% } %>
-          >
-            <i class="bi bi-download me-1"></i> Export
-          </button>
-          <button
             class="btn btn-primary btn-sm"
             data-bs-toggle="modal"
             data-bs-target="#uploadDocumentModal"
