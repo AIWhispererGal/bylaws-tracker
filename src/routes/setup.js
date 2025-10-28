@@ -1046,10 +1046,12 @@ async function processSetupData(setupData, supabaseService) {
                             }
 
                             console.log('[SETUP-DEBUG] 🔄 Calling setupService.processDocumentImport...');
+                            // Pass original filename for proper document naming
                             const importResult = await setupService.processDocumentImport(
                                 organizationId,
                                 importData.file_path,
-                                supabase
+                                supabase,
+                                importData.file_name  // Original filename (e.g., "My-Bylaws.docx")
                             );
 
                             if (importResult.success) {

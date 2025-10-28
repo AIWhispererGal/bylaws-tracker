@@ -173,8 +173,12 @@ class SetupService {
 
   /**
    * Process document import
+   * @param {string} orgId - Organization ID
+   * @param {string} filePath - Path to uploaded file
+   * @param {object} supabase - Supabase client
+   * @param {string} originalFilename - Optional original filename for document title
    */
-  async processDocumentImport(orgId, filePath, supabase) {
+  async processDocumentImport(orgId, filePath, supabase, originalFilename = null) {
     try {
       // Load organization config
       const config = await organizationConfig.loadConfig(orgId, supabase);
@@ -232,15 +236,31 @@ class SetupService {
       }
 
       // Create document record
+      // FIX: Use actual original filename (without extension) as title instead of generic "Bylaws"
+      // Priority: originalFilename param > extracted from filePath > config terminology > "Bylaws"
+      let filename, filenameWithoutExt;
+
+      if (originalFilename) {
+        // Use original filename if provided (e.g., "My-Bylaws.docx")
+        filename = originalFilename;
+        filenameWithoutExt = path.basename(originalFilename, path.extname(originalFilename));
+      } else {
+        // Fall back to extracting from filePath (for backward compatibility)
+        filename = path.basename(filePath);
+        filenameWithoutExt = path.basename(filePath, path.extname(filePath));
+      }
+
+      const documentTitle = filenameWithoutExt || config.terminology?.documentName || 'Bylaws';
+
       const { data: document, error: docError } = await supabase
         .from('documents')
         .insert({
           organization_id: orgId,
-          title: config.terminology?.documentName || 'Bylaws',
+          title: documentTitle,
           document_type: 'bylaws',
           status: 'draft',
           metadata: {
-            source_file: path.basename(filePath),
+            source_file: filename,
             imported_at: new Date().toISOString()
           },
           created_at: new Date().toISOString()
@@ -304,7 +324,7 @@ class SetupService {
         sectionsCount: storageResult.sectionsStored,
         sectionsStored: storageResult.sectionsStored,
         metadata: parseResult.metadata,
-        warnings: validation.warnings,
+        warnings: Array.isArray(validation.warnings) ? validation.warnings : [],
         validationResult: validationResult
       };
     } catch (error) {
@@ -349,7 +369,6 @@ class SetupService {
         .from('organizations')
         .update({
           is_configured: true,
-          configured_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
         .eq('id', orgId)

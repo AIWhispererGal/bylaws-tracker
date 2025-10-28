@@ -292,7 +292,8 @@ router.post('/invite', requireAdmin, async (req, res) => {
       userId = existingUser.id;
     } else {
       // Create new user account (using Supabase Auth)
-      const { data: authData, error: authError } = await supabase.auth.admin.inviteUserByEmail(email, {
+      // FIX: Use supabaseService (service role) for admin operations, not regular supabase client
+      const { data: authData, error: authError } = await supabaseService.auth.admin.inviteUserByEmail(email, {
         data: {
           name: name || null,
           organization_id: organizationId,

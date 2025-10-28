@@ -173,6 +173,7 @@ async function getUserRole(userId, organizationId) {
 /**
  * Middleware: Require specific permission
  * NOTE: Uses req.session.userId for session-based authentication
+ * FIX: Global admins bypass all permission checks
  */
 function requirePermission(permission, orgLevel = false) {
   return async (req, res, next) => {
@@ -187,6 +188,15 @@ function requirePermission(permission, orgLevel = false) {
           error: 'Authentication required',
           code: 'AUTH_REQUIRED'
         });
+      }
+
+      // FIX: Check if user is global admin FIRST - global admins bypass all checks
+      const isGlobalAdminUser = await hasGlobalPermission(userId, 'can_access_all_organizations');
+
+      if (isGlobalAdminUser) {
+        console.log(`[Permissions] User ${userId} is global admin - GRANTED access to ${permission}`);
+        req.isGlobalAdmin = true;
+        return next();
       }
 
       let hasPermission = false;
@@ -226,6 +236,7 @@ function requirePermission(permission, orgLevel = false) {
 /**
  * Middleware: Require minimum role level
  * NOTE: Uses req.session.userId for session-based authentication
+ * FIX: Global admins bypass role level checks
  */
 function requireMinRoleLevel(minLevel) {
   return async (req, res, next) => {
@@ -247,6 +258,15 @@ function requireMinRoleLevel(minLevel) {
           error: 'Organization context required',
           code: 'ORG_REQUIRED'
         });
+      }
+
+      // FIX: Check if user is global admin FIRST - global admins bypass role level checks
+      const isGlobalAdminUser = await hasGlobalPermission(userId, 'can_access_all_organizations');
+
+      if (isGlobalAdminUser) {
+        console.log(`[Permissions] User ${userId} is global admin - GRANTED access (role level ${minLevel})`);
+        req.isGlobalAdmin = true;
+        return next();
       }
 
       const hasLevel = await hasMinRoleLevel(userId, organizationId, minLevel);
@@ -274,6 +294,7 @@ function requireMinRoleLevel(minLevel) {
 /**
  * Middleware: Require specific role
  * NOTE: Uses req.session.userId for session-based authentication
+ * FIX: Global admins bypass role checks
  */
 function requireRole(...allowedRoles) {
   return async (req, res, next) => {
@@ -295,6 +316,15 @@ function requireRole(...allowedRoles) {
           error: 'Organization context required',
           code: 'ORG_REQUIRED'
         });
+      }
+
+      // FIX: Check if user is global admin FIRST - global admins bypass role checks
+      const isGlobalAdminUser = await hasGlobalPermission(userId, 'can_access_all_organizations');
+
+      if (isGlobalAdminUser) {
+        console.log(`[Permissions] User ${userId} is global admin - GRANTED access (required roles: [${allowedRoles.join(', ')}])`);
+        req.isGlobalAdmin = true;
+        return next();
       }
 
       const userRole = await getUserRole(userId, organizationId);

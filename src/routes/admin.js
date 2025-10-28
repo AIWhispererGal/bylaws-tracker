@@ -741,14 +741,16 @@ router.post('/documents/upload', attachGlobalAdminStatus, requireAdmin, async (r
       // Use setupService to process the document import
       const setupService = require('../services/setupService');
 
+      // Pass original filename for proper document naming
       const importResult = await setupService.processDocumentImport(
         organizationId,
         req.file.path,
-        supabaseService
+        supabaseService,
+        req.file.originalname  // Pass original filename
       );
 
-      // Clean up uploaded file after processing
-      await fs.unlink(req.file.path).catch(console.error);
+      // FIX: Don't delete file here - setupService already handles cleanup
+      // Removed: await fs.unlink(req.file.path).catch(console.error);
 
       if (importResult.success) {
         console.log('[ADMIN-UPLOAD] Successfully imported document with', importResult.sectionsCount, 'sections');
@@ -785,8 +787,10 @@ router.post('/documents/upload', attachGlobalAdminStatus, requireAdmin, async (r
     } catch (error) {
       console.error('[ADMIN-UPLOAD] Fatal error:', error);
 
-      // Clean up uploaded file on error
-      if (req.file) {
+      // FIX: Only delete if processDocumentImport wasn't called
+      // If it was called, setupService already cleaned up
+      // Keep this for early errors (before import processing)
+      if (req.file && !importResult) {
         await fs.unlink(req.file.path).catch(console.error);
       }
 

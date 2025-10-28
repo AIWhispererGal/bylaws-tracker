@@ -542,8 +542,9 @@
               <label for="inviteRole" class="form-label">Role</label>
               <select class="form-select" id="inviteRole" required>
                 <option value="viewer">Viewer - Can view documents</option>
-                <option value="editor">Editor - Can edit and suggest changes</option>
+                <option value="member">Member - Can edit and suggest changes</option>
                 <option value="admin">Admin - Full organization access</option>
+                <option value="owner">Owner - Complete control (use with caution)</option>
               </select>
             </div>
             <div class="alert alert-info">
@@ -572,7 +573,7 @@
       const role = document.getElementById('inviteRole').value;
 
       try {
-        const response = await fetch('/admin/users/invite', {
+        const response = await fetch('/api/users/invite', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, role })
@@ -593,10 +594,10 @@
 
     // Edit user role
     function editUser(userId, currentRole) {
-      const newRole = prompt(`Change role for this user:\n\nCurrent: ${currentRole}\n\nEnter new role (admin/editor/viewer):`, currentRole);
+      const newRole = prompt(`Change role for this user:\n\nCurrent: ${currentRole}\n\nEnter new role (owner/admin/member/viewer):`, currentRole);
 
-      if (newRole && ['admin', 'editor', 'viewer'].includes(newRole.toLowerCase())) {
-        fetch(`/admin/users/${userId}/role`, {
+      if (newRole && ['owner', 'admin', 'member', 'viewer'].includes(newRole.toLowerCase())) {
+        fetch(`/api/users/${userId}/role`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ role: newRole.toLowerCase() })
@@ -616,7 +617,7 @@
     // Remove user
     function removeUser(userId, userEmail) {
       if (confirm(`Are you sure you want to remove ${userEmail} from this organization?`)) {
-        fetch(`/admin/users/${userId}`, {
+        fetch(`/api/users/${userId}`, {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' }
         })
