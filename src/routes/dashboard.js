@@ -1125,6 +1125,162 @@ async function handleDocumentView(req, res) {
 }
 
 /**
+ * GET /documents/:documentId/export - Export document as JSON
+ * Exports complete document with all sections, original and current text
+ */
+router.get('/documents/:documentId/export', requireAuth, async (req, res) => {
+  try {
+    const { supabase } = req;
+    const { documentId } = req.params;
+    const orgId = req.organizationId;
+
+    console.log('[EXPORT] Exporting document:', documentId);
+
+    // Fetch document details
+    const { data: document, error: docError } = await supabase
+      .from('documents')
+      .select('id, title, created_at, updated_at, organization_id')
+      .eq('id', documentId)
+      .eq('organization_id', orgId)
+      .single();
+
+    if (docError || !document) {
+      console.error('[EXPORT] Document fetch error:', docError);
+      return res.status(404).json({
+        success: false,
+        error: 'Document not found or access denied'
+      });
+    }
+
+    // Fetch all sections with complete data
+    const { data: sections, error: sectionsError } = await supabase
+      .from('document_sections')
+      .select(`
+        id,
+        section_number,
+        section_title,
+        section_type,
+        depth,
+        ordinal,
+        document_order,
+        original_text,
+        current_text,
+        is_locked,
+        locked_at,
+        locked_by,
+        locked_text,
+        selected_suggestion_id,
+        parent_section_id,
+        path_ids,
+        path_ordinals,
+        metadata,
+        created_at,
+        updated_at
+      `)
+      .eq('document_id', documentId)
+      .order('document_order', { ascending: true });
+
+    if (sectionsError) {
+      console.error('[EXPORT] Error fetching sections:', sectionsError);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to fetch sections'
+      });
+    }
+
+    // Filter for changed sections only if requested
+    let filteredSections = sections || [];
+    const changedOnly = req.query.changed === 'true';
+
+    if (changedOnly) {
+      filteredSections = filteredSections.filter(section =>
+        section.original_text !== section.current_text
+      );
+      console.log('[EXPORT] Filtered to changed sections only:', filteredSections.length);
+    }
+
+    // Build export JSON structure
+    const exportData = {
+      document: {
+        id: document.id,
+        title: document.title,
+        exportDate: new Date().toISOString(),
+        exportedBy: req.session.userName || req.session.userEmail || 'Unknown',
+        version: '1.0',
+        createdAt: document.created_at,
+        updatedAt: document.updated_at
+      },
+      metadata: {
+        totalSections: filteredSections.length,
+        originalTotalSections: sections?.length || 0,
+        changedOnly: changedOnly,
+        exportFormat: 'json',
+        exportVersion: '1.0',
+        organizationId: orgId
+      },
+      sections: filteredSections.map(section => ({
+        id: section.id,
+        number: section.section_number,
+        title: section.section_title || '',
+        citation: section.section_number, // Same as number for compatibility
+        type: section.section_type || 'section',
+        depth: section.depth || 0,
+        ordinal: section.ordinal || 0,
+        documentOrder: section.document_order || 0,
+        originalText: section.original_text || '',
+        currentText: section.current_text || section.original_text || '',
+        isLocked: section.is_locked || false,
+        lockedAt: section.locked_at || null,
+        lockedBy: section.locked_by || null,
+        lockedText: section.locked_text || null,
+        selectedSuggestionId: section.selected_suggestion_id || null,
+        parentSectionId: section.parent_section_id || null,
+        pathIds: section.path_ids || [],
+        pathOrdinals: section.path_ordinals || [],
+        metadata: section.metadata || {},
+        lastModified: section.updated_at || section.created_at
+      }))
+    };
+
+    // Generate filename with sanitized document title and date
+    const sanitizedTitle = document.title
+      .replace(/[^a-z0-9]/gi, '_')
+      .toLowerCase()
+      .substring(0, 50);
+    const dateStr = new Date().toISOString().split('T')[0];
+    const filename = changedOnly
+      ? `${sanitizedTitle}_changes_${dateStr}.json`
+      : `${sanitizedTitle}_${dateStr}.json`;
+
+    // Set response headers for download
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('X-Export-Version', '1.0');
+    res.setHeader('X-Document-Id', documentId);
+
+    console.log('[EXPORT] Export successful:', {
+      documentId,
+      title: document.title,
+      totalSections: sections?.length || 0,
+      exportedSections: filteredSections.length,
+      changedOnly: changedOnly,
+      filename
+    });
+
+    // Send JSON response
+    res.json(exportData);
+
+  } catch (error) {
+    console.error('[EXPORT] Fatal error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'An error occurred during export',
+      details: error.message
+    });
+  }
+});
+
+/**
  * GET /document/:documentId - Document viewer (singular)
  */
 router.get('/document/:documentId', requireAuth, attachPermissions, handleDocumentView);

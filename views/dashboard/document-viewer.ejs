@@ -353,6 +353,12 @@
           </p>
         </div>
         <div>
+          <button id="export-document-btn" class="btn btn-outline-light me-2" title="Export complete document as JSON">
+            <i class="bi bi-download me-1"></i>Export Full
+          </button>
+          <button id="export-changed-btn" class="btn btn-outline-warning me-2" title="Export only changed sections as JSON">
+            <i class="bi bi-file-earmark-diff me-1"></i>Export Changes
+          </button>
           <% if (req.session.isGlobalAdmin || userRole === 'admin' || userRole === 'owner') { %>
           <a href="/admin/documents/<%= document.id %>/hierarchy-editor" class="btn btn-outline-light me-2" title="Configure 10-level numbering schema">
             <i class="bi bi-diagram-3 me-1"></i>Configure Hierarchy
@@ -2793,6 +2799,100 @@
         showToast('Failed to move section: ' + error.message, 'danger');
       }
     }
+
+    // ============================================================================
+    // EXPORT FUNCTIONALITY - Export document as JSON
+    // ============================================================================
+    document.addEventListener('DOMContentLoaded', function() {
+      const exportFullBtn = document.getElementById('export-document-btn');
+      const exportChangedBtn = document.getElementById('export-changed-btn');
+
+      // Reusable export function
+      async function exportDocument(changedOnly = false, button) {
+        const documentId = '<%= document.id %>';
+
+        // Show loading state
+        button.disabled = true;
+        const originalHtml = button.innerHTML;
+        button.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Exporting...';
+
+        try {
+          // Build URL with query parameter
+          const url = changedOnly
+            ? `/dashboard/documents/${documentId}/export?changed=true`
+            : `/dashboard/documents/${documentId}/export`;
+
+          // Fetch export data
+          const response = await fetch(url);
+
+          if (!response.ok) {
+            throw new Error(`Export failed: ${response.status} ${response.statusText}`);
+          }
+
+          // Get filename from Content-Disposition header if available
+          const contentDisposition = response.headers.get('Content-Disposition');
+          let filename = 'document_export.json';
+
+          if (contentDisposition) {
+            const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+            if (filenameMatch) {
+              filename = filenameMatch[1];
+            }
+          }
+
+          // Get JSON data
+          const jsonData = await response.json();
+
+          // Check if changed-only export returned no sections
+          if (changedOnly && jsonData.sections.length === 0) {
+            showToast('No changed sections found. All sections match original text.', 'info');
+            return;
+          }
+
+          // Create blob and download
+          const blob = new Blob([JSON.stringify(jsonData, null, 2)], {
+            type: 'application/json'
+          });
+          const downloadUrl = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = downloadUrl;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+
+          // Cleanup
+          window.URL.revokeObjectURL(downloadUrl);
+          document.body.removeChild(a);
+
+          // Success message
+          const message = changedOnly
+            ? `Exported ${jsonData.sections.length} changed section(s) successfully!`
+            : 'Document exported successfully!';
+          showToast(message, 'success');
+
+        } catch (error) {
+          console.error('[EXPORT] Error:', error);
+          showToast('Failed to export document: ' + error.message, 'danger');
+        } finally {
+          // Restore button
+          button.disabled = false;
+          button.innerHTML = originalHtml;
+        }
+      }
+
+      // Attach event listeners to both buttons
+      if (exportFullBtn) {
+        exportFullBtn.addEventListener('click', function() {
+          exportDocument(false, this);
+        });
+      }
+
+      if (exportChangedBtn) {
+        exportChangedBtn.addEventListener('click', function() {
+          exportDocument(true, this);
+        });
+      }
+    });
   </script>
 
   <!-- Retitle Modal -->
